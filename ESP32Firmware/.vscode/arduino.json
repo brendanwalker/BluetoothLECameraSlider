@@ -1,0 +1,9 @@
+{
+    "port": "COM4",
+    "board": "esp32:esp32:esp32thing",
+    "output": "../build",
+    "configuration": "FlashFreq=80,PartitionScheme=no_ota,UploadSpeed=921600,DebugLevel=info,EraseFlash=none",
+    "programmer": "esptool",
+    "intelliSenseGen": "global",
+    "sketch": "ESP32_BLE_CameraControl.ino"
+}
