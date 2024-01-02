@@ -4,21 +4,6 @@
 #include "Arduino.h"
 #include "FastAccelStepper.h"
 
-struct ArtnetPacket
-{
-  uint8_t slidePosition; // 0 for SlideMin, 255 for SlideMax
-  uint8_t slideSpeed; // 0 for min speed, 100 for max speed
-  uint8_t slideAcceleration; // 0 for min acceleration, 100 for max acceleration
-
-  uint8_t panAngle; // 0 for PanMin, 255 for PanMax
-  uint8_t panSpeed; // 0 for min speed, 100 for max speed
-  uint8_t panAcceleration; // 0 for min acceleration, 100 for max acceleration
-
-  uint8_t tiltAngle; // 0 for TiltMin, 255 for TiltMax
-  uint8_t tiltSpeed; // 0 for min speed, 100 for max speed
-  uint8_t tiltAcceleration; // 0 for min acceleration, 100 for max acceleration
-};
-
 class SliderState
 {
 public:
@@ -35,19 +20,25 @@ public:
   void loop();
   void stopAll();  
   bool isAnySliderRunning() const;
-  void setArtNetCommandsEnabled(bool bEnabled) { m_artNetCommandsEnabled= bEnabled; }
 
   void setPanStepperAngularAcceleration(float cameraAngAccelDegrees);
+  float getPanStepperAngularAcceleration();
   void setTiltStepperAngularAcceleration(float cameraAngAccelDegrees);
-  void setSlideStepperLinearAcceleration(float cameraLinAccelMM);  
+  float getTiltStepperAngularAcceleration();
+  void setSlideStepperLinearAcceleration(float cameraLinAccelMM);
+  float getSlideStepperLinearAcceleration();
 
   void setPanStepperAngularSpeed(float cameraDegreesPerSecond);
+  float getPanStepperAngularSpeed();
   void setTiltStepperAngularSpeed(float cameraDegreesPerSecond);
+  float getTiltStepperAngularSpeed();
   void setSlideStepperLinearSpeed(float cameraMMPerSecond);
+  float getSlideStepperLinearSpeed();
 
   void setPanStepperTargetDegrees(float cameraDegrees);
+  float getPanStepperTargetDegrees() const;
   void setTiltStepperTargetDegrees(float cameraDegrees);
-  void setSlideStepperTargetUnitPosition(float cameraUnitPosition);
+  float getTiltStepperTargetDegrees() const;
 
   int8_t movePanStepperDegrees(float degrees);
   int8_t moveTiltStepperDegrees(float degrees);
@@ -64,6 +55,27 @@ public:
   inline int32_t getPanStepperPosition() const { return m_panStepper->getCurrentPosition(); }
   inline int32_t getTiltStepperPosition() const { return m_tiltStepper->getCurrentPosition(); }
   inline int32_t getSlideStepperPosition() const { return m_slideStepper->getCurrentPosition(); }
+
+  void setSliderPosFraction(float fraction);
+  float getSliderPosFraction(); // [-1.f, 1.f]
+  void setSliderSpeedFraction(float fraction);
+  float getSliderSpeedFraction(); // [0.f, 1.f]
+  void setSliderAccelFraction(float fraction);
+  float getSliderAccelFraction(); // [0.f, 1.f]
+
+  void setPanPosFraction(float fraction);
+  float getPanPosFraction(); // [-1.f, 1.f]
+  void setPanSpeedFraction(float fraction);
+  float getPanSpeedFraction(); // [0.f, 1.f]
+  void setPanAccelFraction(float fraction);
+  float getPanAccelFraction(); // [0.f, 1.f]
+
+  void setTiltPosFraction(float fraction);
+  float getTiltPosFraction(); // [-1.f, 1.f]
+  void setTiltSpeedFraction(float fraction);
+  float getTiltSpeedFraction(); // [0.f, 1.f]
+  void setTiltAccelFraction(float fraction);
+  float getTiltAccelFraction(); // [0.f, 1.f]
 
   inline bool areSteppersCalibrated() const { return m_calibrated; }
   inline void setPanStepperCenter(int32_t position) { m_panStepperCenter= position; }
@@ -83,7 +95,8 @@ private:
 
   void writeCalibrationToConfig();
 
-  float remapUInt8ToFloat(uint8_t intMin, uint8_t intMax, float floatMin, float floatMax, uint8_t value);
+  float remapFloatToFloat(float inMin, float inMax, float outMin, float outMax, float inValue);
+  float remapInt32ToFloat(int32_t intMin, int32_t intMax, float floatMin, float floatMax, int32_t value);
   int32_t remapFloatToInt32(float floatMin, float floatMax, int32_t intMin, int32_t intMax, float value);
 
   uint32_t motorAngleToSteps(float degrees) const;
@@ -92,9 +105,6 @@ private:
   uint32_t millimetersToSteps(float millimeters) const;
   float stepsToMillimeters(uint32_t steps) const;
 
-  bool parseArtnetPacket(const ArtnetPacket* packet);
-  bool m_artNetCommandsEnabled= true;
-
   uint8_t m_enPin;
   uint8_t m_panStepPin;
   uint8_t m_panDirPin;
@@ -102,8 +112,6 @@ private:
   uint8_t m_tiltDirPin;
   uint8_t m_slideStepPin;
   uint8_t m_slideDirPin;
-
-  uint8_t m_universeId = 1;  // 0 - 15
 
   FastAccelStepperEngine m_engine;
   FastAccelStepper* m_panStepper;
@@ -125,7 +133,7 @@ private:
   int32_t m_panStepperCenter= INT_MIN;
   int32_t m_tiltStepperCenter= INT_MIN;
   int32_t m_sliderStepperMin= INT_MIN;
-  int32_t m_sliderStepperMax= INT_MIN;
+  int32_t m_sliderStepperMax= INT_MAX;
   bool m_calibrated= false;
 };
 

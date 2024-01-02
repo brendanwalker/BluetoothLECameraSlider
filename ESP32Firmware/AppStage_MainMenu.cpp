@@ -1,9 +1,8 @@
 #include "App.h"
 #include "AppStage_MainMenu.h"
 #include "AppStage_Monitor.h"
-#include "AppStage_NetworkSettings.h"
 #include "AppStage_SliderSettings.h"
-#include "SliderManager.h"
+#include "BLEManager.h"
 
 //-- statics ----
 const char* AppStage_MainMenu::APP_STAGE_NAME = "MainMenu";
@@ -12,8 +11,6 @@ static const String kMenuStrings[(int)eMenuMenuOptions::COUNT]=
 {
   "Monitor",
   "Slider Settings",
-  "DMX Settings",
-  "Network Settings",
   "Save"
 };
 
@@ -38,7 +35,7 @@ void AppStage_MainMenu::pause()
   Serial.println("Pause Main Menu");
 
   // Ignore commands from ArtNet when outside of the MainMenu
-  SliderState::getInstance()->setArtNetCommandsEnabled(false);
+  BLEManager::getInstance()->setBLECommandsEnabled(false);
   Serial.println("DISABLE ArtNet command processing");
 }
 
@@ -48,7 +45,7 @@ void AppStage_MainMenu::resume()
   Serial.println("Resume Main Menu");
 
   // Ignore commands from ArtNet when outside of the MainMenu
-  SliderState::getInstance()->setArtNetCommandsEnabled(true);
+  BLEManager::getInstance()->setBLECommandsEnabled(true);
   Serial.println("ENABLE ArtNet command processing");
 }
 
@@ -70,12 +67,6 @@ void AppStage_MainMenu::onOptionClicked(int optionIndex)
     break;
   case eMenuMenuOptions::SliderSettings:
     m_app->pushAppStage(AppStage_SliderSettings::getInstance());
-    break;
-  case eMenuMenuOptions::DMXSettings:
-    //m_app->pushAppStage(AppStage_DMXSettings::getInstance());
-    break;
-  case eMenuMenuOptions::NetworkSettings:
-    m_app->pushAppStage(AppStage_NetworkSettings::getInstance());
     break;
   case eMenuMenuOptions::Save:
     m_app->save();

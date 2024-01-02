@@ -16,12 +16,10 @@
 #include "AppStage_Monitor.h"
 #include "AppStage_MagnetTest.h"
 #include "AppStage_MotorTest.h"
-#include "AppStage_NetworkSettings.h"
 #include "AppStage_SliderSettings.h"
 #include "AppStage_SliderCalibration.h"
 #include "BLEManager.h"
 #include "HallSensorManager.h"
-#include "NetworkManager.h"
 #include "SliderManager.h"
 
 #define SCREEN_WIDTH 128                    // OLED display width, in pixels
@@ -70,9 +68,6 @@ Button2 rotaryButton;
 // Hall Effect Sensors
 HallSensorManager hallSensorManager(HALL_PAN_PIN, HALL_TILT_PIN, HALL_SLIDE_MIN_PIN, HALL_SLIDE_MAX_PIN);
 
-// Manages WiFi connection state
-NetworkManager networkManager(&configManager);
-
 // BluetoothLE Manager
 BLEManager bleManager(&configManager);
 
@@ -82,7 +77,6 @@ AppStage_MainMenu mainMenu(&app);
 AppStage_Monitor monitorMenu(&app);
 AppStage_MagnetTest magnetTestMenu(&app);
 AppStage_MotorTest motorTestMenu(&app);
-AppStage_NetworkSettings networkSettings(&app);
 AppStage_SliderCalibration sliderCalibration(&app);
 AppStage_SliderSettings sliderSettings(&app);
 
@@ -136,17 +130,13 @@ void setup()
   Serial.println(F("Setup Config Manager"));
   configManager.load();
 
-  // Init WiFi network connection + Events
-  Serial.println(F("Setup Network Manager"));
-  networkManager.setup();
+  // Setup the Stepper Motor Manager
+  Serial.println(F("Setup Stepper Motor Manager"));
+  sliderState.setup();
 
   // Manage BluetoothLE servive + Events
   Serial.println(F("Setup Bluetooth Manager"));
   bleManager.setup();
-
-  // Setup the Stepper Motor Manager
-  Serial.println(F("Setup Stepper Motor Manager"));
-  sliderState.setup();
 
   // Initialize application state machine
   Serial.println(F("Setup App State Machine"));
@@ -161,11 +151,6 @@ void setup()
     sliderCalibration.setAutoExitOnComplete(true);
     app.pushAppStage(&sliderCalibration);  
   }
-
-  // Then push on net settings state to manage wifi connection
-  // (auto return back to main menu if we connected successfully)
-  networkSettings.setAutoExitOnConnect(true);
-  app.pushAppStage(&networkSettings);  
 }
 
 void loop() 
@@ -180,8 +165,8 @@ void loop()
   // Update hall effect sensor state
   hallSensorManager.loop();
 
-  // Process Network events
-  networkManager.loop();
+  // Process bluetooth events
+  bleManager.loop();
   
   // Update UI
   app.loop();
