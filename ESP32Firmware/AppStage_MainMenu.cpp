@@ -35,7 +35,7 @@ void AppStage_MainMenu::pause()
   Serial.println("Pause Main Menu");
 
   // Ignore commands from ArtNet when outside of the MainMenu
-  BLEManager::getInstance()->setBLECommandsEnabled(false);
+  BLEManager::getInstance()->setBLEControlEnabled(false);
   Serial.println("DISABLE ArtNet command processing");
 }
 
@@ -45,7 +45,7 @@ void AppStage_MainMenu::resume()
   Serial.println("Resume Main Menu");
 
   // Ignore commands from ArtNet when outside of the MainMenu
-  BLEManager::getInstance()->setBLECommandsEnabled(true);
+  BLEManager::getInstance()->setBLEControlEnabled(true);
   Serial.println("ENABLE ArtNet command processing");
 }
 

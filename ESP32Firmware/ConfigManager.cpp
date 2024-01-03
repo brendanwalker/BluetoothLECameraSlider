@@ -7,13 +7,7 @@ ConfigManager* ConfigManager::s_instance= nullptr;
 
 ConfigManager::ConfigManager()
   : m_preferences()
-  , m_ip(127, 0, 0, 1)
-  , m_gateway(127, 0, 0, 1)
-  , m_subnet(255, 255, 255, 0)
 {
-  memset(m_ssid, 0, sizeof(m_ssid));
-  memset(m_password, 0, sizeof(m_password));
-
   s_instance= this;
 }
 
@@ -22,19 +16,6 @@ void ConfigManager::load()
   if (m_preferences.begin(PREFS_NAMESPACE, false))
   {
     size_t bytesRead= 0;
-
-    m_preferences.getString("ssid", m_ssid, MAX_SSID_LENGTH);
-    m_preferences.getString("password", m_password, MAX_PASSWORD_LENGTH);
-    m_preferences.getBytes("ip", &m_ip, sizeof(IPAddress));
-    m_preferences.getBytes("gateway", &m_gateway, sizeof(IPAddress));
-    m_preferences.getBytes("subnet", &m_subnet, sizeof(IPAddress));
-
-    Serial.printf("[Wifi Config]\n");
-    Serial.printf("  ssid: %s\n", m_ssid);
-    Serial.printf("  password: %s\n", m_password);
-    Serial.printf("  ip: %s\n", m_ip.toString().c_str());
-    Serial.printf("  gateway: %s\n", m_gateway.toString().c_str());
-    Serial.printf("  subnet: %s\n", m_subnet.toString().c_str());
 
     Serial.printf("[Motor Calibration Config]\n");
     bytesRead= m_preferences.getBytes("motor_cal", &m_motorCalibrationConfig, sizeof(StepperMotorCalibration));
@@ -80,45 +61,6 @@ void ConfigManager::clearListener(ConfigEventListener *listener)
 {
   if (m_listener == listener)
     m_listener= nullptr;
-}
-
-void ConfigManager::setSSID(const char* newValue)
-{
-  strncpy(m_ssid, newValue, MAX_SSID_LENGTH);
-  if (m_bValidPrefs)
-    m_preferences.putString("ssid", m_ssid);  
-  if (m_listener != nullptr)
-    m_listener->onSSIDChanged();
-}
-
-void ConfigManager::setPassword(const char* newValue)
-{
-  strncpy(m_password, newValue, MAX_PASSWORD_LENGTH);
-  if (m_bValidPrefs)
-    m_preferences.putString("password", m_password);
-  if (m_listener != nullptr)
-    m_listener->onPasswordChanged();    
-}
-
-void ConfigManager::setIPAddress(const IPAddress& newValue)
-{
-  m_ip= newValue;
-  if (m_bValidPrefs)
-    m_preferences.putBytes("ip", &m_ip, sizeof(IPAddress));
-}
-
-void ConfigManager::setGateway(const IPAddress& newValue)
-{
-  m_gateway= newValue;
-  if (m_bValidPrefs)
-    m_preferences.putBytes("gateway", &m_gateway, sizeof(IPAddress));
-}
-
-void ConfigManager::setSubnet(const IPAddress& newValue)
-{
-  m_subnet= newValue;
-  if (m_bValidPrefs)
-    m_preferences.putBytes("subnet", &m_subnet, sizeof(IPAddress));
 }
 
 bool ConfigManager::getMotorCalibrationConfig(StepperMotorCalibration& outMotorConfig) const

@@ -194,7 +194,7 @@ float SliderState::remapFloatToFloat(
   float outMin, float outMax, 
   float inValue)
 {
-  float clampedValue= max(min(value, inMax), inMin);
+  float clampedValue= max(min(inValue, inMax), inMin);
   float u= (clampedValue - inMin) / (inMax - inMin);  
   float rempappedValue= ((1.f - u)*outMin + u*outMax);
 
@@ -204,17 +204,17 @@ float SliderState::remapFloatToFloat(
 int32_t SliderState::remapFloatToInt32(
   float floatMin, float floatMax, 
   int32_t intMin, int32_t intMax, 
-  float value)
+  float inValue)
 {
-  return (int32_t)remapFloatToFloat(floatMin, floatMax, (float)intMin, (float)intMax, value);
+  return (int32_t)remapFloatToFloat(floatMin, floatMax, (float)intMin, (float)intMax, inValue);
 }
 
 float SliderState::remapInt32ToFloat(
   int32_t intMin, int32_t intMax, 
   float floatMin, float floatMax, 
-  int32_t value)
+  int32_t inValue)
 {
-  return remapFloatToFloat((float)intMin, (float)intMax, floatMin, floatMax, (float)value);
+  return remapFloatToFloat((float)intMin, (float)intMax, floatMin, floatMax, (float)inValue);
 }
 
 uint32_t SliderState::motorAngleToSteps(float degrees) const
@@ -246,7 +246,7 @@ void SliderState::setPanStepperAngularAcceleration(float cameraAngAccelDegrees)
 
 float SliderState::getPanStepperAngularAcceleration()
 {  
-  float motorAccel= stepsToMotorAngle(m_panStepper->getAcceleration());
+  float motorAngAccelDegrees= stepsToMotorAngle(m_panStepper->getAcceleration());
   float cameraAngAccelDegrees= motorAngAccelDegrees / PAN_GEAR_RATIO;
 
   return cameraAngAccelDegrees;
@@ -271,7 +271,7 @@ void SliderState::setTiltStepperAngularAcceleration(float cameraAngAccelDegrees)
 
 float SliderState::getTiltStepperAngularAcceleration()
 {
-  float motorAccel= stepsToMotorAngle(m_tiltStepper->getAcceleration());
+  float motorAngAccelDegrees= stepsToMotorAngle(m_tiltStepper->getAcceleration());
   float cameraAngAccelDegrees= motorAngAccelDegrees / TILT_GEAR_RATIO;
 
   return cameraAngAccelDegrees;
@@ -376,7 +376,7 @@ void SliderState::setSlideStepperLinearSpeed(float cameraMMPerSecond)
   }
 }
 
-float SliderState::getSliderStepperLinearSpeed()
+float SliderState::getSlideStepperLinearSpeed()
 {
   const float speedInHz= (float)m_slideStepper->getSpeedInMilliHz() / 1000.f;
   const float turnDegreesPerSecond= stepsToMotorAngle(speedInHz);

@@ -164,9 +164,6 @@ void loop()
 
   // Update hall effect sensor state
   hallSensorManager.loop();
-
-  // Process bluetooth events
-  bleManager.loop();
   
   // Update UI
   app.loop();

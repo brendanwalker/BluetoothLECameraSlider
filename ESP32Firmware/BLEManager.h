@@ -8,10 +8,11 @@
 
 class BLECommandHandler
 {
+public:
   virtual void onCommand(const std::string& command) {}
-}
+};
 
-class BLEManager
+class BLEManager : public BLECharacteristicCallbacks 
 {
 public:
   BLEManager(ConfigManager* config);
@@ -31,8 +32,9 @@ private:
 
   ConfigManager* m_config= nullptr;
 
-  BLECharacteristic *makeFloatCharacteristic(const char* UUID, bool bWritable, float initialValue)
-  BLECharacteristic *makeUTF8Characteristic(const char* UUID, bool bWritable, const char* initialValue);
+  BLECharacteristic *makeFloatCharacteristic(const char* UUID, bool bWritable, float initialValue);
+  BLECharacteristic *makeUTF8Characteristic(const char* UUID, bool bWritable, bool bNotifyOnChange, const char* initialValue);
+  float readFloat(BLECharacteristic *pCharacteristic);
   void onRead(BLECharacteristic* pCharacteristic, esp_ble_gatts_cb_param_t* param) override;
   void onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_param_t* param) override;
 
