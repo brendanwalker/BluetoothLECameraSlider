@@ -3,6 +3,7 @@
 
 #include "AppStage.h"
 #include "SelectionMenu.h"
+#include "BLEManager.h"
 
 enum class eMenuMenuOptions : int
 {
@@ -17,7 +18,10 @@ enum class eMenuMenuOptions : int
   COUNT
 };
 
-class AppStage_MainMenu : public AppStage, public SelectionMenuListener
+class AppStage_MainMenu : 
+  public AppStage, 
+  public SelectionMenuListener,
+  public BLECommandHandler
 {
 public:
 	AppStage_MainMenu(class App* app);
@@ -28,8 +32,12 @@ public:
   virtual void exit() override;  
   virtual void render() override;
 
+  // SelectionMenuListener
   virtual void onOptionClicked(int optionIndex) override;
 
+  // BLECommandHandler
+  virtual void onCommand(const std::string& command) override;
+  
 	static const char* APP_STAGE_NAME;	
 
 private:

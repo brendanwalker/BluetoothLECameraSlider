@@ -148,7 +148,7 @@ void setup()
   // Then push on slider calibration state, if no saved calibration exists
   if (!sliderState.areSteppersCalibrated())
   {
-    sliderCalibration.setAutoExitOnComplete(true);
+    sliderCalibration.setAutoCalibration(true);
     app.pushAppStage(&sliderCalibration);  
   }
 }

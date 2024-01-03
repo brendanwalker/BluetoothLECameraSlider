@@ -38,7 +38,7 @@ public:
 
     static AppStage_SliderCalibration *getInstance() { return s_instance; }
 
-    void setAutoExitOnComplete(bool bFlag) { m_bAutoExitOnComplete= bFlag; }
+    void setAutoCalibration(bool bFlag) { m_bAutoCalibrate= bFlag; }
 
     virtual void enter() override;
     virtual void exit() override;
@@ -65,7 +65,7 @@ private:
 
     static AppStage_SliderCalibration *s_instance;
 
-    bool m_bAutoExitOnComplete= false;
+    bool m_bAutoCalibrate= false;
     SelectionMenu m_setupMenu;
     SelectionMenu m_completeMenu;
     SelectionMenu m_failedMenu;

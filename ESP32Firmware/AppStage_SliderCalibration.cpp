@@ -3,6 +3,7 @@
 #include "Arduino.h"
 #include "App.h"
 #include "AppStage_SliderCalibration.h"
+#include "BLEManager.h"
 #include "SliderManager.h"
 
 #include <Adafruit_SSD1306.h>
@@ -151,16 +152,6 @@ void AppStage_SliderCalibration::onOptionClicked(int optionIndex)
         {
         case eSliderReadyOptions::Start:
             {
-                auto* sliderState= SliderState::getInstance();
-
-                // Stop any slider motion
-                sliderState->stopAll();
-
-                // Set slider speed for calibration
-                sliderState->setPanStepperAngularSpeed(PAN_CALIBRATION_SPEED);
-                sliderState->setTiltStepperAngularSpeed(TILT_CALIBRATION_SPEED);
-                sliderState->setSlideStepperLinearSpeed(SLIDE_CALIBRATION_SPEED);
-
                 setState(eSliderCalibrationState::FindSlideMin);
             }
             break;
@@ -191,6 +182,11 @@ void AppStage_SliderCalibration::update(float deltaSeconds)
     switch (m_calibrationState)
     {
     case eSliderCalibrationState::Setup:
+        if (m_bAutoCalibrate)
+        {
+            Serial.println("Auto-starting slider calibration.");
+            nextState= eSliderCalibrationState::FindSlideMin;
+        }
         break;
     case eSliderCalibrationState::FindSlideMin:
     case eSliderCalibrationState::FindSlideMax:
@@ -259,9 +255,9 @@ void AppStage_SliderCalibration::update(float deltaSeconds)
         }
         break;
     case eSliderCalibrationState::Complete:
-        if (m_bAutoExitOnComplete)
+        if (m_bAutoCalibrate)
         {
-            m_bAutoExitOnComplete= false;
+            m_bAutoCalibrate= false;
             m_app->popAppState();
         }
         break;
@@ -349,21 +345,36 @@ void AppStage_SliderCalibration::setState(eSliderCalibrationState newState)
 
 void AppStage_SliderCalibration::onEnterState(eSliderCalibrationState newState)
 {
+    BLEManager* bleManager= BLEManager::getInstance();
     SliderState* sliderState= SliderState::getInstance();
 
     switch (m_calibrationState)
     {
     case eSliderCalibrationState::Setup:
         {
+            bleManager->sendEvent("calibration_started");
+
             m_activeMenu = &m_setupMenu;
+
+            // Stop any slider motion
+            sliderState->stopAll();
+
+            // Set slider speed for calibration
+            sliderState->setPanStepperAngularSpeed(PAN_CALIBRATION_SPEED);
+            sliderState->setTiltStepperAngularSpeed(TILT_CALIBRATION_SPEED);
+            sliderState->setSlideStepperLinearSpeed(SLIDE_CALIBRATION_SPEED);        
+
+            // Reset slider positions to defaults
             sliderState->getPanStepper()->setCurrentPosition(DEFAULT_INITIAL_PAN_POSITION);
             sliderState->getTiltStepper()->setCurrentPosition(DEFAULT_INITIAL_TILT_POSITION);
             sliderState->getSlideStepper()->setCurrentPosition(DEFAULT_INITIAL_SLIDE_POSITION);
         }
         break;
     case eSliderCalibrationState::FindSlideMin:
-        // Run backward until we hit the slider min hall effect sensor
-        m_moveState= sliderState->getSlideStepper()->moveTo(DEFAULT_INITIAL_SLIDE_POSITION + MAX_SLIDER_SEARCH_STEPS);
+        {
+            // Run backward until we hit the slider min hall effect sensor
+            m_moveState= sliderState->getSlideStepper()->moveTo(DEFAULT_INITIAL_SLIDE_POSITION + MAX_SLIDER_SEARCH_STEPS);
+        }
         break;
     case eSliderCalibrationState::FindSlideMax:
         // Run forward until we hit the slider min hall effect sensor
@@ -382,9 +393,11 @@ void AppStage_SliderCalibration::onEnterState(eSliderCalibrationState newState)
         }    
         break;
     case eSliderCalibrationState::Complete:
+        bleManager->sendEvent("calibration_completed");
         m_activeMenu = &m_completeMenu;
         break;
     case eSliderCalibrationState::Failed:
+        bleManager->sendEvent("calibration_failed");
         m_activeMenu = &m_failedMenu;
         break;
     default:

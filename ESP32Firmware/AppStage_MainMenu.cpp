@@ -2,7 +2,9 @@
 #include "AppStage_MainMenu.h"
 #include "AppStage_Monitor.h"
 #include "AppStage_SliderSettings.h"
+#include "AppStage_SliderCalibration.h"
 #include "BLEManager.h"
+#include "SliderManager.h"
 
 //-- statics ----
 const char* AppStage_MainMenu::APP_STAGE_NAME = "MainMenu";
@@ -20,11 +22,30 @@ AppStage_MainMenu::AppStage_MainMenu(App* app)
 { 
 }
 
+void AppStage_MainMenu::onCommand(const std::string& command)
+{
+  if (command == "calibrate")
+  {    
+    Serial.println("MainMenu: Received calibrate command");
+    m_app->pushAppStage(AppStage_SliderCalibration::getInstance());
+  }
+  else if (command == "stop")
+  {
+    Serial.println("MainMenu: Received stop command");
+    SliderState::getInstance()->stopAll();
+  }
+}
+
 void AppStage_MainMenu::enter()
 {
   Serial.println("Enter Main Menu");
 
   AppStage::enter();
+
+  BLEManager* bleManager= BLEManager::getInstance();
+  bleManager->setBLEControlEnabled(true);
+  bleManager->setCommandHandler(this);
+
   m_selectionMenu.setListener(this);
   m_selectionMenu.show();
 }
@@ -35,7 +56,9 @@ void AppStage_MainMenu::pause()
   Serial.println("Pause Main Menu");
 
   // Ignore commands from ArtNet when outside of the MainMenu
-  BLEManager::getInstance()->setBLEControlEnabled(false);
+  BLEManager* bleManager= BLEManager::getInstance();
+  bleManager->setBLEControlEnabled(false);
+  bleManager->clearCommandHandler(this);
   Serial.println("DISABLE ArtNet command processing");
 }
 
@@ -45,7 +68,9 @@ void AppStage_MainMenu::resume()
   Serial.println("Resume Main Menu");
 
   // Ignore commands from ArtNet when outside of the MainMenu
-  BLEManager::getInstance()->setBLEControlEnabled(true);
+  BLEManager* bleManager= BLEManager::getInstance();
+  bleManager->setBLEControlEnabled(true);
+  bleManager->setCommandHandler(this);
   Serial.println("ENABLE ArtNet command processing");
 }
 
