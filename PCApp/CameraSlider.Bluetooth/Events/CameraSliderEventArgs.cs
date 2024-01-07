@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace CameraSlider.Bluetooth.Events
 {
-    public class RateChangedEventArgs : EventArgs
+    public class CameraSliderEventArgs : EventArgs
     {
-        public int BeatsPerMinute { get; set; }
+        public string Message { get; set; }
     }
 }

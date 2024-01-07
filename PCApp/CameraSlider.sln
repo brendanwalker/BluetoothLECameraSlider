@@ -1,15 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30907.101
+# Visual Studio Version 17
+VisualStudioVersion = 17.6.33801.468
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CameraSlider.Bluetooth", "CameraSlider.Bluetooth\CameraSlider.Bluetooth.csproj", "{CE863405-A1F9-464D-AEED-E265C8244689}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CameraSlider.UI", "CameraSlider.UI\CameraSlider.UI.csproj", "{B585EF35-DC34-48CE-A070-0BB2095756D4}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamlabsEventReceiver", "StreamlabsEventReceiver\StreamlabsEventReceiver.csproj", "{36A5E478-70E9-481C-865E-897F3D909E2C}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SLOBSharp", "SLOBSharp\SLOBSharp.csproj", "{2F14AB96-4EDB-4D5C-A40C-9B407B871077}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OBSWebsocket", "OBSWebsocket\OBSWebsocket.csproj", "{947CA65C-AA3A-49A0-9D94-BB6E89A6D566}"
 EndProject
@@ -27,14 +23,6 @@ Global
 		{B585EF35-DC34-48CE-A070-0BB2095756D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B585EF35-DC34-48CE-A070-0BB2095756D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B585EF35-DC34-48CE-A070-0BB2095756D4}.Release|Any CPU.Build.0 = Release|Any CPU
-		{36A5E478-70E9-481C-865E-897F3D909E2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{36A5E478-70E9-481C-865E-897F3D909E2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{36A5E478-70E9-481C-865E-897F3D909E2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{36A5E478-70E9-481C-865E-897F3D909E2C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2F14AB96-4EDB-4D5C-A40C-9B407B871077}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2F14AB96-4EDB-4D5C-A40C-9B407B871077}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2F14AB96-4EDB-4D5C-A40C-9B407B871077}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2F14AB96-4EDB-4D5C-A40C-9B407B871077}.Release|Any CPU.Build.0 = Release|Any CPU
 		{947CA65C-AA3A-49A0-9D94-BB6E89A6D566}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{947CA65C-AA3A-49A0-9D94-BB6E89A6D566}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{947CA65C-AA3A-49A0-9D94-BB6E89A6D566}.Release|Any CPU.ActiveCfg = Release|Any CPU

@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:CameraSlider.UI"
         mc:Ignorable="d"
-        Title="DomeLights" Height="622" Width="585" HorizontalAlignment="Center" VerticalAlignment="Center" >
+        Title="CameraSlider" Height="622" Width="585" HorizontalAlignment="Center" VerticalAlignment="Center" >
     <Grid >
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="0*"/>
@@ -14,7 +14,7 @@
             <ColumnDefinition Width="11*"/>
             <ColumnDefinition Width="520*"/>
         </Grid.ColumnDefinitions>
-        <StackPanel x:Name="TopStackPanel" Margin="0,0,-155,0" RenderTransformOrigin="0.5,0.5" Grid.ColumnSpan="5">
+        <StackPanel x:Name="TopStackPanel" Margin="0,0,0,0" RenderTransformOrigin="0.5,0.5" Grid.ColumnSpan="5">
             <StackPanel.RenderTransform>
                 <TransformGroup>
                     <ScaleTransform/>
@@ -30,8 +30,8 @@
                         <Label x:Name="DeviceTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
-                        <Label Content="Streamlabs Websocket Status: " Width="175" HorizontalAlignment="Right"/>
-                        <Label x:Name="StreamlabsTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
+                        <Label Content="Twitch PubSub Status: " Width="175" HorizontalAlignment="Right"/>
+                        <Label x:Name="TwitchTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="OBS Studio Websocket Status: " Width="175" HorizontalAlignment="Right"/>
@@ -41,10 +41,18 @@
             </Border>
             <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1" Margin="10">
                 <StackPanel>
-                    <Label Content="Streamlabs Web API Settings" HorizontalAlignment="Center"/>
+                    <Label Content="Twitch Settings" HorizontalAlignment="Center"/>
                     <StackPanel Orientation="Horizontal">
-                        <Label Content="Streamlabs Socket Key"  Width="140" HorizontalAlignment="Left"/>
-                        <PasswordBox x:Name="StreamlabsSocketKeyInput" Width="400" HorizontalAlignment="Left" PasswordChanged="StreamlabsSocketKeyInput_PasswordChanged"/>
+                        <Label Content="Twitch Channel ID"  Width="140" HorizontalAlignment="Left"/>
+                        <TextBox x:Name="TwitchChannelIdInput" Width="400" HorizontalAlignment="Left" TextChanged="TwitchChannelIdInput_Changed"/>
+                    </StackPanel>                    
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="Twitch Client ID"  Width="140" HorizontalAlignment="Left"/>
+                        <TextBox x:Name="TwitchClientIdInput" Width="400" HorizontalAlignment="Left" TextChanged="TwitchClientIdInput_Changed"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="Twitch Secret"  Width="140" HorizontalAlignment="Left"/>
+                        <PasswordBox x:Name="TwitchSecretKeyInput" Width="400" HorizontalAlignment="Left" PasswordChanged="TwitchSecretInput_Changed"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Twitch Follow" Width="140" HorizontalAlignment="Left"/>
@@ -53,46 +61,6 @@
                         <TextBox x:Name="TwitchFollowCyclesInput" Width="50" HorizontalAlignment="Left" TextChanged="TwitchFollowCyclesInput_TextChanged" PreviewTextInput="NumericalInput_PreviewTextInput"/>
                         <Label Content="Smoke Time" Width="75" HorizontalAlignment="Right"/>
                         <TextBox x:Name="TwitchFollowSmokeInput" Width="50" HorizontalAlignment="Left" TextChanged="TwitchFollowSmokeInput_TextChanged" PreviewTextInput="NumericalInput_PreviewTextInput"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Twitch Subscription" Width="140" HorizontalAlignment="Left"/>
-                        <ComboBox x:Name="TwitchSubPattern" Width="140" SelectionChanged="TwitchSubPattern_SelectionChanged"/>
-                        <Label Content="Cycles" Width="50" HorizontalAlignment="Right"/>
-                        <TextBox x:Name="TwitchSubCyclesInput" Width="50" HorizontalAlignment="Left" TextChanged="TwitchSubCyclesInput_TextChanged" PreviewTextInput="NumericalInput_PreviewTextInput"/>
-                        <Label Content="Smoke Time" Width="75" HorizontalAlignment="Right"/>
-                        <TextBox x:Name="TwitchSubSmokeInput" Width="50" HorizontalAlignment="Left" TextChanged="TwitchSubSmokeInput_TextChanged" PreviewTextInput="NumericalInput_PreviewTextInput"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Twitch Mystery Sub" Width="140" HorizontalAlignment="Left"/>
-                        <ComboBox x:Name="TwitchMysterySubPattern" Width="140" SelectionChanged="TwitchMysterySubPattern_SelectionChanged"/>
-                        <Label Content="Cycles" Width="50" HorizontalAlignment="Right"/>
-                        <TextBox x:Name="TwitchMysterySubCyclesInput" Width="50" HorizontalAlignment="Left" TextChanged="TwitchMysterySubCyclesInput_TextChanged" PreviewTextInput="NumericalInput_PreviewTextInput"/>
-                        <Label Content="Smoke Time" Width="75" HorizontalAlignment="Right"/>
-                        <TextBox x:Name="TwitchMysterySubSmokeInput" Width="50" HorizontalAlignment="Left" TextChanged="TwitchMysterySubSmokeInput_TextChanged" PreviewTextInput="NumericalInput_PreviewTextInput"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Twitch Cheer" Width="140" HorizontalAlignment="Left"/>
-                        <ComboBox x:Name="TwitchCheerPattern" Width="140" SelectionChanged="TwitchCheerPattern_SelectionChanged"/>
-                        <Label Content="Cycles" Width="50" HorizontalAlignment="Right"/>
-                        <TextBox x:Name="TwitchCheerCyclesInput" Width="50" HorizontalAlignment="Left" TextChanged="TwitchCheerCyclesInput_TextChanged" PreviewTextInput="NumericalInput_PreviewTextInput"/>
-                        <Label Content="Smoke Time" Width="75" HorizontalAlignment="Right"/>
-                        <TextBox x:Name="TwitchCheerSmokeInput" Width="50" HorizontalAlignment="Left" TextChanged="TwitchCheerSmokeInput_TextChanged" PreviewTextInput="NumericalInput_PreviewTextInput"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Twitch Host" Width="140" HorizontalAlignment="Right"/>
-                        <ComboBox x:Name="TwitchHostPattern" Width="140" SelectionChanged="TwitchHostPattern_SelectionChanged"/>
-                        <Label Content="Cycles" Width="50" HorizontalAlignment="Left"/>
-                        <TextBox x:Name="TwitchHostCyclesInput" Width="50" HorizontalAlignment="Left" TextChanged="TwitchHostCyclesInput_TextChanged" PreviewTextInput="NumericalInput_PreviewTextInput"/>
-                        <Label Content="Smoke Time" Width="75" HorizontalAlignment="Right"/>
-                        <TextBox x:Name="TwitchHostSmokeInput" Width="50" HorizontalAlignment="Left" TextChanged="TwitchHostSmokeInput_TextChanged" PreviewTextInput="NumericalInput_PreviewTextInput"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Twitch Raid" Width="140" HorizontalAlignment="Left"/>
-                        <ComboBox x:Name="TwitchRaidPattern" Width="140" SelectionChanged="TwitchRaidPattern_SelectionChanged"/>
-                        <Label Content="Cycles" Width="50" HorizontalAlignment="Right"/>
-                        <TextBox x:Name="TwitchRaidCyclesInput" Width="50" HorizontalAlignment="Left" TextChanged="TwitchRaidCyclesInput_TextChanged" PreviewTextInput="NumericalInput_PreviewTextInput"/>
-                        <Label Content="Smoke Time" Width="75" HorizontalAlignment="Right"/>
-                        <TextBox x:Name="TwitchRaidSmokeInput" Width="50" HorizontalAlignment="Left" TextChanged="TwitchRaidSmokeInput_TextChanged" PreviewTextInput="NumericalInput_PreviewTextInput"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -112,7 +80,7 @@
                 <StackPanel>
                     <Label Content="Test Camera Pose" HorizontalAlignment="Center" Width="101"/>
                     <StackPanel Orientation="Horizontal">
-                        <Button x:Name="BtnRainbowCycle" Content="Goto Camera" IsEnabled="False" HorizontalAlignment="Right" VerticalAlignment="Stretch" Width="100" Margin="10,0,10,10" Click="RainbowCycle_Click"/>
+                        <Button x:Name="BtnGotoCamera" Content="Goto Camera" IsEnabled="False" HorizontalAlignment="Right" VerticalAlignment="Stretch" Width="100" Margin="10,0,10,10" Click="BtnGotoCamera_Click"/>
                         <ComboBox x:Name="comboBox" Width="210" Height="26"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal"  HorizontalAlignment="Center"/>

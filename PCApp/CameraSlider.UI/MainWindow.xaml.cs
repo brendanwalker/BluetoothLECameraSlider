@@ -1,57 +1,28 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using CameraSlider.UI;
 using System.Diagnostics;
 using CameraSlider.Bluetooth.Events;
 using System.ComponentModel;
 using Color = System.Drawing.Color;
-using StreamlabsEventReceiver;
-using SLOBSharp.Client;
-using SLOBSharp.Client.Requests;
 using CameraSlider.Bluetooth;
 using CameraSlider.Bluetooth.Schema;
-using System.Collections.ObjectModel;
 using System.Threading;
 using System.Configuration;
 using System.Text.RegularExpressions;
 using OBSWebsocketDotNet;
+using TwitchLib.PubSub;
+using TwitchLib.Api.Interfaces;
+using TwitchLib.Api;
+using TwitchLib.PubSub.Events;
+using System.Collections.Generic;
+using TwitchLib.Api.Core.Enums;
+using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
 
 namespace CameraSlider.UI
 {
-    public class SlobsConfigSection : ConfigurationSection
-    {
-        public SlobsConfigSection()
-        {
-            PatternSceneName = "Main";
-            PatternSceneDuration = 3000;
-        }
-
-        [ConfigurationProperty("pattern_scene_name")]
-        public string PatternSceneName
-        {
-            get { return (string)this["pattern_scene_name"]; }
-            set { this["pattern_scene_name"] = value; }
-        }
-
-        [ConfigurationProperty("pattern_scene_duration")]
-        public int PatternSceneDuration
-        {
-            get { return (int)this["pattern_scene_duration"]; }
-            set { this["pattern_scene_duration"] = value; }
-        }
-    }
-
     public class ObsConfigSection : ConfigurationSection
     {
         public ObsConfigSection()
@@ -91,6 +62,38 @@ namespace CameraSlider.UI
         }
     }
 
+    public class TwitchWebAPISection : ConfigurationSection
+    {
+      public TwitchWebAPISection()
+      {
+        ChannelID = "";
+        ClientID = "";
+        Secret = "";
+      }
+
+      [ConfigurationProperty("channel_id")]
+      public string ChannelID
+      {
+        get { return (string)this["channel_id"]; }
+        set { this["channel_id"] = value; }
+      }
+
+    [ConfigurationProperty("client_id")]
+      public string ClientID
+      {
+        get { return (string)this["client_id"]; }
+        set { this["client_id"] = value; }
+      }
+
+      [ConfigurationProperty("secret")]
+      public string Secret
+      {
+        get { return (string)this["secret"]; }
+        set { this["secret"] = value; }
+      }
+  }
+
+  /*
     public class StreamlabsWebAPISection : ConfigurationSection
     {
         public StreamlabsWebAPISection()
@@ -251,29 +254,26 @@ namespace CameraSlider.UI
             set { this["twitch_raid_smoke_time"] = value; }
         }
     }
-
+  */
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window
     {
-        private static string SLOBS_ERROR_RESULT= "<ERROR>";
-
         private Configuration _configFile;
-        private SlobsConfigSection _slobsConfig;
-        private StreamlabsWebAPISection _streamlabsWebApiConfig;
+        private TwitchWebAPISection _twitchWebApiConfig;
         private ObsConfigSection _obsConfig;
 
         private string _selectedDeviceId = "";
-        private CameraSlider.Bluetooth.DomeLightsDeviceWatcher _pairedWatcher;
+        private CameraSlider.Bluetooth.CameraSliderDeviceWatcher _pairedWatcher;
         private bool _deviceReconnectionPending = false;
-        private DomeLightsDevice _domeLightsDevice;
+        private CameraSliderDevice _cameraSliderDevice;
 
-        private bool _streamlabsReconnectionPending = false;
-        private StreamlabsEventClient _streamlabsEventClient;
+        private bool _twitchIsConnected = false;
+        private bool _twitchReconnectionPending = false;
+        private ITwitchAPI _twitchAPI;
+        private TwitchPubSub _twitchPubsubClient;
         
-        private SlobsClient _slobsClient;
-
         private bool _obsReconnectionPending = false;
         private OBSWebsocket _obsClient;
 
@@ -281,7 +281,7 @@ namespace CameraSlider.UI
         private static int _keepAliveDelay = 10;
         private int _keepAliveCountdown = _keepAliveDelay;
 
-        private Timer _streamlabsWatchdogTimer = null;
+        private Timer _twitchWatchdogTimer = null;
 
         private Timer _obsWatchdogTimer = null;
 
@@ -290,58 +290,48 @@ namespace CameraSlider.UI
             InitializeComponent();
 
             _selectedDeviceId = "";
-            _pairedWatcher = new CameraSlider.Bluetooth.DomeLightsDeviceWatcher(DeviceSelector.BluetoothLePairedOnly);
+            _pairedWatcher = new CameraSlider.Bluetooth.CameraSliderDeviceWatcher(DeviceSelector.BluetoothLePairedOnly);
             _pairedWatcher.DeviceAdded += OnPaired_DeviceAdded;
             _pairedWatcher.DeviceRemoved += OnPaired_DeviceRemoved;
             _pairedWatcher.Start();
 
-            // Register to Streamlabs OBS named pipe so that we can remote control SLOBS
-            // Constructor takes the name of the pipe (default constructor uses the pipe name "slobs")
-            _slobsClient = new SlobsPipeClient("slobs");
-
-            // Register to Streamlabs WebSocket API to get multiplatform stream events (subs, bits, etc)
-            _streamlabsEventClient = new StreamlabsEventClient();
-            _streamlabsEventClient.StreamlabsSocketConnected += OnStreamlabsConnected;
-            _streamlabsEventClient.StreamlabsSocketConnectFailed += OnStreamlabsConnectFailed;
-            _streamlabsEventClient.StreamlabsSocketDisconnected += OnStreamlabsDisconnected;
-            _streamlabsEventClient.StreamlabsSocketEvent += OnStreamlabsEvent;
+            // Registern Twitch API and PubSub to get Twitch specific events (channel point redeems)
+            _twitchAPI = new TwitchAPI();
+            _twitchPubsubClient = new TwitchPubSub();
+            _twitchPubsubClient.OnPubSubServiceConnected += OnTwitchPubsubConnected;
+            _twitchPubsubClient.OnPubSubServiceClosed += OnTwitchPubsubClosed;
+            _twitchPubsubClient.OnPubSubServiceError += OnTwitchPubsubError;
 
             _obsClient = new OBSWebsocket();
             _obsClient.Connected += OnObsConnected;
             _obsClient.OBSExit += OnObsExited;
             _obsClient.Disconnected += OnObsDisconnected;
 
-            // Register to Bluetooth LE Domelights Device Manager
-            _domeLightsDevice = new DomeLightsDevice();
-            _domeLightsDevice.ConnectionStatusChanged += DLDeviceOnDeviceConnectionStatusChanged;
-            _domeLightsDevice.UARTMessageHandler += UARTMessageReceived;
+            // Register to Bluetooth LE Camera Slider Device Manager
+            _cameraSliderDevice = new CameraSliderDevice();
+            _cameraSliderDevice.ConnectionStatusChanged += DLDeviceOnDeviceConnectionStatusChanged;
+            _cameraSliderDevice.CameraSliderEventHandler += CameraSliderEventReceived;
 
             // Load the config file and update the UI based on safed settings
             LoadConfig();
             ApplyConfigToUI();
 
             // Timer use to maintain connection to device
-            _deviceWatchdogTimer = new Timer(DeviceWatchdogCallback, null, 0, 1000);
+            _deviceWatchdogTimer = new Timer(DeviceWatchdogCallback, null, 0, 1000);            
+            _twitchWatchdogTimer = new Timer(TwitchWatchdogCallback, null, 0, 1000);
             _obsWatchdogTimer = new Timer(ObsStudioWatchdogCallback, null, 0, 1000);
         }
 
-        protected void LoadConfig()
+    protected void LoadConfig()
         {
             // Open App.Config of executable
             _configFile = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
 
-            _slobsConfig = (SlobsConfigSection)_configFile.GetSection("slobs_settings");
-            if (_slobsConfig == null)
+            _twitchWebApiConfig = (TwitchWebAPISection)_configFile.GetSection("twitch_webapi_settings");
+            if (_twitchWebApiConfig == null)
             {
-                _slobsConfig = new SlobsConfigSection();
-                _configFile.Sections.Add("slobs_settings", _slobsConfig);
-            }
-
-            _streamlabsWebApiConfig = (StreamlabsWebAPISection)_configFile.GetSection("streamlabs_webapi_settings");
-            if (_streamlabsWebApiConfig == null)
-            {
-                _streamlabsWebApiConfig = new StreamlabsWebAPISection();
-                _configFile.Sections.Add("streamlabs_webapi_settings", _streamlabsWebApiConfig);
+                _twitchWebApiConfig = new TwitchWebAPISection();
+                _configFile.Sections.Add("twitch_webapi_settings", _twitchWebApiConfig);
             }
 
             _obsConfig = (ObsConfigSection)_configFile.GetSection("obs_socket_settings");
@@ -356,33 +346,34 @@ namespace CameraSlider.UI
 
         protected void ApplyConfigToUI()
         {
-            string[] Patterns = Enum.GetNames(typeof(DomeLightsDevice.Pattern));
-            TwitchCheerPattern.ItemsSource = Patterns;
-            TwitchFollowPattern.ItemsSource = Patterns;
-            TwitchHostPattern.ItemsSource = Patterns;
-            TwitchMysterySubPattern.ItemsSource = Patterns;
-            TwitchSubPattern.ItemsSource = Patterns;
-            TwitchRaidPattern.ItemsSource = Patterns;
+            //string[] Patterns = new string[] { }; //Enum.GetNames(typeof(CameraSliderDevice.Pattern));
+            //TwitchCheerPattern.ItemsSource = Patterns;
+            //TwitchFollowPattern.ItemsSource = Patterns;
+            //TwitchHostPattern.ItemsSource = Patterns;
+            //TwitchMysterySubPattern.ItemsSource = Patterns;
+            //TwitchSubPattern.ItemsSource = Patterns;
+            //TwitchRaidPattern.ItemsSource = Patterns;
 
-            StreamlabsSocketKeyInput.Password = _streamlabsWebApiConfig.StreamlabsSocketToken;
-            SetPatternComboBox(TwitchCheerPattern, _streamlabsWebApiConfig.TwitchCheerPattern);
-            SetPatternComboBox(TwitchFollowPattern, _streamlabsWebApiConfig.TwitchFollowPattern);
-            SetPatternComboBox(TwitchHostPattern, _streamlabsWebApiConfig.TwitchHostPattern);
-            SetPatternComboBox(TwitchMysterySubPattern, _streamlabsWebApiConfig.TwitchMysterySubPattern);
-            SetPatternComboBox(TwitchSubPattern, _streamlabsWebApiConfig.TwitchSubPattern);
-            SetPatternComboBox(TwitchRaidPattern, _streamlabsWebApiConfig.TwitchRaidPattern);
-            TwitchCheerCyclesInput.Text= _streamlabsWebApiConfig.TwitchCheerPatternCycles.ToString();
-            TwitchFollowCyclesInput.Text= _streamlabsWebApiConfig.TwitchFollowPatternCycles.ToString();
-            TwitchHostCyclesInput.Text= _streamlabsWebApiConfig.TwitchHostPatternCycles.ToString();
-            TwitchMysterySubCyclesInput.Text= _streamlabsWebApiConfig.TwitchMysterySubPatternCycles.ToString();
-            TwitchSubCyclesInput.Text= _streamlabsWebApiConfig.TwitchSubPatternCycles.ToString();
-            TwitchRaidCyclesInput.Text= _streamlabsWebApiConfig.TwitchRaidPatternCycles.ToString();
-            TwitchCheerSmokeInput.Text = _streamlabsWebApiConfig.TwitchCheerSmokeTime.ToString();
-            TwitchFollowSmokeInput.Text = _streamlabsWebApiConfig.TwitchFollowSmokeTime.ToString();
-            TwitchHostSmokeInput.Text = _streamlabsWebApiConfig.TwitchHostSmokeTime.ToString();
-            TwitchMysterySubSmokeInput.Text = _streamlabsWebApiConfig.TwitchMysterySubSmokeTime.ToString();
-            TwitchSubSmokeInput.Text = _streamlabsWebApiConfig.TwitchSubSmokeTime.ToString();
-            TwitchRaidSmokeInput.Text = _streamlabsWebApiConfig.TwitchRaidSmokeTime.ToString();
+            TwitchClientIdInput.Text = _twitchWebApiConfig.ClientID;
+            TwitchSecretKeyInput.Password = _twitchWebApiConfig.Secret;
+            //SetPatternComboBox(TwitchCheerPattern, _streamlabsWebApiConfig.TwitchCheerPattern);
+            //SetPatternComboBox(TwitchFollowPattern, _streamlabsWebApiConfig.TwitchFollowPattern);
+            //SetPatternComboBox(TwitchHostPattern, _streamlabsWebApiConfig.TwitchHostPattern);
+            //SetPatternComboBox(TwitchMysterySubPattern, _streamlabsWebApiConfig.TwitchMysterySubPattern);
+            //SetPatternComboBox(TwitchSubPattern, _streamlabsWebApiConfig.TwitchSubPattern);
+            //SetPatternComboBox(TwitchRaidPattern, _streamlabsWebApiConfig.TwitchRaidPattern);
+            //TwitchCheerCyclesInput.Text= _streamlabsWebApiConfig.TwitchCheerPatternCycles.ToString();
+            //TwitchFollowCyclesInput.Text= _streamlabsWebApiConfig.TwitchFollowPatternCycles.ToString();
+            //TwitchHostCyclesInput.Text= _streamlabsWebApiConfig.TwitchHostPatternCycles.ToString();
+            //TwitchMysterySubCyclesInput.Text= _streamlabsWebApiConfig.TwitchMysterySubPatternCycles.ToString();
+            //TwitchSubCyclesInput.Text= _streamlabsWebApiConfig.TwitchSubPatternCycles.ToString();
+            //TwitchRaidCyclesInput.Text= _streamlabsWebApiConfig.TwitchRaidPatternCycles.ToString();
+            //TwitchCheerSmokeInput.Text = _streamlabsWebApiConfig.TwitchCheerSmokeTime.ToString();
+            //TwitchFollowSmokeInput.Text = _streamlabsWebApiConfig.TwitchFollowSmokeTime.ToString();
+            //TwitchHostSmokeInput.Text = _streamlabsWebApiConfig.TwitchHostSmokeTime.ToString();
+            //TwitchMysterySubSmokeInput.Text = _streamlabsWebApiConfig.TwitchMysterySubSmokeTime.ToString();
+            //TwitchSubSmokeInput.Text = _streamlabsWebApiConfig.TwitchSubSmokeTime.ToString();
+            //TwitchRaidSmokeInput.Text = _streamlabsWebApiConfig.TwitchRaidSmokeTime.ToString();
 
             SocketAddressInput.Text = _obsConfig.SocketAddress;
             SocketPasswordInput.Password = _obsConfig.Password;
@@ -409,9 +400,9 @@ namespace CameraSlider.UI
 
             _pairedWatcher.Stop();
 
-            if (_domeLightsDevice.IsConnected)
+            if (_cameraSliderDevice.IsConnected)
             {
-                await _domeLightsDevice.DisconnectAsync();
+                await _cameraSliderDevice.DisconnectAsync();
             }
         }
 
@@ -419,7 +410,7 @@ namespace CameraSlider.UI
         {
             Debug.WriteLine("Paired Device Added: " + e.Device.Id);
 
-            if (e.Device.Name == "DomeLights" && _selectedDeviceId == "")
+            if (e.Device.Name == "Camera Slider" && _selectedDeviceId == "")
             {
                 _selectedDeviceId = e.Device.Id;
             }
@@ -438,22 +429,22 @@ namespace CameraSlider.UI
         private async void DeviceWatchdogCallback(Object context)
         {
             // Ping a connected device regularly to keep it awake
-            if (_domeLightsDevice.IsConnected)
+            if (_cameraSliderDevice.IsConnected)
             {
                 _keepAliveCountdown--;
                 if (_keepAliveCountdown <= 0)
                 {
-                    await _domeLightsDevice.WakeUp();
+                    await _cameraSliderDevice.WakeUp();
                     _keepAliveCountdown = _keepAliveDelay;
                 }
             }
             // Attempt to kick off an async device reconnection
-            else if (_selectedDeviceId != "" && !_deviceReconnectionPending && !_domeLightsDevice.IsConnected)
+            else if (_selectedDeviceId != "" && !_deviceReconnectionPending && !_cameraSliderDevice.IsConnected)
             {
                 _deviceReconnectionPending = true;
                 try
                 {
-                    await _domeLightsDevice.ConnectAsync(_selectedDeviceId);
+                    await _cameraSliderDevice.ConnectAsync(_selectedDeviceId);
                 }
                 catch (Exception ex)
                 {
@@ -495,7 +486,7 @@ namespace CameraSlider.UI
             }
         }
 
-        private async void UARTMessageReceived(object sender, UARTMessageEventArgs arg)
+        private async void CameraSliderEventReceived(object sender, CameraSliderEventArgs arg)
         {
             await RunOnUiThread(() =>
             {
@@ -512,7 +503,6 @@ namespace CameraSlider.UI
                 bool connected = args.IsConnected;
                 if (connected)
                 {
-                    var device = await _domeLightsDevice.GetDeviceInfoAsync();
                     DeviceTxtStatus.Content = "Connected";
                 }
                 else
@@ -520,169 +510,135 @@ namespace CameraSlider.UI
                     DeviceTxtStatus.Content = "Searching...";
                 }
 
-                BtnRainbowCycle.IsEnabled = connected;
+                BtnGotoCamera.IsEnabled = connected;
             });
         }
 
-        protected async Task<Dictionary<string, string>> GetSlobsSceneNameToIdTable()
+    private async void TwitchWatchdogCallback(Object context)
+    {
+      // Attempt reconnection to stream labs
+      if (_twitchWebApiConfig.ChannelID != "" && 
+          _twitchWebApiConfig.ClientID != "" &&
+          _twitchWebApiConfig.Secret != "" &&
+          !_twitchReconnectionPending && 
+          !_twitchIsConnected)
+      {
+        await RunOnUiThread(() =>
         {
-            try
-            {
-                var nameToIdTable = new Dictionary<string, string>();
-                var slobsRequest = SlobsRequestBuilder.NewRequest().SetMethod("getScenes").SetResource("ScenesService").BuildRequest();
-                var slobsRpcResponse = await _slobsClient.ExecuteRequestAsync(slobsRequest).ConfigureAwait(false);
+          TwitchTxtStatus.Content = "Connecting...";
+        });
 
-                foreach (var result in slobsRpcResponse.Result)
-                {
-                    nameToIdTable.Add(result.Name, result.Id);
-                }
 
-                return nameToIdTable;
-            }
-            catch (System.InvalidOperationException)
-            {
-                return null;
-            }
-        }
+        _twitchReconnectionPending = true;
+        _twitchAPI.Settings.ClientId = _twitchWebApiConfig.ClientID;
+        _twitchAPI.Settings.Secret = _twitchWebApiConfig.Secret;
+        _twitchPubsubClient.ListenToChannelPoints(_twitchWebApiConfig.ChannelID);
+        _twitchPubsubClient.OnChannelPointsRewardRedeemed += OnChannelPointsRewardRedeemed;
+        _twitchPubsubClient.Connect();
+      }
+    }
 
-        protected async Task<string> GetSlobsSceneName()
+    private void OnChannelPointsRewardRedeemed(object sender, OnChannelPointsRewardRedeemedArgs e)
+    {
+      var redemption = e.RewardRedeemed.Redemption;
+      var reward = e.RewardRedeemed.Redemption.Reward;
+      var redeemedUser = e.RewardRedeemed.Redemption.User;
+      string rewardId= reward.Id;
+
+      //if (redemption.Status == "UNFULFILLED")
+      //{
+
+      //  d($"{redeemedUser.DisplayName} redeemed: {reward.Title}");
+      //  await TwitchLib.API.Helix.ChannelPoints.UpdateRedemptionStatusAsync(e.ChannelId, reward.Id,
+      //      new List<string>() { e.RewardRedeemed.Redemption.Id }, new UpdateCustomRewardRedemptionStatusRequest() { Status = CustomRewardRedemptionStatus.CANCELED });
+      //}
+
+      //if (redemption.Status == "FULFILLED")
+      //{
+      //  d($"Reward from {redeemedUser.DisplayName} ({reward.Title}) has been marked as complete");
+      //}
+      //TODO Trigger a camera scene based on the redeem
+    }
+
+    private async void OnTwitchPubsubError(object sender, OnPubSubServiceErrorArgs e)
+    {
+      if (_twitchReconnectionPending)
+      {
+        await RunOnUiThread(() =>
         {
-            try
-            {
-                var slobsRequest = SlobsRequestBuilder.NewRequest().SetMethod("activeScene").SetResource("ScenesService").BuildRequest();
-                var slobsRpcResponse = await _slobsClient.ExecuteRequestAsync(slobsRequest).ConfigureAwait(false);
+          d("Twitch PubSub failed to connect");
+          TwitchTxtStatus.Content = "Disconnected";
+        });
 
-                return slobsRpcResponse.Result.FirstOrDefault().Name;
-            }
-            catch (System.InvalidOperationException)
-            {
-                return SLOBS_ERROR_RESULT;
-            }
-        }
+        _twitchReconnectionPending = false;
+      }
+    }
 
-        protected async Task<bool> SetSlobsSceneByName(string SceneName)
-        {
-            Dictionary<string, string> nameToIdTable= await GetSlobsSceneNameToIdTable();
-            if (nameToIdTable == null)
-            {
-                return false;
-            }
+    private async void OnTwitchPubsubClosed(object sender, EventArgs e)
+    {
+      await RunOnUiThread(() =>
+      {
+        d("Twitch PubSub disconnected");
+        TwitchTxtStatus.Content = "Disconnected";
+      });
 
-            string SceneId;
-            if (!nameToIdTable.TryGetValue(SceneName, out SceneId))
-            {
-                return false;
-            }
+      _twitchIsConnected = true;
+      _twitchReconnectionPending = false;
+    }
 
-            try
-            {
-                var slobsRequest = SlobsRequestBuilder.NewRequest().AddArgs(SceneId).SetMethod("makeSceneActive").SetResource("ScenesService").BuildRequest();
-                var slobsRpcResponse = await _slobsClient.ExecuteRequestAsync(slobsRequest).ConfigureAwait(false);
+    private async void OnTwitchPubsubConnected(object sender, EventArgs e)
+    {
+      await RunOnUiThread(() =>
+      {
+        d("Twitch PubSub connected");
+        TwitchTxtStatus.Content = "Connected";
+      });
 
-                return true;
-            }
-            catch (System.InvalidOperationException)
-            {
-                return false;
-            }
-        }
+      _twitchIsConnected = true;
+    }
 
-        protected async Task SetSlobsSceneForDuration(string NewSceneName, int Milliseconds)
-        {
-            if (NewSceneName != "")
-            {
-                string OrigSceneName = await GetSlobsSceneName();
-                if (OrigSceneName != NewSceneName)
-                {
-                    bool bSuccess= await SetSlobsSceneByName(NewSceneName);
-                    if (bSuccess)
-                    {
-                        await Task.Delay(Milliseconds);
-                        await SetSlobsSceneByName(OrigSceneName);
-                    }
-                }
-            }
-        }
-
-        protected async void OnStreamlabsConnected(object sender, EventArgs e)
-        {
-            await RunOnUiThread(() =>
-            {
-                d("Streamlabs connected");
-                StreamlabsTxtStatus.Content = "Connected";
-            });
-        }
-        
-        protected async void OnStreamlabsConnectFailed(object sender, EventArgs e)
-        {
-            await RunOnUiThread(() =>
-            {
-                d("Streamlabs failed to connect");
-                StreamlabsTxtStatus.Content = "Disconnected";
-            });
-
-            _streamlabsReconnectionPending = false;
-        }
-
-        protected async void OnStreamlabsDisconnected(object sender, EventArgs e)
-        {
-            await RunOnUiThread(() =>
-            {
-                d("Streamlabs disconnected");
-                StreamlabsTxtStatus.Content = "Disconnected";
-            });
-
-            _streamlabsReconnectionPending = false;
-        }
-
-        protected async void OnStreamlabsEvent(object sender, StreamlabsEventArgs e)
-        {
-            if (e.Data is StreamlabsEvent<TwitchFollow>)
-            {
-                await EmitSmoke(_streamlabsWebApiConfig.TwitchFollowSmokeTime);
-                await PlayPattern(
-                    _streamlabsWebApiConfig.TwitchFollowPattern, 
-                    _streamlabsWebApiConfig.TwitchFollowPatternCycles);
-            }
-            else if (e.Data is StreamlabsEvent<TwitchMysterySubscription>)
-            {
-                await EmitSmoke(_streamlabsWebApiConfig.TwitchMysterySubSmokeTime);
-                await PlayPattern(
-                    _streamlabsWebApiConfig.TwitchMysterySubPattern, 
-                    _streamlabsWebApiConfig.TwitchMysterySubPatternCycles);
-            }
-            else if (e.Data is StreamlabsEvent<TwitchSubscription>)
-            {
-                await EmitSmoke(_streamlabsWebApiConfig.TwitchSubSmokeTime);
-                await PlayPattern(
-                    _streamlabsWebApiConfig.TwitchSubPattern,
-                    _streamlabsWebApiConfig.TwitchSubPatternCycles);
-            }
-            else if (e.Data is StreamlabsEvent<TwitchCheer>)
-            {
-                await EmitSmoke(_streamlabsWebApiConfig.TwitchCheerSmokeTime);
-                await PlayPattern(
-                    _streamlabsWebApiConfig.TwitchCheerPattern,
-                    _streamlabsWebApiConfig.TwitchCheerPatternCycles);
-            }
-            else if (e.Data is StreamlabsEvent<TwitchHost>)
-            {
-                await EmitSmoke(_streamlabsWebApiConfig.TwitchHostSmokeTime);
-                await PlayPattern(
-                    _streamlabsWebApiConfig.TwitchHostPattern,
-                    _streamlabsWebApiConfig.TwitchHostPatternCycles);
-            }
-            else if (e.Data is StreamlabsEvent<TwitchRaid>)
-            {
-                await EmitSmoke(_streamlabsWebApiConfig.TwitchRaidSmokeTime);
-                await PlayPattern(
-                    _streamlabsWebApiConfig.TwitchRaidPattern,
-                    _streamlabsWebApiConfig.TwitchRaidPatternCycles);
-            }
-        }
+    //protected async void OnStreamlabsEvent(object sender, StreamlabsEventArgs e)
+    //{
+    //    if (e.Data is StreamlabsEvent<TwitchFollow>)
+    //    {
+    //        //await PlayPattern(
+    //        //    _streamlabsWebApiConfig.TwitchFollowPattern, 
+    //        //    _streamlabsWebApiConfig.TwitchFollowPatternCycles);
+    //    }
+    //    else if (e.Data is StreamlabsEvent<TwitchMysterySubscription>)
+    //    {
+    //        //await PlayPattern(
+    //        //    _streamlabsWebApiConfig.TwitchMysterySubPattern, 
+    //        //    _streamlabsWebApiConfig.TwitchMysterySubPatternCycles);
+    //    }
+    //    else if (e.Data is StreamlabsEvent<TwitchSubscription>)
+    //    {
+    //        //await PlayPattern(
+    //        //    _streamlabsWebApiConfig.TwitchSubPattern,
+    //        //    _streamlabsWebApiConfig.TwitchSubPatternCycles);
+    //    }
+    //    else if (e.Data is StreamlabsEvent<TwitchCheer>)
+    //    {
+    //        //await PlayPattern(
+    //        //    _streamlabsWebApiConfig.TwitchCheerPattern,
+    //        //    _streamlabsWebApiConfig.TwitchCheerPatternCycles);
+    //    }
+    //    else if (e.Data is StreamlabsEvent<TwitchHost>)
+    //    {
+    //        //await PlayPattern(
+    //        //    _streamlabsWebApiConfig.TwitchHostPattern,
+    //        //    _streamlabsWebApiConfig.TwitchHostPatternCycles);
+    //    }
+    //    else if (e.Data is StreamlabsEvent<TwitchRaid>)
+    //    {
+    //        //await PlayPattern(
+    //        //    _streamlabsWebApiConfig.TwitchRaidPattern,
+    //        //    _streamlabsWebApiConfig.TwitchRaidPatternCycles);
+    //    }
+    //}
 
 
-        protected string GetObsSceneName()
+    protected string GetObsSceneName()
         {
             if (_obsClient == null || !_obsClient.IsConnected)
                 return "";
@@ -767,30 +723,30 @@ namespace CameraSlider.UI
             _obsReconnectionPending = false;
         }
 
-        private async void BtnStart_Click(object sender, RoutedEventArgs e)
-        {
-            d("Button START clicked.");
-            //await _domeLightsMonitor.EnableNotificationsAsync();
-            d("Notification enabled");
-        }
+        //private async void BtnStart_Click(object sender, RoutedEventArgs e)
+        //{
+        //    d("Button START clicked.");
+        //    //await _domeLightsMonitor.EnableNotificationsAsync();
+        //    d("Notification enabled");
+        //}
 
-        private async void BtnStop_Click(object sender, RoutedEventArgs e)
-        {
-            d("Button STOP clicked.");
-            //await _domeLightsMonitor.DisableNotificationsAsync();
-            d("Notification disabled.");
-        }
+        //private async void BtnStop_Click(object sender, RoutedEventArgs e)
+        //{
+        //    d("Button STOP clicked.");
+        //    //await _domeLightsMonitor.DisableNotificationsAsync();
+        //    d("Notification disabled.");
+        //}
 
-        private async void BtnReadInfo_Click(object sender, RoutedEventArgs e)
-        {
-            var deviceInfo = await _domeLightsDevice.GetDeviceInfoAsync();
+        //private async void BtnReadInfo_Click(object sender, RoutedEventArgs e)
+        //{
+        //    var deviceInfo = await _cameraSliderDevice.GetDeviceInfoAsync();
 
-            d($" Manufacturer : {deviceInfo.Manufacturer}"); d("");
-            d($"    Model : {deviceInfo.ModelNumber}"); d("");
-            d($"      S/N : {deviceInfo.SerialNumber}"); d("");
-            d($" Firmware : {deviceInfo.Firmware}"); d("");
-            d($" Hardware : {deviceInfo.Hardware}"); d("");
-        }
+        //    d($" Manufacturer : {deviceInfo.Manufacturer}"); d("");
+        //    d($"    Model : {deviceInfo.ModelNumber}"); d("");
+        //    d($"      S/N : {deviceInfo.SerialNumber}"); d("");
+        //    d($" Firmware : {deviceInfo.Firmware}"); d("");
+        //    d($" Hardware : {deviceInfo.Hardware}"); d("");
+        //}
 
         [Conditional("DEBUG")]
         private void d(string txt)
@@ -805,299 +761,162 @@ namespace CameraSlider.UI
                a();
            });
         }
-        private async void RainbowCycle_Click(object sender, RoutedEventArgs e)
-        {
-            await PlayPattern("RAINBOW_CYCLE", 5);
-        }
+    //private async void RainbowCycle_Click(object sender, RoutedEventArgs e)
+    //{
+    //    //await PlayPattern("RAINBOW_CYCLE", 5);
+    //}
 
-        private async void TheaterChase_Click(object sender, RoutedEventArgs e)
-        {
-            await PlayPattern("THEATER_CHASE", 5);
-        }
+    //private async void TheaterChase_Click(object sender, RoutedEventArgs e)
+    //{
+    //    //await PlayPattern("THEATER_CHASE", 5);
+    //}
 
-        private async void Scanner_Click(object sender, RoutedEventArgs e)
-        {
-            await PlayPattern("SCANNER", 5);
-        }
+    //private async void Scanner_Click(object sender, RoutedEventArgs e)
+    //{
+    //    //await PlayPattern("SCANNER", 5);
+    //}
 
-        private async void Fade_Click(object sender, RoutedEventArgs e)
-        {
-            await PlayPattern("FADE", 5);
-        }
+    //private async void Fade_Click(object sender, RoutedEventArgs e)
+    //{
+    //    //await PlayPattern("FADE", 5);
+    //}
 
-        private async void BtnColorWipe_Click(object sender, RoutedEventArgs e)
-        {
-            await PlayPattern("COLOR_WIPE", 5);
-        }
-        private async void EmitSmoke_Click(object sender, RoutedEventArgs e)
-        {
-            float SmokeTime = 0;
-            if (float.TryParse(TestSmokeInput.Text, out SmokeTime))
-            {
-                await EmitSmoke(SmokeTime);
-            }
-        }
+    //private async void BtnColorWipe_Click(object sender, RoutedEventArgs e)
+    //{
+    //    //await PlayPattern("COLOR_WIPE", 5);
+    //}
 
-        private async Task EmitSmoke(float SmokeTime)
-        {
-            if (SmokeTime > 0.0f)
-            {
-                short Milliseconds = (short)(SmokeTime * 1000.0f);
-                await _domeLightsDevice.EmitSmokeAsync(Milliseconds);
-            }
-        }
+    //private async Task PlayPattern(string patternString, int CycleCount)
+    //{
+    //    if (!_cameraSliderDevice.IsConnected)
+    //        return;
 
-        private async Task PlayPattern(string patternString, int CycleCount)
-        {
-            if (!_domeLightsDevice.IsConnected)
-                return;
+    //    CameraSliderDevice.Pattern pattern= CameraSliderDevice.Pattern.NONE;
+    //    if (!Enum.TryParse<CameraSliderDevice.Pattern>(patternString, out pattern))
+    //        return;
 
-            DomeLightsDevice.Pattern pattern= DomeLightsDevice.Pattern.NONE;
-            if (!Enum.TryParse<DomeLightsDevice.Pattern>(patternString, out pattern))
-                return;
+    //    if (_obsClient.IsConnected)
+    //    {
+    //        SetObsSceneForDuration(_obsConfig.PatternSceneName, _obsConfig.PatternSceneDuration).ConfigureAwait(false);
+    //    }
+    //    else
+    //    {
+    //        SetSlobsSceneForDuration(_slobsConfig.PatternSceneName, _slobsConfig.PatternSceneDuration).ConfigureAwait(false);
+    //    }
 
-            if (_obsClient.IsConnected)
-            {
-                SetObsSceneForDuration(_obsConfig.PatternSceneName, _obsConfig.PatternSceneDuration).ConfigureAwait(false);
-            }
-            else
-            {
-                SetSlobsSceneForDuration(_slobsConfig.PatternSceneName, _slobsConfig.PatternSceneDuration).ConfigureAwait(false);
-            }
+    //    // Give SLOBS a bit to change the scene
+    //    await Task.Delay(500);
 
-            // Give SLOBS a bit to change the scene
-            await Task.Delay(500);
+    //    switch (pattern)
+    //    {
+    //        case CameraSliderDevice.Pattern.NONE:
+    //            await _cameraSliderDevice.CancelPatternAsync();
+    //            break;
+    //        case CameraSliderDevice.Pattern.RAINBOW_CYCLE:
+    //            await _cameraSliderDevice.PlayRainbowCycleAsync(CycleCount);
+    //            break;
+    //        case CameraSliderDevice.Pattern.THEATER_CHASE:
+    //            await _cameraSliderDevice.PlayTheaterChaseAsync(Color.Red, Color.BlueViolet, CycleCount);
+    //            break;
+    //        case CameraSliderDevice.Pattern.COLOR_WIPE:
+    //            await _cameraSliderDevice.PlayColorWipeAsync(Color.Red, CycleCount);
+    //            break;
+    //        case CameraSliderDevice.Pattern.SCANNER:
+    //            await _cameraSliderDevice.PlayScannerAsync(Color.Red, CycleCount);
+    //            break;
+    //        case CameraSliderDevice.Pattern.FADE:
+    //            await _cameraSliderDevice.PlayFadeAsync(Color.Red, Color.BlueViolet, 16, CycleCount);
+    //            break;
+    //    }
+    //}
 
-            switch (pattern)
-            {
-                case DomeLightsDevice.Pattern.NONE:
-                    await _domeLightsDevice.CancelPatternAsync();
-                    break;
-                case DomeLightsDevice.Pattern.RAINBOW_CYCLE:
-                    await _domeLightsDevice.PlayRainbowCycleAsync(CycleCount);
-                    break;
-                case DomeLightsDevice.Pattern.THEATER_CHASE:
-                    await _domeLightsDevice.PlayTheaterChaseAsync(Color.Red, Color.BlueViolet, CycleCount);
-                    break;
-                case DomeLightsDevice.Pattern.COLOR_WIPE:
-                    await _domeLightsDevice.PlayColorWipeAsync(Color.Red, CycleCount);
-                    break;
-                case DomeLightsDevice.Pattern.SCANNER:
-                    await _domeLightsDevice.PlayScannerAsync(Color.Red, CycleCount);
-                    break;
-                case DomeLightsDevice.Pattern.FADE:
-                    await _domeLightsDevice.PlayFadeAsync(Color.Red, Color.BlueViolet, 16, CycleCount);
-                    break;
-            }
-        }
+    private void TwitchChannelIdInput_Changed(object sender, RoutedEventArgs e)
+    {
+      _twitchWebApiConfig.ChannelID = TwitchClientIdInput.Text;
+      SaveConfig();
 
-        private void StreamlabsSocketKeyInput_PasswordChanged(object sender, RoutedEventArgs e)
-        {
-            _streamlabsWebApiConfig.StreamlabsSocketToken = StreamlabsSocketKeyInput.Password;
+      _twitchPubsubClient.Disconnect();
+    }
+
+    private void TwitchClientIdInput_Changed(object sender, RoutedEventArgs e)
+    {
+      _twitchWebApiConfig.ClientID = TwitchClientIdInput.Text;
+      SaveConfig();
+
+      _twitchPubsubClient.Disconnect();
+    }
+
+    private void TwitchSecretInput_Changed(object sender, RoutedEventArgs e)
+    {
+            _twitchWebApiConfig.Secret = TwitchSecretKeyInput.Password;
             SaveConfig();
 
-            if (_streamlabsEventClient.IsConnected)
-            {
-                _streamlabsEventClient.Disconnect();
-            }
+            _twitchPubsubClient.Disconnect();
         }
 
-        private void TwitchFollowPattern_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            _streamlabsWebApiConfig.TwitchFollowPattern = TwitchFollowPattern.SelectedItem.ToString();
-            SaveConfig();
-        }
+    private void TwitchFollowPattern_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+     // _twitchWebApiConfig.TwitchFollowPattern = TwitchFollowPattern.SelectedItem.ToString();
+      //SaveConfig();
+    }
 
-        private void TwitchFollowCyclesInput_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            int Cycles = 0;
-            if (int.TryParse(TwitchFollowCyclesInput.Text, out Cycles))
-            {
-                _streamlabsWebApiConfig.TwitchFollowPatternCycles = Cycles;
-                SaveConfig();
-            }
-        }
+    private void TwitchFollowCyclesInput_TextChanged(object sender, TextChangedEventArgs e)
+    {
+    //    int Cycles = 0;
+    //    if (int.TryParse(TwitchFollowCyclesInput.Text, out Cycles))
+    //    {
+    //        _twitchWebApiConfig.TwitchFollowPatternCycles = Cycles;
+    //        SaveConfig();
+    //    }
+    }
 
-        private void TwitchFollowSmokeInput_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            float SmokeTime = 0;
-            if (float.TryParse(TwitchFollowSmokeInput.Text, out SmokeTime))
-            {
-                _streamlabsWebApiConfig.TwitchFollowSmokeTime = SmokeTime;
-                SaveConfig();
-            }
-        }
+    private void TwitchFollowSmokeInput_TextChanged(object sender, TextChangedEventArgs e)
+    {
+    //    float SmokeTime = 0;
+    //    if (float.TryParse(TwitchFollowSmokeInput.Text, out SmokeTime))
+    //    {
+    //        _twitchWebApiConfig.TwitchFollowSmokeTime = SmokeTime;
+    //        SaveConfig();
+    //    }
+    }
 
+    //private void SlobsLedSceneNameInput_TextChanged(object sender, TextChangedEventArgs e)
+    //{
+    //    _slobsConfig.PatternSceneName = SlobsLedSceneNameInput.Text;
+    //    SaveConfig();
+    //}
 
-        private void TwitchSubPattern_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            _streamlabsWebApiConfig.TwitchSubPattern = TwitchSubPattern.SelectedItem.ToString();
-            SaveConfig();
-        }
+    //private void SlobsLedSceneDurationInput_TextChanged(object sender, TextChangedEventArgs e)
+    //{
+    //    int Duration = 0;
+    //    if (int.TryParse(SlobsLedSceneDurationInput.Text, out Duration))
+    //    {
+    //        _slobsConfig.PatternSceneDuration = Duration;
+    //        SaveConfig();
+    //    }
+    //}        
 
-        private void TwitchSubCyclesInput_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            int Cycles = 0;
-            if (int.TryParse(TwitchSubCyclesInput.Text, out Cycles))
-            {
-                _streamlabsWebApiConfig.TwitchSubPatternCycles = Cycles;
-                SaveConfig();
-            }
-        }
-
-        private void TwitchSubSmokeInput_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            float SmokeTime = 0;
-            if (float.TryParse(TwitchSubSmokeInput.Text, out SmokeTime))
-            {
-                _streamlabsWebApiConfig.TwitchSubSmokeTime = SmokeTime;
-                SaveConfig();
-            }
-        }
-
-        private void TwitchMysterySubPattern_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            _streamlabsWebApiConfig.TwitchMysterySubPattern = TwitchMysterySubPattern.SelectedItem.ToString();
-            SaveConfig();
-        }
-
-        private void TwitchMysterySubCyclesInput_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            int Cycles = 0;
-            if (int.TryParse(TwitchMysterySubCyclesInput.Text, out Cycles))
-            {
-                _streamlabsWebApiConfig.TwitchMysterySubPatternCycles = Cycles;
-                SaveConfig();
-            }
-        }
-
-        private void TwitchMysterySubSmokeInput_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            float SmokeTime = 0;
-            if (float.TryParse(TwitchMysterySubSmokeInput.Text, out SmokeTime))
-            {
-                _streamlabsWebApiConfig.TwitchMysterySubSmokeTime = SmokeTime;
-                SaveConfig();
-            }
-        }
-
-
-        private void TwitchCheerPattern_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            _streamlabsWebApiConfig.TwitchCheerPattern = TwitchCheerPattern.SelectedItem.ToString();
-            SaveConfig();
-        }
-
-        private void TwitchCheerCyclesInput_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            int Cycles = 0;
-            if (int.TryParse(TwitchCheerCyclesInput.Text, out Cycles))
-            {
-                _streamlabsWebApiConfig.TwitchCheerPatternCycles = Cycles;
-                SaveConfig();
-            }
-        }
-
-        private void TwitchCheerSmokeInput_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            float SmokeTime = 0;
-            if (float.TryParse(TwitchCheerSmokeInput.Text, out SmokeTime))
-            {
-                _streamlabsWebApiConfig.TwitchCheerSmokeTime = SmokeTime;
-                SaveConfig();
-            }
-        }
-
-        private void TwitchHostPattern_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            _streamlabsWebApiConfig.TwitchHostPattern = TwitchHostPattern.SelectedItem.ToString();
-            SaveConfig();
-        }
-
-        private void TwitchHostCyclesInput_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            int Cycles = 0;
-            if (int.TryParse(TwitchHostCyclesInput.Text, out Cycles))
-            {
-                _streamlabsWebApiConfig.TwitchHostPatternCycles = Cycles;
-                SaveConfig();
-            }
-        }
-
-        private void TwitchHostSmokeInput_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            float SmokeTime = 0;
-            if (float.TryParse(TwitchHostSmokeInput.Text, out SmokeTime))
-            {
-                _streamlabsWebApiConfig.TwitchHostSmokeTime = SmokeTime;
-                SaveConfig();
-            }
-        }
-
-
-        private void TwitchRaidPattern_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            _streamlabsWebApiConfig.TwitchRaidPattern = TwitchRaidPattern.SelectedItem.ToString();
-            SaveConfig();
-        }
-
-        private void TwitchRaidCyclesInput_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            int Cycles = 0;
-            if (int.TryParse(TwitchRaidCyclesInput.Text, out Cycles))
-            {
-                _streamlabsWebApiConfig.TwitchRaidPatternCycles = Cycles;
-                SaveConfig();
-            }
-        }
-
-        private void TwitchRaidSmokeInput_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            float SmokeTime = 0;
-            if (float.TryParse(TwitchRaidSmokeInput.Text, out SmokeTime))
-            {
-                _streamlabsWebApiConfig.TwitchRaidSmokeTime = SmokeTime;
-                SaveConfig();
-            }
-        }
-
-        private void SlobsLedSceneNameInput_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            _slobsConfig.PatternSceneName = SlobsLedSceneNameInput.Text;
-            SaveConfig();
-        }
-
-        private void SlobsLedSceneDurationInput_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            int Duration = 0;
-            if (int.TryParse(SlobsLedSceneDurationInput.Text, out Duration))
-            {
-                _slobsConfig.PatternSceneDuration = Duration;
-                SaveConfig();
-            }
-        }        
-
-        private void NumericalInput_PreviewTextInput(object sender, TextCompositionEventArgs e)
+    private void NumericalInput_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
             Regex regex = new Regex("[^0-9]+");
             e.Handled = regex.IsMatch(e.Text);
         }
 
-        private void ObsLedSceneNameInput_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            _obsConfig.PatternSceneName = ObsLedSceneNameInput.Text;
-            SaveConfig();
-        }
+        //private void ObsLedSceneNameInput_TextChanged(object sender, TextChangedEventArgs e)
+        //{
+        //    _obsConfig.PatternSceneName = ObsLedSceneNameInput.Text;
+        //    SaveConfig();
+        //}
 
-        private void ObsLedSceneDurationInput_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            int Duration = 0;
-            if (int.TryParse(ObsLedSceneDurationInput.Text, out Duration))
-            {
-                _obsConfig.PatternSceneDuration = Duration;
-                SaveConfig();
-            }
-        }
+        //private void ObsLedSceneDurationInput_TextChanged(object sender, TextChangedEventArgs e)
+        //{
+        //    int Duration = 0;
+        //    if (int.TryParse(ObsLedSceneDurationInput.Text, out Duration))
+        //    {
+        //        _obsConfig.PatternSceneDuration = Duration;
+        //        SaveConfig();
+        //    }
+        //}
 
         private void SocketAddressInput_TextChanged(object sender, TextChangedEventArgs e)
         {
@@ -1126,5 +945,10 @@ namespace CameraSlider.UI
                 }
             }
         }
+
+    private void BtnGotoCamera_Click(object sender, RoutedEventArgs e)
+    {
+
     }
+  }
 }

@@ -9,7 +9,7 @@ using Windows.Devices.Enumeration;
 
 namespace CameraSlider.Bluetooth
 {
-    public class DomeLightsDeviceWatcher
+    public class CameraSliderDeviceWatcher
     {
         // Additional properties we would like about the device.
         // Property strings are documented here https://msdn.microsoft.com/en-us/library/windows/desktop/ff521659(v=vs.85).aspx
@@ -21,7 +21,6 @@ namespace CameraSlider.Bluetooth
                 "System.Devices.Aep.IsPaired"
             };
 
-        private static readonly string[] RequiredServices = new string[] { "180D", "180A", "180F" };
         private DeviceWatcher _deviceWatcher;
         private List<string> _filters;
 
@@ -55,7 +54,7 @@ namespace CameraSlider.Bluetooth
             DeviceEnumerationStopped?.Invoke(this, obj);
         }
 
-        public DomeLightsDeviceWatcher(Schema.DeviceSelector deviceSelector)
+        public CameraSliderDeviceWatcher(Schema.DeviceSelector deviceSelector)
         {
             _deviceWatcher = DeviceInformation.CreateWatcher(
                         GetSelector(deviceSelector),
@@ -69,7 +68,7 @@ namespace CameraSlider.Bluetooth
             _deviceWatcher.Stopped += Stopped;
         }
 
-        public DomeLightsDeviceWatcher(Schema.DeviceSelector deviceSelector, List<string> filters) : this(deviceSelector)
+        public CameraSliderDeviceWatcher(Schema.DeviceSelector deviceSelector, List<string> filters) : this(deviceSelector)
         {
             _filters = filters;
         }

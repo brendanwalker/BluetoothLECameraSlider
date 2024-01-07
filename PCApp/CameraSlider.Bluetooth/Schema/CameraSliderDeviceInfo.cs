@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CameraSlider.Bluetooth.Schema
 {
-    public class DomeLightsDeviceInfo
+    public class CameraSliderDeviceInfo
     {
         public string DeviceId { get; set; }
         public string Name { get; set; }

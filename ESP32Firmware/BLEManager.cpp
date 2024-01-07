@@ -202,7 +202,11 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
   {
     std::string value = pCharacteristic->getValue();
 
-    if (m_commandHandler != nullptr)
+    if (value == "ping")
+    {
+      Serial.printf("BLEManager - Received Ping\n");
+    }
+    else if (m_commandHandler != nullptr)
     {
       Serial.printf("BLEManager - Handling command: %s\n", value.c_str());
       m_commandHandler->onCommand(value);
