@@ -1,0 +1,61 @@
+﻿<Window x:Class="CameraSlider.UI.EditPresetWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:CameraSlider.UI"
+        mc:Ignorable="d"
+        Title="Edit Preset"  Width="400">
+    <Grid>
+        <StackPanel x:Name="ControlsStackPanel" Margin="0,0,0,0" RenderTransformOrigin="0.5,0.5" Grid.ColumnSpan="5">
+            <StackPanel.RenderTransform>
+                <TransformGroup>
+                    <ScaleTransform/>
+                    <SkewTransform AngleY="0"/>
+                    <RotateTransform/>
+                    <TranslateTransform Y="0"/>
+                </TransformGroup>
+            </StackPanel.RenderTransform>
+            <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="Preset Name" Width="100"/>
+                        <TextBox x:Name="PresetNameTxt" Text="Preset Name" VerticalAlignment="Center" Width="216" TextChanged="PresetNameTxt_TextChanged"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="Slide Position" Width="100"/>
+                        <TextBox x:Name="SlidePosTxt" Text="100" VerticalAlignment="Center" Width="50" InputScope="Number" TextChanged="SlidePosTxt_TextChanged"/>
+                        <Label Content="%" Width="20"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="Pan Position" Width="100"/>
+                        <TextBox x:Name="PanPosTxt" Text="100" VerticalAlignment="Center" Width="50" InputScope="Number" TextChanged="PanPosTxt_TextChanged"/>
+                        <Label Content="%" Width="20"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="Tilt Position" Width="100"/>
+                        <TextBox x:Name="TiltPosTxt" Text="100" VerticalAlignment="Center" Width="50" InputScope="Number" TextChanged="TiltPosTxt_TextChanged"/>
+                        <Label Content="%" Width="20"/>
+                    </StackPanel>
+                    <Button x:Name="UpdatePosBtn" Content="Update Positions" HorizontalAlignment="Left" Margin="10,10,10,10" VerticalAlignment="Top" Width="105" Click="UpdatePosBtn_Click"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="Chat Trigger" Width="100"/>
+                        <TextBox x:Name="ChatCommandTxt" Text="" VerticalAlignment="Center" Width="100" TextChanged="ChatCommandTxt_TextChanged"/>
+                        <CheckBox x:Name="IsChatModOnlyChk" Content="Mod Only" VerticalAlignment="Center" Margin="10,0,0,0" Checked="IsChatModOnlyChk_Checked"/>
+                        <CheckBox x:Name="IsChatTriggeredChk" Content="Active" VerticalAlignment="Center" Margin="10,0,0,0" Checked="IsChatTriggeredChk_Checked"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="Redeem Trigger" Width="100"/>
+                        <TextBox x:Name="RedeemTxt" Text="" VerticalAlignment="Center" Width="100" TextChanged="RedeemTxt_TextChanged"/>
+                        <CheckBox x:Name="IsRedeemModOnlyChk" Content="Mod Only" VerticalAlignment="Center" Margin="10,0,0,0" Checked="IsRedeemModOnlyChk_Checked"/>
+                        <CheckBox x:Name="IsRedeemActiveChk" Content="Active" VerticalAlignment="Center" Margin="10,0,0,0" Checked="IsRedeemActiveChk_Checked"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Button x:Name="SavePresetBtn" Content="Save Preset" HorizontalAlignment="Left" Margin="10,10,10,10" VerticalAlignment="Top" Width="105" Click="SavePresetBtn_Click"/>
+                        <Button x:Name="CancelChangesBtn" Content="Cancel" HorizontalAlignment="Left" Margin="10,10,10,10" VerticalAlignment="Top" Width="105" Click="CancelChangesBtn_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
+</Window>

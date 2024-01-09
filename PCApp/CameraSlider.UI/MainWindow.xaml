@@ -5,87 +5,174 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:CameraSlider.UI"
         mc:Ignorable="d"
-        Title="CameraSlider" Height="622" Width="585" HorizontalAlignment="Center" VerticalAlignment="Center" >
+        Title="CameraSlider" Width="400" HorizontalAlignment="Center" VerticalAlignment="Center" >
     <Grid >
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="0*"/>
-            <ColumnDefinition Width="54*"/>
-            <ColumnDefinition Width="0*"/>
-            <ColumnDefinition Width="11*"/>
-            <ColumnDefinition Width="520*"/>
-        </Grid.ColumnDefinitions>
-        <StackPanel x:Name="TopStackPanel" Margin="0,0,0,0" RenderTransformOrigin="0.5,0.5" Grid.ColumnSpan="5">
-            <StackPanel.RenderTransform>
-                <TransformGroup>
-                    <ScaleTransform/>
-                    <SkewTransform AngleY="0"/>
-                    <RotateTransform/>
-                    <TranslateTransform Y="0"/>
-                </TransformGroup>
-            </StackPanel.RenderTransform>
-            <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1" Margin="10">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="CameraSlider Device Status:" Width="175" HorizontalAlignment="Right"/>
-                        <Label x:Name="DeviceTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Twitch PubSub Status: " Width="175" HorizontalAlignment="Right"/>
-                        <Label x:Name="TwitchTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="OBS Studio Websocket Status: " Width="175" HorizontalAlignment="Right"/>
-                        <Label x:Name="ObsTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
-                    </StackPanel>
+        <TabControl>
+            <TabItem Header="Controls">
+                <StackPanel x:Name="ControlsStackPanel" Margin="0,0,0,0" RenderTransformOrigin="0.5,0.5" Grid.ColumnSpan="5">
+                    <StackPanel.RenderTransform>
+                        <TransformGroup>
+                            <ScaleTransform/>
+                            <SkewTransform AngleY="0"/>
+                            <RotateTransform/>
+                            <TranslateTransform Y="0"/>
+                        </TransformGroup>
+                    </StackPanel.RenderTransform>
+                    <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="CameraSlider Device Status:" Width="175" HorizontalAlignment="Right"/>
+                                <Label x:Name="DeviceTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Twitch Client Status: " Width="175" HorizontalAlignment="Right"/>
+                                <Label x:Name="TwitchClientTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Twitch PubSub Status: " Width="175" HorizontalAlignment="Right"/>
+                                <Label x:Name="TwitchPubSubTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="OBS Studio Websocket Status: " Width="175" HorizontalAlignment="Right"/>
+                                <Label x:Name="ObsTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1">
+                        <StackPanel>
+                            <Label Content="Slide Controls" HorizontalAlignment="Left" Width="150"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Slide Pos: " Width="120" HorizontalAlignment="Right"/>
+                                <Slider x:Name="SlidePosSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="SlidePos_ValueChanged" Maximum="100"/>
+                                <Label x:Name="SlidePosStatus" Content="0%" Width="50" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Slide Speed: " Width="120" HorizontalAlignment="Right"/>
+                                <Slider x:Name="SlideSpeedSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="SlideSpeed_ValueChanged"  Maximum="100"/>
+                                <Label x:Name="SlideSpeedStatus" Content="0%" Width="50" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Slide Acceleration: " Width="120" HorizontalAlignment="Right"/>
+                                <Slider x:Name="SlideAccelSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="SlideAccel_ValueChanged"  Maximum="100"/>
+                                <Label x:Name="SlideAccelStatus" Content="0%" Width="50" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1">
+                        <StackPanel>
+                            <Label Content="Pan Controls" HorizontalAlignment="Left" Width="150"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Pan Pos: " Width="120" HorizontalAlignment="Right"/>
+                                <Slider x:Name="PanPosSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="PanPos_ValueChanged"  Maximum="100"/>
+                                <Label x:Name="PanPosStatus" Content="0%" Width="50" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Pan Speed: " Width="120" HorizontalAlignment="Right"/>
+                                <Slider x:Name="PanSpeedSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="PanSpeed_ValueChanged" Maximum="100"/>
+                                <Label x:Name="PanSpeedStatus" Content="0%" Width="50" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Pan Acceleration: " Width="120" HorizontalAlignment="Right"/>
+                                <Slider x:Name="PanAccelSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="PanAccel_ValueChanged" Maximum="100"/>
+                                <Label x:Name="PanAccelStatus" Content="0%" Width="50" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1">
+                        <StackPanel>
+                            <Label Content="Tilt Controls" HorizontalAlignment="Left" Width="150"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Tilt Pos: " Width="120" HorizontalAlignment="Right"/>
+                                <Slider x:Name="TiltPosSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="TiltPos_ValueChanged" Maximum="100"/>
+                                <Label x:Name="TiltPosStatus" Content="0%" Width="50" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Tilt Speed: " Width="120" HorizontalAlignment="Right"/>
+                                <Slider x:Name="TiltSpeedSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="TiltSpeed_ValueChanged" Maximum="100"/>
+                                <Label x:Name="TiltSpeedStatus" Content="0%" Width="50" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Tilt Acceleration: " Width="120" HorizontalAlignment="Right"/>
+                                <Slider x:Name="TiltAccelSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="TiltAccel_ValueChanged" Maximum="100"/>
+                                <Label x:Name="TiltAccelStatus" Content="0%" Width="50" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1">
+                        <StackPanel>
+                            <Label Content="Presets" HorizontalAlignment="Left" Width="88"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <Label Content="Active Preset:" HorizontalAlignment="Left" Width="88"/>
+                                <Label x:Name="ActivePresetLabel" Content="NONE" HorizontalAlignment="Left" Width="200"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <Button x:Name="BtnGotoPreset" Content="Goto Preset" IsEnabled="False" Width="100" Margin="10,10,10,10" Click="BtnGotoPreset_Click"/>
+                                <ComboBox x:Name="PresetComboBox" Width="210" VerticalAlignment="Center" SelectionChanged="PresetComboBox_SelectionChanged"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                <Button x:Name="BtnEditPreset" Content="Edit Preset" IsEnabled="False"  Width="100" Margin="10,10,10,10" Click="BtnEditPreset_Click" VerticalAlignment="Center"/>
+                                <Button x:Name="BtnAddPreset" Content="Add Preset" IsEnabled="False"  Width="100" Margin="10,10,10,10" Click="BtnAddPreset_Click" VerticalAlignment="Center"/>
+                                <Button x:Name="BtnDeletePreset" Content="Delete Preset" IsEnabled="False" Width="100" Margin="10,10,10,10" Click="BtnDeletePreset_Click" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1">
+                        <StackPanel>
+                            <Label Content="Camera Commands" HorizontalAlignment="Left" Width="150"/>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                <Button x:Name="BtnCalibrate" Content="Calibrate" IsEnabled="False"  Width="100" Margin="10,10,10,10" Click="BtnCalibrate_Click" VerticalAlignment="Center"/>
+                                <Button x:Name="BtnHalt" Content="Halt" IsEnabled="False" Width="100" Margin="10,10,10,10" Click="BtnHalt_Click" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
-            </Border>
-            <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1" Margin="10">
-                <StackPanel>
-                    <Label Content="Twitch Settings" HorizontalAlignment="Center"/>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Twitch Channel ID"  Width="140" HorizontalAlignment="Left"/>
-                        <TextBox x:Name="TwitchChannelIdInput" Width="400" HorizontalAlignment="Left" TextChanged="TwitchChannelIdInput_Changed"/>
-                    </StackPanel>                    
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Twitch Client ID"  Width="140" HorizontalAlignment="Left"/>
-                        <TextBox x:Name="TwitchClientIdInput" Width="400" HorizontalAlignment="Left" TextChanged="TwitchClientIdInput_Changed"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Twitch Secret"  Width="140" HorizontalAlignment="Left"/>
-                        <PasswordBox x:Name="TwitchSecretKeyInput" Width="400" HorizontalAlignment="Left" PasswordChanged="TwitchSecretInput_Changed"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Twitch Follow" Width="140" HorizontalAlignment="Left"/>
-                        <ComboBox x:Name="TwitchFollowPattern" Width="140" SelectionChanged="TwitchFollowPattern_SelectionChanged"/>
-                        <Label Content="Cycles" Width="50" HorizontalAlignment="Right"/>
-                        <TextBox x:Name="TwitchFollowCyclesInput" Width="50" HorizontalAlignment="Left" TextChanged="TwitchFollowCyclesInput_TextChanged" PreviewTextInput="NumericalInput_PreviewTextInput"/>
-                        <Label Content="Smoke Time" Width="75" HorizontalAlignment="Right"/>
-                        <TextBox x:Name="TwitchFollowSmokeInput" Width="50" HorizontalAlignment="Left" TextChanged="TwitchFollowSmokeInput_TextChanged" PreviewTextInput="NumericalInput_PreviewTextInput"/>
-                    </StackPanel>
+            </TabItem>
+            <TabItem Header="Settings">
+                <StackPanel x:Name="SettingsStackPanel" Margin="0,0,0,0" RenderTransformOrigin="0.5,0.5" Grid.ColumnSpan="5">
+                    <StackPanel.RenderTransform>
+                        <TransformGroup>
+                            <ScaleTransform/>
+                            <SkewTransform AngleY="0"/>
+                            <RotateTransform/>
+                            <TranslateTransform Y="0"/>
+                        </TransformGroup>
+                    </StackPanel.RenderTransform>
+                    <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1" Margin="10">
+                        <StackPanel>
+                            <Label Content="Twitch Settings" HorizontalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Twitch Channel ID"  Width="140" HorizontalAlignment="Left"/>
+                                <TextBox x:Name="TwitchChannelIdInput" Width="200" HorizontalAlignment="Left" TextChanged="TwitchChannelIdInput_Changed"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Twitch Client ID"  Width="140" HorizontalAlignment="Left"/>
+                                <TextBox x:Name="TwitchClientIdInput" Width="200" HorizontalAlignment="Left" TextChanged="TwitchClientIdInput_Changed"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Twitch Secret" Width="140" HorizontalAlignment="Left"/>
+                                <PasswordBox x:Name="TwitchSecretKeyInput" Width="200" HorizontalAlignment="Left" PasswordChanged="TwitchSecretInput_Changed"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1" Margin="10">
+                        <StackPanel>
+                            <Label Content="OBS Studio Settings" HorizontalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Socket Address" Width="140" HorizontalAlignment="Left"/>
+                                <TextBox x:Name="SocketAddressInput" Width="200" HorizontalAlignment="Left" TextChanged="SocketAddressInput_TextChanged" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Password" Width="140" HorizontalAlignment="Left"/>
+                                <PasswordBox x:Name="SocketPasswordInput" Width="200" HorizontalAlignment="Left" PasswordChanged="SocketPasswordInput_TextChanged" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>                    
                 </StackPanel>
-            </Border>
-            <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1" Margin="10">
-                <StackPanel>
-                    <Label Content="OBS Studio Settings" HorizontalAlignment="Center"/>
-                    <StackPanel Orientation="Horizontal"/>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Socket Address" HorizontalAlignment="Left" Margin="10,0,0,10"/>
-                        <TextBox x:Name="SocketAddressInput" Width="150" HorizontalAlignment="Left" Margin="0,0,0,10" TextChanged="SocketAddressInput_TextChanged" />
-                        <Label Content="Password" HorizontalAlignment="Left" Margin="10,0,0,10"/>
-                        <PasswordBox x:Name="SocketPasswordInput" Width="150" HorizontalAlignment="Left" Margin="0,0,0,10" PasswordChanged="SocketPasswordInput_TextChanged" />
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-            <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1" Margin="10" Height="68">
-                <StackPanel>
-                    <Label Content="Test Camera Pose" HorizontalAlignment="Center" Width="101"/>
-                    <StackPanel Orientation="Horizontal">
-                        <Button x:Name="BtnGotoCamera" Content="Goto Camera" IsEnabled="False" HorizontalAlignment="Right" VerticalAlignment="Stretch" Width="100" Margin="10,0,10,10" Click="BtnGotoCamera_Click"/>
-                        <ComboBox x:Name="comboBox" Width="210" Height="26"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal"  HorizontalAlignment="Center"/>
-                </StackPanel>
-            </Border>
-        </StackPanel>
+            </TabItem>
+        </TabControl>
     </Grid>
 </Window>
