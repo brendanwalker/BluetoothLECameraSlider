@@ -24,20 +24,30 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Slide Position" Width="100"/>
-                        <TextBox x:Name="SlidePosTxt" Text="100" VerticalAlignment="Center" Width="50" InputScope="Number" TextChanged="SlidePosTxt_TextChanged"/>
-                        <Label Content="%" Width="20"/>
+                        <TextBox x:Name="SlidePosTxt" Text="0.00" VerticalAlignment="Center" Width="50" InputScope="Number" TextChanged="SlidePosTxt_TextChanged">
+                            <UIElement.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform/>
+                                    <SkewTransform/>
+                                    <RotateTransform/>
+                                    <TranslateTransform/>
+                                </TransformGroup>
+                            </UIElement.RenderTransform>
+                        </TextBox>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Pan Position" Width="100"/>
-                        <TextBox x:Name="PanPosTxt" Text="100" VerticalAlignment="Center" Width="50" InputScope="Number" TextChanged="PanPosTxt_TextChanged"/>
-                        <Label Content="%" Width="20"/>
+                        <TextBox x:Name="PanPosTxt" Text="0.00" VerticalAlignment="Center" Width="50" InputScope="Number" TextChanged="PanPosTxt_TextChanged"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Tilt Position" Width="100"/>
-                        <TextBox x:Name="TiltPosTxt" Text="100" VerticalAlignment="Center" Width="50" InputScope="Number" TextChanged="TiltPosTxt_TextChanged"/>
-                        <Label Content="%" Width="20"/>
+                        <TextBox x:Name="TiltPosTxt" Text="0.00" VerticalAlignment="Center" Width="50" InputScope="Number" TextChanged="TiltPosTxt_TextChanged"/>
                     </StackPanel>
                     <Button x:Name="UpdatePosBtn" Content="Update Positions" HorizontalAlignment="Left" Margin="10,10,10,10" VerticalAlignment="Top" Width="105" Click="UpdatePosBtn_Click"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="OBS Scene" Width="100"/>
+                        <TextBox x:Name="OBSSceneTxt" Text="" VerticalAlignment="Center" Width="100" TextChanged="ObsSceneTxt_TextChanged"/>
+                    </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Chat Trigger" Width="100"/>
                         <TextBox x:Name="ChatCommandTxt" Text="" VerticalAlignment="Center" Width="100" TextChanged="ChatCommandTxt_TextChanged"/>

@@ -20,7 +20,7 @@ namespace CameraSlider.UI
 	public partial class EditPresetWindow : Window
 	{
 		private CameraSettingsSection _cameraSettings;
-		private List<PresetSettings> _presets;
+		private List<PresetSettings> _presets= new List<PresetSettings>();
 		private int _editPresetIndex= -1;
 
 		private PresetSettings _preset;
@@ -38,22 +38,25 @@ namespace CameraSlider.UI
 			InitializeComponent();
 
 			_cameraSettings= cameraSettings;
+			_presets = presets;
+			_editPresetIndex = editPresetIndex;
+
 			if (editPresetIndex >= 0 && editPresetIndex < presets.Count)
 			{
-				_preset= new PresetSettings(presets[editPresetIndex]);
+				_preset= new PresetSettings(presets[_editPresetIndex]);
 			}
 			else
 			{
 				_preset= new PresetSettings();
 				_preset.PresetName= "Preset_"+presets.Count;
 			}
-			_editPresetIndex = editPresetIndex;
 
 			// Copy the preset settings to the UI
 			PresetNameTxt.Text = _preset.PresetName;
-			SlidePosTxt.Text = _preset.SlidePosition.ToString();
-			PanPosTxt.Text = _preset.PanPosition.ToString();
-			TiltPosTxt.Text = _preset.TiltPosition.ToString();
+			SlidePosTxt.Text = _preset.SlidePosition.ToString("0.00");
+			PanPosTxt.Text = _preset.PanPosition.ToString("0.00");
+			TiltPosTxt.Text = _preset.TiltPosition.ToString("0.00");
+			OBSSceneTxt.Text = _preset.ObsScene;
 			ChatCommandTxt.Text = _preset.ChatTrigger.TriggerName;
 			IsChatModOnlyChk.IsChecked = _preset.ChatTrigger.IsModOnly;
 			IsChatTriggeredChk.IsChecked = _preset.ChatTrigger.IsActive;
@@ -69,7 +72,7 @@ namespace CameraSlider.UI
 
 		private void SlidePosTxt_TextChanged(object sender, TextChangedEventArgs e)
 		{
-			_preset.SlidePosition = int.Parse(SlidePosTxt.Text);
+			_preset.SlidePosition = float.Parse(SlidePosTxt.Text);
 		}
 
 		private void PanPosTxt_TextChanged(object sender, TextChangedEventArgs e)
@@ -88,9 +91,14 @@ namespace CameraSlider.UI
 			_preset.PanPosition= _cameraSettings.PanPos;
 			_preset.TiltPosition= _cameraSettings.TiltPos;
 
-			SlidePosTxt.Text= _preset.SlidePosition.ToString();
-			PanPosTxt.Text= _preset.PanPosition.ToString();
-			TiltPosTxt.Text= _preset.TiltPosition.ToString();
+			SlidePosTxt.Text= _preset.SlidePosition.ToString("0.00");
+			PanPosTxt.Text= _preset.PanPosition.ToString("0.00");
+			TiltPosTxt.Text= _preset.TiltPosition.ToString("0.00");
+		}
+
+		private void ObsSceneTxt_TextChanged(object sender, TextChangedEventArgs e)
+		{
+			_preset.ObsScene = OBSSceneTxt.Text;
 		}
 
 		private void ChatCommandTxt_TextChanged(object sender, TextChangedEventArgs e)

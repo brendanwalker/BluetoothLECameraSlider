@@ -22,7 +22,7 @@
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <Label Content="CameraSlider Device Status:" Width="175" HorizontalAlignment="Right"/>
-                                <Label x:Name="DeviceTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
+                                <Label x:Name="CameraTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <Label Content="Twitch Client Status: " Width="175" HorizontalAlignment="Right"/>
@@ -40,63 +40,65 @@
                     </Border>
                     <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1">
                         <StackPanel>
-                            <Label Content="Slide Controls" HorizontalAlignment="Left" Width="150"/>
+                            <Label Content="Position" HorizontalAlignment="Left" Width="150"/>
                             <StackPanel Orientation="Horizontal">
-                                <Label Content="Slide Pos: " Width="120" HorizontalAlignment="Right"/>
-                                <Slider x:Name="SlidePosSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="SlidePos_ValueChanged" Maximum="100"/>
-                                <Label x:Name="SlidePosStatus" Content="0%" Width="50" HorizontalAlignment="Center"/>
+                                <Label Content="Slide: " Width="60" HorizontalAlignment="Right"/>
+                                <Slider x:Name="SlidePosSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="SlidePos_ValueChanged" Maximum="1" Minimum="-1" LargeChange="0.1" SmallChange="0.01"/>
+                                <Label x:Name="SlidePosStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <Label Content="Slide Speed: " Width="120" HorizontalAlignment="Right"/>
-                                <Slider x:Name="SlideSpeedSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="SlideSpeed_ValueChanged"  Maximum="100"/>
-                                <Label x:Name="SlideSpeedStatus" Content="0%" Width="50" HorizontalAlignment="Center"/>
+                                <Label Content="Pan: " Width="60" HorizontalAlignment="Right"/>
+                                <Slider x:Name="PanPosSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="PanPos_ValueChanged" Maximum="1" Minimum="-1" LargeChange="0.1" SmallChange="0.01"/>
+                                <Label x:Name="PanPosStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <Label Content="Slide Acceleration: " Width="120" HorizontalAlignment="Right"/>
-                                <Slider x:Name="SlideAccelSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="SlideAccel_ValueChanged"  Maximum="100"/>
-                                <Label x:Name="SlideAccelStatus" Content="0%" Width="50" HorizontalAlignment="Center"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1">
-                        <StackPanel>
-                            <Label Content="Pan Controls" HorizontalAlignment="Left" Width="150"/>
-                            <StackPanel Orientation="Horizontal">
-                                <Label Content="Pan Pos: " Width="120" HorizontalAlignment="Right"/>
-                                <Slider x:Name="PanPosSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="PanPos_ValueChanged"  Maximum="100"/>
-                                <Label x:Name="PanPosStatus" Content="0%" Width="50" HorizontalAlignment="Center"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <Label Content="Pan Speed: " Width="120" HorizontalAlignment="Right"/>
-                                <Slider x:Name="PanSpeedSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="PanSpeed_ValueChanged" Maximum="100"/>
-                                <Label x:Name="PanSpeedStatus" Content="0%" Width="50" HorizontalAlignment="Center"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <Label Content="Pan Acceleration: " Width="120" HorizontalAlignment="Right"/>
-                                <Slider x:Name="PanAccelSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="PanAccel_ValueChanged" Maximum="100"/>
-                                <Label x:Name="PanAccelStatus" Content="0%" Width="50" HorizontalAlignment="Center"/>
+                                <Label Content="Tilt: " Width="60" HorizontalAlignment="Right"/>
+                                <Slider x:Name="TiltPosSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="TiltPos_ValueChanged" Maximum="1" Minimum="-1" LargeChange="0.1" SmallChange="0.01"/>
+                                <Label x:Name="TiltPosStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
 
                     <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1">
                         <StackPanel>
-                            <Label Content="Tilt Controls" HorizontalAlignment="Left" Width="150"/>
+                            <Label Content="Speed" HorizontalAlignment="Left" Width="150"/>
                             <StackPanel Orientation="Horizontal">
-                                <Label Content="Tilt Pos: " Width="120" HorizontalAlignment="Right"/>
-                                <Slider x:Name="TiltPosSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="TiltPos_ValueChanged" Maximum="100"/>
-                                <Label x:Name="TiltPosStatus" Content="0%" Width="50" HorizontalAlignment="Center"/>
+                                <Label Content="Slide: " Width="60" HorizontalAlignment="Right"/>
+                                <Slider x:Name="SlideSpeedSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="SlideSpeed_ValueChanged" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
+                                <Label x:Name="SlideSpeedStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <Label Content="Tilt Speed: " Width="120" HorizontalAlignment="Right"/>
-                                <Slider x:Name="TiltSpeedSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="TiltSpeed_ValueChanged" Maximum="100"/>
-                                <Label x:Name="TiltSpeedStatus" Content="0%" Width="50" HorizontalAlignment="Center"/>
+                                <Label Content="Pan: " Width="60" HorizontalAlignment="Right"/>
+                                <Slider x:Name="PanSpeedSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="PanSpeed_ValueChanged" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
+                                <Label x:Name="PanSpeedStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <Label Content="Tilt Acceleration: " Width="120" HorizontalAlignment="Right"/>
-                                <Slider x:Name="TiltAccelSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="TiltAccel_ValueChanged" Maximum="100"/>
-                                <Label x:Name="TiltAccelStatus" Content="0%" Width="50" HorizontalAlignment="Center"/>
+                                <Label Content="Tilt: " Width="60" HorizontalAlignment="Right"/>
+                                <Slider x:Name="TiltSpeedSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="TiltSpeed_ValueChanged" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
+                                <Label x:Name="TiltSpeedStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
+                            </StackPanel>
+
+
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1">
+                        <StackPanel>
+                            <Label Content="Acceleration" HorizontalAlignment="Left" Width="150"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Slide: " Width="60" HorizontalAlignment="Right"/>
+                                <Slider x:Name="SlideAccelSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="SlideAccel_ValueChanged" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
+                                <Label x:Name="SlideAccelStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Pan: " Width="60" HorizontalAlignment="Right"/>
+                                <Slider x:Name="PanAccelSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="PanAccel_ValueChanged" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
+                                <Label x:Name="PanAccelStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Tilt: " Width="60" HorizontalAlignment="Right"/>
+                                <Slider x:Name="TiltAccelSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="TiltAccel_ValueChanged" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
+                                <Label x:Name="TiltAccelStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -106,7 +108,7 @@
                             <Label Content="Presets" HorizontalAlignment="Left" Width="88"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
                                 <Label Content="Active Preset:" HorizontalAlignment="Left" Width="88"/>
-                                <Label x:Name="ActivePresetLabel" Content="NONE" HorizontalAlignment="Left" Width="200"/>
+                                <Label x:Name="ActivePresetTxtStatus" Content="NONE" HorizontalAlignment="Left" Width="200"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
                                 <Button x:Name="BtnGotoPreset" Content="Goto Preset" IsEnabled="False" Width="100" Margin="10,10,10,10" Click="BtnGotoPreset_Click"/>
@@ -122,7 +124,9 @@
 
                     <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1">
                         <StackPanel>
-                            <Label Content="Camera Commands" HorizontalAlignment="Left" Width="150"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <Label Content="Camera Commands" HorizontalAlignment="Left" Width="150"/>
+                            </StackPanel>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
                                 <Button x:Name="BtnCalibrate" Content="Calibrate" IsEnabled="False"  Width="100" Margin="10,10,10,10" Click="BtnCalibrate_Click" VerticalAlignment="Center"/>
                                 <Button x:Name="BtnHalt" Content="Halt" IsEnabled="False" Width="100" Margin="10,10,10,10" Click="BtnHalt_Click" VerticalAlignment="Center"/>

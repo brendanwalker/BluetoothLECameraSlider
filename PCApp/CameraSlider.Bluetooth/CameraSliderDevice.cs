@@ -279,59 +279,108 @@ namespace CameraSlider.Bluetooth
 			}
 		}
 
-		private float IntPercentToFloatPosition(int percent)
+		public async Task<bool> SetSlidePosition(float position)
 		{
-			return ((float)percent - 50.0f) / 50.0f;
+			return await SendFloat(_slidePosCharacteristic, position);
 		}
 
-		private float IntPercentToUnitFloat(int percent)
+		public async Task<bool> SetPanPosition(float position)
 		{
-			return (float)percent / 100.0f;
+			return await SendFloat(_panPosCharacteristic, position);
 		}
 
-		public async Task<bool> SetSlidePosition(int position)
+		public async Task<bool> SetTiltPosition(float position)
 		{
-			return await SendFloat(_slidePosCharacteristic, IntPercentToFloatPosition(position));
+			return await SendFloat(_tiltPosCharacteristic, position);
 		}
 
-		public async Task<bool> SetSlideSpeed(int speed)
+		public async Task<bool> SetSlideSpeed(float speed)
 		{
-			return await SendFloat(_slideSpeedCharacteristic, IntPercentToUnitFloat(speed));
+			return await SendFloat(_slideSpeedCharacteristic, speed);
 		}
 
-		public async Task<bool> SetSlideAcceleration(int acceleration)
+		public async Task<bool> SetPanSpeed(float speed)
 		{
-			return await SendFloat(_slideAccelCharacteristic, IntPercentToUnitFloat(acceleration));
+			return await SendFloat(_panSpeedCharacteristic, speed);
 		}
 
-		public async Task<bool> SetPanPosition(int position)
+		public async Task<bool> SetTiltSpeed(float speed)
 		{
-			return await SendFloat(_panPosCharacteristic, IntPercentToFloatPosition(position));
+			return await SendFloat(_tiltSpeedCharacteristic, speed);
 		}
 
-		public async Task<bool> SetPanSpeed(int speed)
+		public async Task<bool> SetSlideAcceleration(float acceleration)
 		{
-			return await SendFloat(_panSpeedCharacteristic, IntPercentToUnitFloat(speed));
+			return await SendFloat(_slideAccelCharacteristic, acceleration);
 		}
 
-		public async Task<bool> SetPanAcceleration(int acceleration)
+		public async Task<bool> SetPanAcceleration(float acceleration)
 		{
-			return await SendFloat(_panAccelCharacteristic, IntPercentToUnitFloat(acceleration));
+			return await SendFloat(_panAccelCharacteristic, acceleration);
 		}
 
-		public async Task<bool> SetTiltPosition(int position)
+		public async Task<bool> SetTiltAcceleration(float acceleration)
 		{
-			return await SendFloat(_tiltPosCharacteristic, IntPercentToFloatPosition(position));
+			return await SendFloat(_tiltAccelCharacteristic, acceleration);
 		}
 
-		public async Task<bool> SetTiltSpeed(int speed)
+		private async Task<float> GetFloat(GattCharacteristic characteristic)
 		{
-			return await SendFloat(_tiltSpeedCharacteristic, IntPercentToUnitFloat(speed));
+			try
+			{
+				GattReadResult result = await characteristic.ReadValueAsync();
+
+				return BitConverter.ToSingle(result.Value.ToArray(), 0);
+			}
+			catch (Exception)
+			{
+				return 0.0f;
+			}
 		}
 
-		public async Task<bool> SetTiltAcceleration(int acceleration)
+		public async Task<float> GetSlidePosition()
 		{
-			return await SendFloat(_tiltAccelCharacteristic, IntPercentToUnitFloat(acceleration));
+			return await GetFloat(_slidePosCharacteristic);
+		}
+
+		public async Task<float> GetPanPosition()
+		{
+			return await GetFloat(_panPosCharacteristic);
+		}
+
+		public async Task<float> GetTiltPosition()
+		{
+			return await GetFloat(_tiltPosCharacteristic);
+		}
+
+		public async Task<float> GetSlideSpeed()
+		{
+			return await GetFloat(_slideSpeedCharacteristic);
+		}
+
+		public async Task<float> GetPanSpeed()
+		{
+			return await GetFloat(_panSpeedCharacteristic);
+		}
+
+		public async Task<float> GetTiltSpeed()
+		{
+			return await GetFloat(_tiltSpeedCharacteristic);
+		}
+
+		public async Task<float> GetSlideAcceleration()
+		{
+			return await GetFloat(_slideAccelCharacteristic);
+		}
+
+		public async Task<float> GetPanAcceleration()
+		{
+			return await GetFloat(_panAccelCharacteristic);
+		}
+
+		public async Task<float> GetTiltAcceleration()
+		{
+			return await GetFloat(_tiltAccelCharacteristic);
 		}
 
 		public async Task<bool> WakeUp()
@@ -375,12 +424,6 @@ namespace CameraSlider.Bluetooth
 			OnCameraSliderEvent(args);
 		}
 
-		/// <summary>
-		/// Gets a value indicating whether this instance is connected.
-		/// </summary>
-		/// <value>
-		///   <c>true</c> if this instance is connected; otherwise, <c>false</c>.
-		/// </value>
 		public bool IsConnected
 		{
 			get

@@ -28,6 +28,7 @@ using TwitchLib.Client.Interfaces;
 using TwitchLib.Client.Events;
 using TwitchLib.Communication.Events;
 using Newtonsoft.Json;
+using OBSWebsocketDotNet.Types;
 
 namespace CameraSlider.UI
 {
@@ -125,9 +126,10 @@ namespace CameraSlider.UI
 	public class PresetSettings
 	{
 		public string PresetName { get; set; }
-		public int SlidePosition { get; set; }
-		public int PanPosition { get; set; }
-		public int TiltPosition { get; set; }
+		public float SlidePosition { get; set; }
+		public float PanPosition { get; set; }
+		public float TiltPosition { get; set; }
+		public String ObsScene { get; set; }
 		public TriggerSettings ChatTrigger { get; set; }
 		public TriggerSettings RedeemTrigger { get; set; }
 
@@ -137,6 +139,7 @@ namespace CameraSlider.UI
 			SlidePosition = 0;
 			PanPosition = 0;
 			TiltPosition = 0;
+			ObsScene = "";
 			ChatTrigger = new TriggerSettings();
 			RedeemTrigger = new TriggerSettings();
 		}
@@ -147,6 +150,7 @@ namespace CameraSlider.UI
 			SlidePosition = other.SlidePosition;
 			PanPosition = other.PanPosition;
 			TiltPosition = other.TiltPosition;
+			ObsScene = other.ObsScene;
 			ChatTrigger = new TriggerSettings(other.ChatTrigger);
 			RedeemTrigger = new TriggerSettings(other.RedeemTrigger);
 		}
@@ -156,78 +160,78 @@ namespace CameraSlider.UI
 	{
 		public CameraSettingsSection()
 		{
-			SlidePos = 0;
-			SlideSpeed = 0;
-			SlideAccel = 0;
-			PanPos = 0;
-			PanSpeed = 0;
-			PanAccel = 0;
-			TiltPos = 0;
-			TiltSpeed = 0;
-			TiltAccel = 0;
+			SlidePos = 0.0f;
+			SlideSpeed = 0.0f;
+			SlideAccel = 0.0f;
+			PanPos = 0.0f;
+			PanSpeed = 0.0f;
+			PanAccel = 0.0f;
+			TiltPos = 0.0f;
+			TiltSpeed = 0.0f;
+			TiltAccel = 0.0f;
 			PresetJson = "";
 		}
 
 		[ConfigurationProperty("slide_pos")]
-		public int SlidePos
+		public float SlidePos
 		{
-			get { return (int)this["slide_pos"]; }
+			get { return (float)this["slide_pos"]; }
 			set { this["slide_pos"] = value; }
 		}
 
 		[ConfigurationProperty("slide_speed")]
-		public int SlideSpeed
+		public float SlideSpeed
 		{
-			get { return (int)this["slide_speed"]; }
+			get { return (float)this["slide_speed"]; }
 			set { this["slide_speed"] = value; }
 		}
 
 		[ConfigurationProperty("slide_accel")]
-		public int SlideAccel
+		public float SlideAccel
 		{
-			get { return (int)this["slide_accel"]; }
+			get { return (float)this["slide_accel"]; }
 			set { this["slide_accel"] = value; }
 		}
 
 		[ConfigurationProperty("pan_pos")]
-		public int PanPos
+		public float PanPos
 		{
-			get { return (int)this["pan_pos"]; }
+			get { return (float)this["pan_pos"]; }
 			set { this["pan_pos"] = value; }
 		}
 
 		[ConfigurationProperty("pan_speed")]
-		public int PanSpeed
+		public float PanSpeed
 		{
-			get { return (int)this["pan_speed"]; }
+			get { return (float)this["pan_speed"]; }
 			set { this["pan_speed"] = value; }
 		}
 
 		[ConfigurationProperty("pan_accel")]
-		public int PanAccel
+		public float PanAccel
 		{
-			get { return (int)this["pan_accel"]; }
+			get { return (float)this["pan_accel"]; }
 			set { this["pan_accel"] = value; }
 		}
 
 		[ConfigurationProperty("tilt_pos")]
-		public int TiltPos
+		public float TiltPos
 		{
-			get { return (int)this["tilt_pos"]; }
+			get { return (float)this["tilt_pos"]; }
 			set { this["tilt_pos"] = value; }
 		}
 
 		[ConfigurationProperty("tilt_speed")]
-		public int TiltSpeed
+		public float TiltSpeed
 		{
-			get { return (int)this["tilt_speed"]; }
+			get { return (float)this["tilt_speed"]; }
 			set { this["tilt_speed"] = value; }
 		}
 
 		[ConfigurationProperty("tilt_accel")]
-		public int TiltAccel
+		public float TiltAccel
 		{
-			get { return (int)this["tilt_accel"]; }
+			get { return (float)this["tilt_accel"]; }
 			set { this["tilt_accel"] = value; }
 		}
 
@@ -241,6 +245,16 @@ namespace CameraSlider.UI
 
 	public partial class MainWindow : Window
 	{
+		[Flags]
+		public enum UIControlDisableFlags
+		{
+			None = 0,
+			DeviceDisconnected = 1,
+			Calibrating = 1 << 1,
+		}
+
+		private UIControlDisableFlags _uiDisableBitmask = UIControlDisableFlags.None;
+
 		// Config
 		private Configuration _configFile;
 		private TwitchWebAPISection _twitchWebApiConfig;
@@ -252,8 +266,9 @@ namespace CameraSlider.UI
 		// Camera Slider
 		private string _selectedDeviceId = "";
 		private CameraSliderDeviceWatcher _pairedWatcher;
-		private bool _deviceReconnectionPending = false;
 		private CameraSliderDevice _cameraSliderDevice;
+		private bool _deviceReconnectionPending = false;
+		private bool _deviceCalibrationRunning = false;
 
 		// Twitch Chat Client
 		private ITwitchAPI _twitchAPI;
@@ -277,6 +292,13 @@ namespace CameraSlider.UI
 		private Timer _twitchPubSubWatchdogTimer = null;
 		private Timer _twitchClientWatchdogTimer = null;
 		private Timer _obsWatchdogTimer = null;
+
+		// Preset state
+		private Timer _presetStatusPollTimer = null;
+		private float _presetTargetSlidePosition = 0.0f;
+		private float _presetTargetPanPosition = 0.0f;
+		private float _presetTargetTiltPosition = 0.0f;
+		private string _presetBackupObsScene = "";
 
 		public MainWindow()
 		{
@@ -315,20 +337,38 @@ namespace CameraSlider.UI
 
 			// Register to Bluetooth LE Camera Slider Device Manager
 			_cameraSliderDevice = new CameraSliderDevice();
-			_cameraSliderDevice.ConnectionStatusChanged += DLDeviceOnDeviceConnectionStatusChanged;
+			_cameraSliderDevice.ConnectionStatusChanged += OnDeviceConnectionStatusChanged;
 			_cameraSliderDevice.CameraSliderEventHandler += CameraSliderEventReceived;
 
 			// Load the config file and update the UI based on saved settings
+			SetUIControlsDisableFlag(UIControlDisableFlags.DeviceDisconnected, true);
 			LoadConfig();
 			ApplyConfigToUI();
 
-			// Timer use to maintain connection to device
+			// Timers used to monitor the state of the various connections
 			_deviceWatchdogTimer = new Timer(DeviceWatchdogCallback, null, 0, 1000);
 			_twitchPubSubWatchdogTimer = new Timer(TwitchPubSubWatchdogCallback, null, 0, 1000);
 			_twitchClientWatchdogTimer = new Timer(TwitchClientWatchdogCallback, null, 0, 1000);
 			_obsWatchdogTimer = new Timer(ObsStudioWatchdogCallback, null, 0, 1000);
 		}
 
+		protected async override void OnClosing(CancelEventArgs e)
+		{
+			base.OnClosing(e);
+
+			_pairedWatcher.Stop();
+
+			if (_cameraSliderDevice.IsConnected)
+			{
+				await _cameraSliderDevice.DisconnectAsync();
+			}
+
+			_twitchClient.Disconnect();
+			_twitchPubsub.Disconnect();
+			_obsClient.Disconnect();
+		}
+
+		// Config
 		protected void LoadConfig()
 		{
 			// Open App.Config of executable
@@ -367,63 +407,71 @@ namespace CameraSlider.UI
 			_configFile.Save();
 		}
 
-		protected void ApplyConfigToUI()
-		{
-			SlidePosSlider.Value = _cameraSettingsConfig.SlidePos;
-			SlideSpeedSlider.Value = _cameraSettingsConfig.SlideSpeed;
-			SlideAccelSlider.Value = _cameraSettingsConfig.SlideAccel;
-			PanPosSlider.Value = _cameraSettingsConfig.PanPos;
-			PanSpeedSlider.Value = _cameraSettingsConfig.PanSpeed;
-			PanAccelSlider.Value = _cameraSettingsConfig.PanAccel;
-			TiltPosSlider.Value = _cameraSettingsConfig.TiltPos;
-			TiltSpeedSlider.Value = _cameraSettingsConfig.TiltSpeed;
-			TiltAccelSlider.Value = _cameraSettingsConfig.TiltAccel;
-
-			SlidePosStatus.Content = _cameraSettingsConfig.SlidePos.ToString() + "%";
-			SlideSpeedStatus.Content = _cameraSettingsConfig.SlideSpeed.ToString() + "%";
-			SlideAccelStatus.Content = _cameraSettingsConfig.SlideAccel.ToString() + "%";
-			PanPosStatus.Content = _cameraSettingsConfig.PanPos.ToString() + "%";
-			PanSpeedStatus.Content = _cameraSettingsConfig.PanSpeed.ToString() + "%";
-			PanAccelStatus.Content = _cameraSettingsConfig.PanAccel.ToString() + "%";
-			TiltPosStatus.Content = _cameraSettingsConfig.TiltPos.ToString() + "%";
-			TiltSpeedStatus.Content = _cameraSettingsConfig.TiltSpeed.ToString() + "%";
-			TiltAccelStatus.Content = _cameraSettingsConfig.TiltAccel.ToString() + "%";
-
-			RebuildPresetComboBox();
-
-			// Apply the config settings to the settings tab
-			TwitchClientIdInput.Text = _twitchWebApiConfig.ClientID;
-			TwitchChannelIdInput.Text = _twitchWebApiConfig.ChannelID;
-			TwitchSecretKeyInput.Password = _twitchWebApiConfig.Secret;
-
-			SocketAddressInput.Text = _obsConfig.SocketAddress;
-			SocketPasswordInput.Password = _obsConfig.Password;
-		}
-
 		protected void SaveConfig()
 		{
 			if (_arePresetsDirty)
 			{
 				_cameraSettingsConfig.PresetJson = JsonConvert.SerializeObject(_presets, Formatting.None);
-				_arePresetsDirty= false;
+				_arePresetsDirty = false;
 			}
 			_configFile.Save();
 		}
 
-		protected async override void OnClosing(CancelEventArgs e)
+		// Camera Slider Functions
+		private async void SetCameraStatusLabel(string status)
 		{
-			base.OnClosing(e);
-
-			_pairedWatcher.Stop();
-
-			if (_cameraSliderDevice.IsConnected)
+			await RunOnUiThread(() =>
 			{
-				await _cameraSliderDevice.DisconnectAsync();
-			}
+				CameraTxtStatus.Content = status;
+			});
+		}
 
-			_twitchClient.Disconnect();
-			_twitchPubsub.Disconnect();
-			_obsClient.Disconnect();
+		private void CameraSliderEventReceived(object sender, CameraSliderEventArgs arg)
+		{
+			d("Received slider event received: " + arg.Message);
+
+			switch(arg.Message)
+			{
+			case "calibration_started":
+				{
+					_deviceCalibrationRunning = true;
+					SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, true);
+					SetCameraStatusLabel ("Calibrating...");
+				}
+			break;
+			case "calibration_completed":
+				{
+					_deviceCalibrationRunning = false;
+					SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, false);
+					SetCameraStatusLabel("Connected");
+				}
+			break;
+			case "calibration_failed":
+				{
+					_deviceCalibrationRunning = false;
+					SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, false);
+					SetCameraStatusLabel("Calibration Failed!");
+				}
+			break;
+			}
+		}
+
+		private void OnDeviceConnectionStatusChanged(object sender, ConnectionStatusChangedEventArgs args)
+		{
+			bool connected = args.IsConnected;
+			d("Current connection status is: " + connected);
+
+			if (connected)
+			{
+				SetCameraStatusLabel("Connected");
+				SetUIControlsDisableFlag(UIControlDisableFlags.DeviceDisconnected, false);
+			}
+			else
+			{
+				SetCameraStatusLabel("Searching...");
+				SetActivePresetStatusLabel("");
+				SetUIControlsDisableFlag(UIControlDisableFlags.DeviceDisconnected, true);
+			}
 		}
 
 		private void OnPaired_DeviceAdded(object sender, CameraSlider.Bluetooth.Events.DeviceAddedEventArgs e)
@@ -471,78 +519,90 @@ namespace CameraSlider.UI
 					d("Device connect error: " + ex.Message);
 				}
 				_deviceReconnectionPending = false;
+
+				// Clear the control UI disable if the device is connected
+				if (_cameraSliderDevice.IsConnected)
+				{
+					SetUIControlsDisableFlag(UIControlDisableFlags.DeviceDisconnected, false);
+				}
 			}
 		}
 
-		private async void ObsStudioWatchdogCallback(Object context)
+		private async void ActivatePreset(PresetSettings preset)
 		{
-			if (_obsConfig.SocketAddress != "")
-			{
-				if (_obsReconnectionPending)
-				{
-					if (_obsClient.IsConnected)
-					{
-						OnObsConnected(this, new EventArgs { });
-					}
-				}
-				else if (!_obsClient.IsConnected)
-				{
-					await RunOnUiThread(() =>
-					{
-						ObsTxtStatus.Content = "Connecting...";
-					});
+			_presetTargetSlidePosition = preset.SlidePosition;
+			_presetTargetPanPosition = preset.PanPosition;
+			_presetTargetTiltPosition = preset.TiltPosition;
+	
+			SetActivePresetStatusLabel("Moving To "+preset.PresetName);
+			await _cameraSliderDevice.SetSlidePosition(_presetTargetSlidePosition);
+			await _cameraSliderDevice.SetPanPosition(_presetTargetPanPosition);
+			await _cameraSliderDevice.SetTiltPosition(_presetTargetTiltPosition);
 
-					_obsReconnectionPending = true;
-					_obsClient.Connect("ws://" + _obsConfig.SocketAddress, _obsConfig.Password);
-				}
-			}
-			else
+			await RunOnUiThread(() =>
 			{
-				if (_obsClient.IsConnected || _obsReconnectionPending)
+				SlidePosSlider.Value = preset.SlidePosition;
+				PanPosSlider.Value = preset.PanPosition;
+				TiltPosSlider.Value = preset.TiltPosition;
+			});
+
+			if (_presetStatusPollTimer != null)
+			{
+				_presetStatusPollTimer.Dispose();
+				_presetStatusPollTimer= null;
+			}
+
+			if (preset.ObsScene.Length > 0)
+			{
+				// If there wasn't already a backup OBS scene, save the current scene
+				if (_presetBackupObsScene.Length == 0)
 				{
-					_obsReconnectionPending = false;
-					_obsClient.Disconnect();
+					_presetBackupObsScene = GetObsSceneName();
 				}
+
+				// Switch to the new OBS scene
+				SetObsSceneByName(preset.ObsScene);
+			}
+
+			// Start a polling timer to see if the camera reached the target position
+			_presetStatusPollTimer = new Timer(PresetStatusPollCallback, preset, 0, 100);
+		}
+
+		private async void PresetStatusPollCallback(object state)
+		{
+			const float kEpsilon= 0.01f;
+			
+			float slidePos= await _cameraSliderDevice.GetSlidePosition();
+			float panPos= await _cameraSliderDevice.GetPanPosition();
+			float tiltPos= await _cameraSliderDevice.GetTiltPosition();
+
+			if (Math.Abs(slidePos - _presetTargetSlidePosition) < kEpsilon &&
+				Math.Abs(panPos - _presetTargetPanPosition) < kEpsilon &&
+				Math.Abs(tiltPos - _presetTargetTiltPosition) < kEpsilon)
+			{
+				// Halt the timer
+				_presetStatusPollTimer.Change(Timeout.Infinite, Timeout.Infinite);
+
+				// Restore back to the previous OBS scene
+				if (_presetBackupObsScene.Length > 0)
+				{
+					SetObsSceneByName(_presetBackupObsScene);
+					_presetBackupObsScene= "";
+				}
+
+				SetActivePresetStatusLabel("");
 			}
 		}
 
-		private async void CameraSliderEventReceived(object sender, CameraSliderEventArgs arg)
+		private async void SetActivePresetStatusLabel(string status)
 		{
 			await RunOnUiThread(() =>
 			{
-				d("Got new message: " + arg.Message);
+				ActivePresetTxtStatus.Content = status;
 			});
 		}
 
-		private async void DLDeviceOnDeviceConnectionStatusChanged(object sender, ConnectionStatusChangedEventArgs args)
-		{
-			d("Current connection status is: " + args.IsConnected);
-
-			await RunOnUiThread(async () =>
-			{
-				bool connected = args.IsConnected;
-				if (connected)
-				{
-					DeviceTxtStatus.Content = "Connected";
-				}
-				else
-				{
-					DeviceTxtStatus.Content = "Searching...";
-				}
-
-				SlidePosSlider.IsEnabled = connected;
-				SlideSpeedSlider.IsEnabled = connected;
-				SlideAccelSlider.IsEnabled = connected;
-
-				PanPosSlider.IsEnabled = connected;
-				PanSpeedSlider.IsEnabled = connected;
-				PanAccelSlider.IsEnabled = connected;
-
-				BtnCalibrate.IsEnabled = connected;
-				BtnHalt.IsEnabled = connected;
-			});
-		}
-
+		// Twitch PubSub Event Handlers
 		private async void TwitchPubSubWatchdogCallback(Object context)
 		{
 			// Attempt reconnection to stream labs
@@ -567,6 +627,60 @@ namespace CameraSlider.UI
 			}
 		}
 
+		private void OnChannelPointsRewardRedeemed(object sender, OnChannelPointsRewardRedeemedArgs e)
+		{
+			var reward = e.RewardRedeemed.Redemption.Reward;
+			string rewardId = reward.Id;
+
+			foreach (PresetSettings preset in _presets)
+			{
+				if (preset.RedeemTrigger.IsActive &&
+					preset.RedeemTrigger.TriggerName == rewardId)
+				{
+					ActivatePreset(preset);
+					break;
+				}
+			}
+		}
+
+		private async void OnTwitchPubsubError(object sender, OnPubSubServiceErrorArgs e)
+		{
+			if (_twitchPubSubReconnectionPending)
+			{
+				await RunOnUiThread(() =>
+				{
+					d("Twitch PubSub failed to connect");
+					TwitchPubSubTxtStatus.Content = "Disconnected";
+				});
+
+				_twitchPubSubReconnectionPending = false;
+			}
+		}
+
+		private async void OnTwitchPubsubClosed(object sender, EventArgs e)
+		{
+			await RunOnUiThread(() =>
+			{
+				d("Twitch PubSub disconnected");
+				TwitchPubSubTxtStatus.Content = "Disconnected";
+			});
+
+			_twitchPubSubIsConnected = true;
+			_twitchPubSubReconnectionPending = false;
+		}
+
+		private async void OnTwitchPubsubConnected(object sender, EventArgs e)
+		{
+			await RunOnUiThread(() =>
+			{
+				d("Twitch PubSub connected");
+				TwitchPubSubTxtStatus.Content = "Connected";
+			});
+
+			_twitchPubSubIsConnected = true;
+		}
+
+		// Twitch Client Event Handlers
 		private void TwitchClientWatchdogCallback(Object context)
 		{
 			// Attempt reconnection to stream labs
@@ -622,72 +736,37 @@ namespace CameraSlider.UI
 			}
 		}
 
-		private async void ActivatePreset(PresetSettings preset)
+		// OBS Studio Event Handlers
+		private async void ObsStudioWatchdogCallback(Object context)
 		{
-			ActivePresetLabel.Content = preset.PresetName;
-			await _cameraSliderDevice.SetSlidePosition(preset.SlidePosition);
-			await _cameraSliderDevice.SetPanPosition(preset.PanPosition);
-			await _cameraSliderDevice.SetTiltPosition(preset.TiltPosition);
-
-			await RunOnUiThread(() =>
+			if (_obsConfig.SocketAddress != "")
 			{
-				SlidePosSlider.Value = preset.SlidePosition;
-				PanPosSlider.Value = preset.PanPosition;
-				TiltPosSlider.Value = preset.TiltPosition;
-			});
-		}
-
-		private void OnChannelPointsRewardRedeemed(object sender, OnChannelPointsRewardRedeemedArgs e)
-		{
-			var reward = e.RewardRedeemed.Redemption.Reward;
-			string rewardId = reward.Id;
-
-			foreach (PresetSettings preset in _presets)
-			{
-				if (preset.RedeemTrigger.IsActive &&
-					preset.RedeemTrigger.TriggerName == rewardId)
+				if (_obsReconnectionPending)
 				{
-					ActivatePreset(preset);
-					break;
+					if (_obsClient.IsConnected)
+					{
+						OnObsConnected(this, new EventArgs { });
+					}
+				}
+				else if (!_obsClient.IsConnected)
+				{
+					await RunOnUiThread(() =>
+					{
+						ObsTxtStatus.Content = "Connecting...";
+					});
+
+					_obsReconnectionPending = true;
+					_obsClient.Connect("ws://" + _obsConfig.SocketAddress, _obsConfig.Password);
 				}
 			}
-		}
-
-		private async void OnTwitchPubsubError(object sender, OnPubSubServiceErrorArgs e)
-		{
-			if (_twitchPubSubReconnectionPending)
+			else
 			{
-				await RunOnUiThread(() =>
+				if (_obsClient.IsConnected || _obsReconnectionPending)
 				{
-					d("Twitch PubSub failed to connect");
-					TwitchPubSubTxtStatus.Content = "Disconnected";
-				});
-
-				_twitchPubSubReconnectionPending = false;
+					_obsReconnectionPending = false;
+					_obsClient.Disconnect();
+				}
 			}
-		}
-
-		private async void OnTwitchPubsubClosed(object sender, EventArgs e)
-		{
-			await RunOnUiThread(() =>
-			{
-				d("Twitch PubSub disconnected");
-				TwitchPubSubTxtStatus.Content = "Disconnected";
-			});
-
-			_twitchPubSubIsConnected = true;
-			_twitchPubSubReconnectionPending = false;
-		}
-
-		private async void OnTwitchPubsubConnected(object sender, EventArgs e)
-		{
-			await RunOnUiThread(() =>
-			{
-				d("Twitch PubSub connected");
-				TwitchPubSubTxtStatus.Content = "Connected";
-			});
-
-			_twitchPubSubIsConnected = true;
 		}
 
 		protected string GetObsSceneName()
@@ -775,10 +854,74 @@ namespace CameraSlider.UI
 			_obsReconnectionPending = false;
 		}
 
-		[Conditional("DEBUG")]
-		private void d(string txt)
+		// UI Functions
+		protected void ApplyConfigToUI()
 		{
-			Debug.WriteLine(txt);
+			SlidePosSlider.Value = _cameraSettingsConfig.SlidePos;
+			SlideSpeedSlider.Value = _cameraSettingsConfig.SlideSpeed;
+			SlideAccelSlider.Value = _cameraSettingsConfig.SlideAccel;
+			PanPosSlider.Value = _cameraSettingsConfig.PanPos;
+			PanSpeedSlider.Value = _cameraSettingsConfig.PanSpeed;
+			PanAccelSlider.Value = _cameraSettingsConfig.PanAccel;
+			TiltPosSlider.Value = _cameraSettingsConfig.TiltPos;
+			TiltSpeedSlider.Value = _cameraSettingsConfig.TiltSpeed;
+			TiltAccelSlider.Value = _cameraSettingsConfig.TiltAccel;
+
+			SlidePosStatus.Content = _cameraSettingsConfig.SlidePos.ToString("0.00");
+			SlideSpeedStatus.Content = _cameraSettingsConfig.SlideSpeed.ToString("0.00");
+			SlideAccelStatus.Content = _cameraSettingsConfig.SlideAccel.ToString("0.00");
+			PanPosStatus.Content = _cameraSettingsConfig.PanPos.ToString("0.00");
+			PanSpeedStatus.Content = _cameraSettingsConfig.PanSpeed.ToString("0.00");
+			PanAccelStatus.Content = _cameraSettingsConfig.PanAccel.ToString("0.00");
+			TiltPosStatus.Content = _cameraSettingsConfig.TiltPos.ToString("0.00");
+			TiltSpeedStatus.Content = _cameraSettingsConfig.TiltSpeed.ToString("0.00");
+			TiltAccelStatus.Content = _cameraSettingsConfig.TiltAccel.ToString("0.00");
+
+			RebuildPresetComboBox();
+
+			// Apply the config settings to the settings tab
+			TwitchClientIdInput.Text = _twitchWebApiConfig.ClientID;
+			TwitchChannelIdInput.Text = _twitchWebApiConfig.ChannelID;
+			TwitchSecretKeyInput.Password = _twitchWebApiConfig.Secret;
+
+			SocketAddressInput.Text = _obsConfig.SocketAddress;
+			SocketPasswordInput.Password = _obsConfig.Password;
+		}
+
+		private void SetUIControlsDisableFlag(UIControlDisableFlags flag, bool bSetFlag)
+		{
+			UIControlDisableFlags newFlags = _uiDisableBitmask;
+
+			if (bSetFlag)
+				newFlags |= flag;
+			else
+				newFlags &= ~flag;
+
+			SetUIDisableBitmask(newFlags);
+		}
+
+		private async void SetUIDisableBitmask(UIControlDisableFlags newFlags)
+		{
+			if (_uiDisableBitmask != newFlags)
+			{
+				bool bEnabled = newFlags == UIControlDisableFlags.None;
+
+				await RunOnUiThread(() =>
+				{
+					SlidePosSlider.IsEnabled = bEnabled;
+					SlideSpeedSlider.IsEnabled = bEnabled;
+					SlideAccelSlider.IsEnabled = bEnabled;
+
+					PanPosSlider.IsEnabled = bEnabled;
+					PanSpeedSlider.IsEnabled = bEnabled;
+					PanAccelSlider.IsEnabled = bEnabled;
+
+					BtnCalibrate.IsEnabled = bEnabled;
+					BtnHalt.IsEnabled = bEnabled;
+				});
+
+				_uiDisableBitmask = newFlags;
+			}
 		}
 
 		private async Task RunOnUiThread(Action a)
@@ -851,54 +994,63 @@ namespace CameraSlider.UI
 		{
 			_cameraSettingsConfig.SlidePos = (int)SlidePosSlider.Value;
 			await _cameraSliderDevice.SetSlidePosition(_cameraSettingsConfig.SlidePos);
-		}
-
-		private async void SlideSpeed_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-		{
-			_cameraSettingsConfig.SlideSpeed = (int)SlideSpeedSlider.Value;
-			await _cameraSliderDevice.SetSlideSpeed(_cameraSettingsConfig.SlideSpeed);
-		}
-
-		private async void SlideAccel_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-		{
-			_cameraSettingsConfig.SlideAccel = (int)SlideAccelSlider.Value;
-			await _cameraSliderDevice.SetSlideAcceleration(_cameraSettingsConfig.SlideAccel);
+			SlidePosStatus.Content = _cameraSettingsConfig.SlidePos.ToString("0.00");
 		}
 
 		private async void PanPos_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
 		{
 			_cameraSettingsConfig.PanPos = (int)PanPosSlider.Value;
 			await _cameraSliderDevice.SetSlidePosition(_cameraSettingsConfig.PanPos);
-		}
-
-		private async void PanSpeed_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-		{
-			_cameraSettingsConfig.PanSpeed = (int)PanSpeedSlider.Value;
-			await _cameraSliderDevice.SetSlideSpeed(_cameraSettingsConfig.PanSpeed);
-		}
-
-		private async void PanAccel_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-		{
-			_cameraSettingsConfig.PanAccel = (int)PanAccelSlider.Value;
-			await _cameraSliderDevice.SetSlideAcceleration(_cameraSettingsConfig.PanAccel);
+			PanPosStatus.Content = _cameraSettingsConfig.PanPos.ToString("0.00");
 		}
 
 		private async void TiltPos_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
 		{
 			_cameraSettingsConfig.TiltPos = (int)TiltPosSlider.Value;
 			await _cameraSliderDevice.SetSlidePosition(_cameraSettingsConfig.TiltPos);
+			TiltPosStatus.Content = _cameraSettingsConfig.TiltPos.ToString("0.00");
+		}
+
+		private async void SlideSpeed_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+		{
+			_cameraSettingsConfig.SlideSpeed = (int)SlideSpeedSlider.Value;
+			await _cameraSliderDevice.SetSlideSpeed(_cameraSettingsConfig.SlideSpeed);
+			SlideSpeedStatus.Content = _cameraSettingsConfig.SlideSpeed.ToString("0.00");
+		}
+
+		private async void PanSpeed_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+		{
+			_cameraSettingsConfig.PanSpeed = (int)PanSpeedSlider.Value;
+			await _cameraSliderDevice.SetSlideSpeed(_cameraSettingsConfig.PanSpeed);
+			PanSpeedStatus.Content = _cameraSettingsConfig.PanSpeed.ToString("0.00");
 		}
 
 		private async void TiltSpeed_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
 		{
 			_cameraSettingsConfig.TiltSpeed = (int)TiltSpeedSlider.Value;
 			await _cameraSliderDevice.SetSlideSpeed(_cameraSettingsConfig.TiltSpeed);
+			TiltSpeedStatus.Content = _cameraSettingsConfig.TiltSpeed.ToString("0.00");
+		}
+
+		private async void SlideAccel_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+		{
+			_cameraSettingsConfig.SlideAccel = (int)SlideAccelSlider.Value;
+			await _cameraSliderDevice.SetSlideAcceleration(_cameraSettingsConfig.SlideAccel);
+			SlideAccelStatus.Content = _cameraSettingsConfig.SlideAccel.ToString("0.00");
+		}
+
+		private async void PanAccel_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+		{
+			_cameraSettingsConfig.PanAccel = (int)PanAccelSlider.Value;
+			await _cameraSliderDevice.SetSlideAcceleration(_cameraSettingsConfig.PanAccel);
+			PanAccelStatus.Content = _cameraSettingsConfig.PanAccel.ToString("0.00");
 		}
 
 		private async void TiltAccel_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
 		{
 			_cameraSettingsConfig.TiltAccel = (int)TiltAccelSlider.Value;
 			await _cameraSliderDevice.SetSlideAcceleration(_cameraSettingsConfig.TiltAccel);
+			TiltAccelStatus.Content = _cameraSettingsConfig.TiltAccel.ToString("0.00");
 		}
 
 		private void BtnGotoPreset_Click(object sender, RoutedEventArgs e)
@@ -960,12 +1112,22 @@ namespace CameraSlider.UI
 
 		private async void BtnCalibrate_Click(object sender, RoutedEventArgs e)
 		{
-			await _cameraSliderDevice.StartCalibration();
+			if (!_deviceCalibrationRunning)
+			{ 
+				// Wait to hear if calibration started in the device event handler
+				await _cameraSliderDevice.StartCalibration();
+			}
 		}
 
 		private async void BtnHalt_Click(object sender, RoutedEventArgs e)
 		{
 			await _cameraSliderDevice.StopAllMotors();
+		}
+
+		[Conditional("DEBUG")]
+		private void d(string txt)
+		{
+			Debug.WriteLine(txt);
 		}
 	}
 }
