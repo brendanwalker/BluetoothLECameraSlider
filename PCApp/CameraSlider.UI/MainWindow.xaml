@@ -21,19 +21,20 @@
                     <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <Label Content="CameraSlider Device Status:" Width="175" HorizontalAlignment="Right"/>
+                                <Label Content="CameraSlider Device:" Margin="26,0,0,0" Width="175" HorizontalAlignment="Right"/>
                                 <Label x:Name="CameraTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <Label Content="Twitch Client Status: " Width="175" HorizontalAlignment="Right"/>
+                                <Label Content="Twitch Client: " Margin="26,0,0,0"  Width="175" HorizontalAlignment="Right"/>
                                 <Label x:Name="TwitchClientTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <Label Content="Twitch PubSub Status: " Width="175" HorizontalAlignment="Right"/>
+                                <Label Content="Twitch PubSub: " Margin="26,0,0,0"  Width="175" HorizontalAlignment="Right"/>
                                 <Label x:Name="TwitchPubSubTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <Label Content="OBS Studio Websocket Status: " Width="175" HorizontalAlignment="Right"/>
+                                <CheckBox x:Name="ObsCheckBox" HorizontalAlignment="Left" Margin="5,5,5,5" IsChecked="False" Checked="ObsCheckBox_Checked"/>
+                                <Label Content="OBS Studio Websocket: " Width="175" HorizontalAlignment="Right"/>
                                 <Label x:Name="ObsTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
                             </StackPanel>
                         </StackPanel>
@@ -77,8 +78,6 @@
                                 <Slider x:Name="TiltSpeedSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="TiltSpeed_ValueChanged" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
                                 <Label x:Name="TiltSpeedStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
                             </StackPanel>
-
-
                         </StackPanel>
                     </Border>
 

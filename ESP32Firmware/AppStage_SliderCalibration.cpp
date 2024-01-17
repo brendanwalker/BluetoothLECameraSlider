@@ -68,9 +68,13 @@ void AppStage_SliderCalibration::exit()
 // HallSensorEventListener Events
 void AppStage_SliderCalibration::onSlideMinSensorChanged(bool bActive)
 {
-    if (m_calibrationState == eSliderCalibrationState::FindSlideMin && bActive)
+    if (m_calibrationState == eSliderCalibrationState::FindSlideMin && 
+        (bActive || m_bBypassHallSensorEvent))
     {
         SliderState* silderState= SliderState::getInstance();
+
+        // Clear bypass flag in case it was set
+        m_bBypassHallSensorEvent= false;
 
         // Store the slider min position
         int32_t sliderPosition= silderState->getSlideStepperPosition();
@@ -86,9 +90,13 @@ void AppStage_SliderCalibration::onSlideMinSensorChanged(bool bActive)
 
 void AppStage_SliderCalibration::onSlideMaxSensorChanged(bool bActive)
 {
-    if (m_calibrationState == eSliderCalibrationState::FindSlideMax && bActive)
+    if (m_calibrationState == eSliderCalibrationState::FindSlideMax && 
+        (bActive || m_bBypassHallSensorEvent))
     {
         SliderState* silderState= SliderState::getInstance();
+
+        // Clear bypass flag in case it was set
+        m_bBypassHallSensorEvent= false;
 
         // Store the slider max position
         int32_t sliderPosition= silderState->getSlideStepperPosition();
@@ -109,9 +117,13 @@ void AppStage_SliderCalibration::onSlideMaxSensorChanged(bool bActive)
 
 void AppStage_SliderCalibration::onPanSensorChanged(bool bActive)
 {
-    if (m_calibrationState == eSliderCalibrationState::FindPanCenter && bActive)
+    if (m_calibrationState == eSliderCalibrationState::FindPanCenter && 
+        (bActive || m_bBypassHallSensorEvent))
     {
         SliderState* silderState= SliderState::getInstance();
+
+        // Clear bypass flag in case it was set
+        m_bBypassHallSensorEvent= false;
 
         // Store the pan center position
         int32_t panPosition= silderState->getPanStepperPosition();
@@ -127,9 +139,13 @@ void AppStage_SliderCalibration::onPanSensorChanged(bool bActive)
 
 void AppStage_SliderCalibration::onTiltSensorChanged(bool bActive)
 {
-    if (m_calibrationState == eSliderCalibrationState::FindTiltCenter && bActive)
+    if (m_calibrationState == eSliderCalibrationState::FindTiltCenter && 
+        (bActive || m_bBypassHallSensorEvent))
     {
         SliderState* silderState= SliderState::getInstance();
+
+        // Clear bypass flag in case it was set
+        m_bBypassHallSensorEvent= false;
 
         // Store the tilt center position
         int32_t tiltPosition= silderState->getTiltStepperPosition();
@@ -140,6 +156,18 @@ void AppStage_SliderCalibration::onTiltSensorChanged(bool bActive)
         silderState->getTiltStepper()->stopMove();
 
         setState(eSliderCalibrationState::Recenter);            
+    }
+}
+
+// Button Bypass for Hall Effect Sensor searches
+void AppStage_SliderCalibration::onRotaryButtonClicked(Button2* button)
+{
+    if (m_calibrationState == eSliderCalibrationState::FindSlideMin ||
+        m_calibrationState == eSliderCalibrationState::FindSlideMax ||
+        m_calibrationState == eSliderCalibrationState::FindPanCenter ||
+        m_calibrationState == eSliderCalibrationState::FindTiltCenter)
+    {
+      m_bBypassHallSensorEvent= true;
     }
 }
 
@@ -160,7 +188,8 @@ void AppStage_SliderCalibration::onOptionClicked(int optionIndex)
             break;
         }
     }
-    else if (m_calibrationState == eSliderCalibrationState::Complete)
+    else if (m_calibrationState == eSliderCalibrationState::Complete || 
+             m_calibrationState == eSliderCalibrationState::Failed)
     {
         switch ((eCalibrationDoneOptions)optionIndex)
         {
@@ -409,6 +438,10 @@ void AppStage_SliderCalibration::onEnterState(eSliderCalibrationState newState)
         m_activeMenu->setListener(this);
         m_activeMenu->show();
     }
+    else
+    {
+        App::getInstance()->pushInputListener(this);
+    }
 }
 
 void AppStage_SliderCalibration::onLeaveState(eSliderCalibrationState oldState)
@@ -418,5 +451,9 @@ void AppStage_SliderCalibration::onLeaveState(eSliderCalibrationState oldState)
         m_activeMenu->hide();
         m_activeMenu->clearListener();
         m_activeMenu = nullptr;
+    }
+    else
+    {
+        App::getInstance()->popInputListener();
     }
 }

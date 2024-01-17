@@ -31,7 +31,11 @@ enum class eSearchMode : int
     COUNT
 };
 
-class AppStage_SliderCalibration : public AppStage, public SelectionMenuListener, public HallSensorEventListener
+class AppStage_SliderCalibration : 
+  public AppStage, 
+  public InputEventListener,
+  public SelectionMenuListener, 
+  public HallSensorEventListener
 {
 public:
     AppStage_SliderCalibration(class App *app);
@@ -43,7 +47,7 @@ public:
     virtual void enter() override;
     virtual void exit() override;
     virtual void update(float deltaSeconds) override;
-    virtual void render() override;
+    virtual void render() override;    
 
     // HallSensorEventListener Events
     virtual void onPanSensorChanged(bool bActive) override;
@@ -53,6 +57,14 @@ public:
 
     // Selection Events
     virtual void onOptionClicked(int optionIndex) override;
+
+    // Input Event Handling (active when menu is not active)
+    virtual bool getIsRotaryEncoderWrapped() const override { return true; }
+    virtual int getRotaryEncoderDefaultValue() const override { return 0; }
+    virtual int getRotaryEncoderLowerBound() const override { return 0; }
+    virtual int getRotaryEncoderUpperBound() const override { return 100; }  
+    virtual void onRotaryEncoderValueChanged(class RotaryHalfStep* rotaryEncoder) override {}
+    virtual void onRotaryButtonClicked(class Button2* button) override;    
 
     static const char *APP_STAGE_NAME;
 
@@ -72,6 +84,7 @@ private:
     SelectionMenu* m_activeMenu= nullptr;
     uint8_t m_moveState= 0;
     eSearchMode m_searchMode= eSearchMode::NotStarted;
+    bool m_bBypassHallSensorEvent= false;
 };
 
 #endif

@@ -12,7 +12,7 @@ public:
   virtual void onCommand(const std::string& command) {}
 };
 
-class BLEManager : public BLECharacteristicCallbacks 
+class BLEManager : public BLECharacteristicCallbacks, public BLEServerCallbacks
 {
 public:
   BLEManager(ConfigManager* config);
@@ -32,8 +32,14 @@ private:
 
   ConfigManager* m_config= nullptr;
 
+  // BLEServerCallbacks
+  void onConnect(BLEServer *pServer) override;
+  void onDisconnect(BLEServer *pServer) override;
+
+  // BLECharacteristicCallbacks
   BLECharacteristic *makeFloatCharacteristic(const char* UUID, bool bWritable, float initialValue);
-  BLECharacteristic *makeUTF8Characteristic(const char* UUID, bool bWritable, bool bNotifyOnChange, const char* initialValue);
+  BLECharacteristic *makeUTF8OutputCharacteristic(const char* UUID);
+  BLECharacteristic *makeUTF8InputCharacteristic(const char* UUID);
   float readFloat(BLECharacteristic *pCharacteristic);
   void onRead(BLECharacteristic* pCharacteristic, esp_ble_gatts_cb_param_t* param) override;
   void onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_param_t* param) override;
@@ -53,7 +59,8 @@ private:
   BLECharacteristic *m_pTiltAccelCharacteristic= nullptr;    
   BLEAdvertising *m_pAdvertising= nullptr;
 
-  bool m_bleControlEnabled= true;  
+  bool m_bleControlEnabled= true;
+  int m_deviceConnectedCount= 0;
 };
 
 #endif // BLE_MANAGER_H__

@@ -36,10 +36,18 @@ namespace CameraSlider.UI
 	{
 		public ObsConfigSection()
 		{
+			IsEnabled = false;
 			PatternSceneName = "Main";
 			PatternSceneDuration = 3000;
 			SocketAddress = "127.0.0.1:4444";
 			Password = "";
+		}
+
+		[ConfigurationProperty("is_enabled")]
+		public bool IsEnabled
+		{
+			get { return (bool)this["is_enabled"]; }
+			set { this["is_enabled"] = value; }
 		}
 
 		[ConfigurationProperty("pattern_scene_name")]
@@ -264,37 +272,30 @@ namespace CameraSlider.UI
 		private bool _arePresetsDirty = false;
 
 		// Camera Slider
-		private string _selectedDeviceId = "";
-		private CameraSliderDeviceWatcher _pairedWatcher;
+		CancellationTokenSource _deviceWatchdogCancelSignaler = new CancellationTokenSource();
+		private string _deviceName = "Camera Slider";
 		private CameraSliderDevice _cameraSliderDevice;
-		private bool _deviceReconnectionPending = false;
 		private bool _deviceCalibrationRunning = false;
+		private static int _deviceKeepAliveDelay = 10;
+		private int _deviceKeepAliveCountdown = _deviceKeepAliveDelay;
 
 		// Twitch Chat Client
+		CancellationTokenSource _twitchApiWatchdogCancelSignaler = new CancellationTokenSource();
 		private ITwitchAPI _twitchAPI;
 		private TwitchClient _twitchClient;
 		private bool _twitchClientIsConnected = false;
-		private bool _twitchClientReconnectionPending = false;
 
 		// Twitch PubSub Client
+		CancellationTokenSource _twitchPubSubWatchdogCancelSignaler = new CancellationTokenSource();
 		private TwitchPubSub _twitchPubsub;
 		private bool _twitchPubSubIsConnected = false;
-		private bool _twitchPubSubReconnectionPending = false;
 
 		// OBS Web Socket
-		private bool _obsReconnectionPending = false;
+		CancellationTokenSource _obsClientCancelSignaler = new CancellationTokenSource();
 		private OBSWebsocket _obsClient;
 
-		// Watchdog timers
-		private Timer _deviceWatchdogTimer = null;
-		private static int _keepAliveDelay = 10;
-		private int _keepAliveCountdown = _keepAliveDelay;
-		private Timer _twitchPubSubWatchdogTimer = null;
-		private Timer _twitchClientWatchdogTimer = null;
-		private Timer _obsWatchdogTimer = null;
-
 		// Preset state
-		private Timer _presetStatusPollTimer = null;
+		CancellationTokenSource _presetCancelSignaler = null;
 		private float _presetTargetSlidePosition = 0.0f;
 		private float _presetTargetPanPosition = 0.0f;
 		private float _presetTargetTiltPosition = 0.0f;
@@ -303,12 +304,6 @@ namespace CameraSlider.UI
 		public MainWindow()
 		{
 			InitializeComponent();
-
-			_selectedDeviceId = "";
-			_pairedWatcher = new CameraSliderDeviceWatcher(DeviceSelector.BluetoothLePairedOnly);
-			_pairedWatcher.DeviceAdded += OnPaired_DeviceAdded;
-			_pairedWatcher.DeviceRemoved += OnPaired_DeviceRemoved;
-			_pairedWatcher.Start();
 
 			// Register Twitch PubSub to get channel point redeems
 			_twitchAPI = new TwitchAPI();
@@ -345,24 +340,36 @@ namespace CameraSlider.UI
 			LoadConfig();
 			ApplyConfigToUI();
 
-			// Timers used to monitor the state of the various connections
-			_deviceWatchdogTimer = new Timer(DeviceWatchdogCallback, null, 0, 1000);
-			_twitchPubSubWatchdogTimer = new Timer(TwitchPubSubWatchdogCallback, null, 0, 1000);
-			_twitchClientWatchdogTimer = new Timer(TwitchClientWatchdogCallback, null, 0, 1000);
-			_obsWatchdogTimer = new Timer(ObsStudioWatchdogCallback, null, 0, 1000);
+			// Kick off the watchdog workers
+			_ = StartDeviceWatchdogWorker(_deviceWatchdogCancelSignaler.Token);
+			_ = StartTwitchClientWatchdogWorker(_twitchApiWatchdogCancelSignaler.Token);
+			_ = StartTwitchPubSubWatchdogWorker(_twitchPubSubWatchdogCancelSignaler.Token);
+
+			if (_obsConfig.IsEnabled)
+			{
+				_ = StartObsStudioWatchdogWorker(_obsClientCancelSignaler.Token);
+			}
 		}
 
 		protected async override void OnClosing(CancelEventArgs e)
 		{
 			base.OnClosing(e);
 
-			_pairedWatcher.Stop();
+			// Stop any running async tasks
+			_deviceWatchdogCancelSignaler.Cancel();
+			_twitchApiWatchdogCancelSignaler.Cancel();
+			_twitchPubSubWatchdogCancelSignaler.Cancel();
+			_obsClientCancelSignaler.Cancel();
+			if (_presetCancelSignaler != null)
+			{
+				_presetCancelSignaler.Cancel();
+			}
 
+			// Disconnect from everything
 			if (_cameraSliderDevice.IsConnected)
 			{
 				await _cameraSliderDevice.DisconnectAsync();
 			}
-
 			_twitchClient.Disconnect();
 			_twitchPubsub.Disconnect();
 			_obsClient.Disconnect();
@@ -474,67 +481,75 @@ namespace CameraSlider.UI
 			}
 		}
 
-		private void OnPaired_DeviceAdded(object sender, CameraSlider.Bluetooth.Events.DeviceAddedEventArgs e)
+		private async Task StartDeviceWatchdogWorker(CancellationToken cancellationToken)
 		{
-			Debug.WriteLine("Paired Device Added: " + e.Device.Id);
-
-			if (e.Device.Name == "Camera Slider" && _selectedDeviceId == "")
+			try
 			{
-				_selectedDeviceId = e.Device.Id;
+				while (true)
+				{
+					// Ping a connected device regularly to keep it awake
+					if (_cameraSliderDevice.IsConnected)
+					{
+						_deviceKeepAliveCountdown--;
+						if (_deviceKeepAliveCountdown <= 0)
+						{
+							await _cameraSliderDevice.WakeUp();
+							_deviceKeepAliveCountdown = _deviceKeepAliveDelay;
+						}
+					}
+					// Attempt to kick off an async device reconnection
+					else if (!_cameraSliderDevice.IsConnected)
+					{
+						try
+						{
+							await _cameraSliderDevice.ConnectAsync(_deviceName);
+						}
+						catch (Exception ex)
+						{
+							d("Device connect error: " + ex.Message);
+						}
+
+						// Clear the control UI disable if the device is connected
+						if (_cameraSliderDevice.IsConnected)
+						{
+							SetUIControlsDisableFlag(UIControlDisableFlags.DeviceDisconnected, false);
+						}
+					}
+
+					await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+				}
+			}
+			catch (OperationCanceledException)
+			{
+				// Handle the cancellation
+				Console.WriteLine("Shut down watch dog worker");
 			}
 		}
 
-		private void OnPaired_DeviceRemoved(object sender, CameraSlider.Bluetooth.Events.DeviceRemovedEventArgs e)
+		private void ActivatePreset(PresetSettings preset)
 		{
-			Debug.WriteLine("Paired device Removed: " + e.Device.Id);
-
-			if (_selectedDeviceId == e.Device.Id)
+			// Cancel any previous preset status polling
+			if (_presetCancelSignaler != null)
 			{
-				_selectedDeviceId = "";
+				_presetCancelSignaler.Cancel();
 			}
+
+			// Start an async worker to move the camera to the preset position
+			_presetCancelSignaler = new CancellationTokenSource();
+			_ = StartPresetWorkerAsync(preset, _presetCancelSignaler.Token);
 		}
 
-		private async void DeviceWatchdogCallback(Object context)
+		private async Task StartPresetWorkerAsync(PresetSettings preset, CancellationToken cancellationToken)
 		{
-			// Ping a connected device regularly to keep it awake
-			if (_cameraSliderDevice.IsConnected)
-			{
-				_keepAliveCountdown--;
-				if (_keepAliveCountdown <= 0)
-				{
-					await _cameraSliderDevice.WakeUp();
-					_keepAliveCountdown = _keepAliveDelay;
-				}
-			}
-			// Attempt to kick off an async device reconnection
-			else if (_selectedDeviceId != "" && !_deviceReconnectionPending && !_cameraSliderDevice.IsConnected)
-			{
-				_deviceReconnectionPending = true;
-				try
-				{
-					await _cameraSliderDevice.ConnectAsync(_selectedDeviceId);
-				}
-				catch (Exception ex)
-				{
-					d("Device connect error: " + ex.Message);
-				}
-				_deviceReconnectionPending = false;
+			const float kEpsilon= 0.01f;
 
-				// Clear the control UI disable if the device is connected
-				if (_cameraSliderDevice.IsConnected)
-				{
-					SetUIControlsDisableFlag(UIControlDisableFlags.DeviceDisconnected, false);
-				}
-			}
-		}
-
-		private async void ActivatePreset(PresetSettings preset)
-		{
+			// Store our preset target
 			_presetTargetSlidePosition = preset.SlidePosition;
 			_presetTargetPanPosition = preset.PanPosition;
 			_presetTargetTiltPosition = preset.TiltPosition;
-	
-			SetActivePresetStatusLabel("Moving To "+preset.PresetName);
+
+			// Update the UI to show the preset target
+			SetActivePresetStatusLabel("Moving To " + preset.PresetName);
 			await _cameraSliderDevice.SetSlidePosition(_presetTargetSlidePosition);
 			await _cameraSliderDevice.SetPanPosition(_presetTargetPanPosition);
 			await _cameraSliderDevice.SetTiltPosition(_presetTargetTiltPosition);
@@ -546,12 +561,7 @@ namespace CameraSlider.UI
 				TiltPosSlider.Value = preset.TiltPosition;
 			});
 
-			if (_presetStatusPollTimer != null)
-			{
-				_presetStatusPollTimer.Dispose();
-				_presetStatusPollTimer= null;
-			}
-
+			// Switch to the desired scene
 			if (preset.ObsScene.Length > 0)
 			{
 				// If there wasn't already a backup OBS scene, save the current scene
@@ -564,34 +574,39 @@ namespace CameraSlider.UI
 				SetObsSceneByName(preset.ObsScene);
 			}
 
-			// Start a polling timer to see if the camera reached the target position
-			_presetStatusPollTimer = new Timer(PresetStatusPollCallback, preset, 0, 100);
-		}
-
-		private async void PresetStatusPollCallback(object state)
-		{
-			const float kEpsilon= 0.01f;
-			
-			float slidePos= await _cameraSliderDevice.GetSlidePosition();
-			float panPos= await _cameraSliderDevice.GetPanPosition();
-			float tiltPos= await _cameraSliderDevice.GetTiltPosition();
-
-			if (Math.Abs(slidePos - _presetTargetSlidePosition) < kEpsilon &&
-				Math.Abs(panPos - _presetTargetPanPosition) < kEpsilon &&
-				Math.Abs(tiltPos - _presetTargetTiltPosition) < kEpsilon)
+			// Wait for the camera to reach the target position
+			try
 			{
-				// Halt the timer
-				_presetStatusPollTimer.Change(Timeout.Infinite, Timeout.Infinite);
-
-				// Restore back to the previous OBS scene
-				if (_presetBackupObsScene.Length > 0)
+				bool bHasReachedTarget = false;
+				while (!bHasReachedTarget)
 				{
-					SetObsSceneByName(_presetBackupObsScene);
-					_presetBackupObsScene= "";
-				}
+					float slidePos = await _cameraSliderDevice.GetSlidePosition();
+					float panPos = await _cameraSliderDevice.GetPanPosition();
+					float tiltPos = await _cameraSliderDevice.GetTiltPosition();
 
-				SetActivePresetStatusLabel("");
+					if (Math.Abs(slidePos - _presetTargetSlidePosition) < kEpsilon &&
+						Math.Abs(panPos - _presetTargetPanPosition) < kEpsilon &&
+						Math.Abs(tiltPos - _presetTargetTiltPosition) < kEpsilon)
+					{
+						bHasReachedTarget = true;
+						await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
+					}
+				}
 			}
+			catch (OperationCanceledException)
+			{
+				// Handle the cancellation
+				Console.WriteLine("Preset was cancelled.");
+			}
+
+			// Restore back to the previous OBS scene
+			if (_presetBackupObsScene.Length > 0)
+			{
+				SetObsSceneByName(_presetBackupObsScene);
+				_presetBackupObsScene= "";
+			}
+
+			SetActivePresetStatusLabel("");
 		}
 
 		private async void SetActivePresetStatusLabel(string status)
@@ -603,27 +618,37 @@ namespace CameraSlider.UI
 		}
 
 		// Twitch PubSub Event Handlers
-		private async void TwitchPubSubWatchdogCallback(Object context)
+		private async Task StartTwitchPubSubWatchdogWorker(CancellationToken cancellationToken)
 		{
-			// Attempt reconnection to stream labs
-			if (_twitchWebApiConfig.ChannelID != "" &&
-				_twitchWebApiConfig.ClientID != "" &&
-				_twitchWebApiConfig.Secret != "" &&
-				!_twitchPubSubReconnectionPending &&
-				!_twitchPubSubIsConnected)
+			try
 			{
-				await RunOnUiThread(() =>
+				while (true)
 				{
-					TwitchPubSubTxtStatus.Content = "Connecting...";
-				});
+					// Attempt reconnection to stream labs
+					if (_twitchWebApiConfig.ChannelID != "" &&
+						_twitchWebApiConfig.ClientID != "" &&
+						_twitchWebApiConfig.Secret != "" &&
+						!_twitchPubSubIsConnected)
+					{
+						await RunOnUiThread(() =>
+						{
+							TwitchPubSubTxtStatus.Content = "Connecting...";
+						});
 
-				_twitchPubSubReconnectionPending = true;
+						_twitchAPI.Settings.ClientId = _twitchWebApiConfig.ClientID;
+						_twitchAPI.Settings.Secret = _twitchWebApiConfig.Secret;
+						_twitchPubsub.ListenToChannelPoints(_twitchWebApiConfig.ChannelID);
+						_twitchPubsub.OnChannelPointsRewardRedeemed += OnChannelPointsRewardRedeemed;
+						_twitchPubsub.Connect();
+					}
 
-				_twitchAPI.Settings.ClientId = _twitchWebApiConfig.ClientID;
-				_twitchAPI.Settings.Secret = _twitchWebApiConfig.Secret;
-				_twitchPubsub.ListenToChannelPoints(_twitchWebApiConfig.ChannelID);
-				_twitchPubsub.OnChannelPointsRewardRedeemed += OnChannelPointsRewardRedeemed;
-				_twitchPubsub.Connect();
+					await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+				}
+			}
+			catch (OperationCanceledException)
+			{
+				// Handle the cancellation
+				Console.WriteLine("Shut down watch dog worker");
 			}
 		}
 
@@ -645,16 +670,11 @@ namespace CameraSlider.UI
 
 		private async void OnTwitchPubsubError(object sender, OnPubSubServiceErrorArgs e)
 		{
-			if (_twitchPubSubReconnectionPending)
+			await RunOnUiThread(() =>
 			{
-				await RunOnUiThread(() =>
-				{
-					d("Twitch PubSub failed to connect");
-					TwitchPubSubTxtStatus.Content = "Disconnected";
-				});
-
-				_twitchPubSubReconnectionPending = false;
-			}
+				d("Twitch PubSub failed to connect");
+				TwitchPubSubTxtStatus.Content = "Disconnected";
+			});
 		}
 
 		private async void OnTwitchPubsubClosed(object sender, EventArgs e)
@@ -666,7 +686,6 @@ namespace CameraSlider.UI
 			});
 
 			_twitchPubSubIsConnected = true;
-			_twitchPubSubReconnectionPending = false;
 		}
 
 		private async void OnTwitchPubsubConnected(object sender, EventArgs e)
@@ -681,20 +700,30 @@ namespace CameraSlider.UI
 		}
 
 		// Twitch Client Event Handlers
-		private void TwitchClientWatchdogCallback(Object context)
+		private async Task StartTwitchClientWatchdogWorker(CancellationToken cancellationToken)
 		{
-			// Attempt reconnection to stream labs
-			if (_twitchWebApiConfig.ChannelID != "" &&
-				_twitchWebApiConfig.ClientID != "" &&
-				_twitchWebApiConfig.Secret != "" &&
-				!_twitchClientIsConnected &&
-				!_twitchClientReconnectionPending)
+			try
 			{
-				_twitchClientReconnectionPending = true;
+				while (true)
+				{
+					// Attempt reconnection to stream labs
+					if (_twitchWebApiConfig.ChannelID != "" &&
+						_twitchWebApiConfig.ClientID != "" &&
+						_twitchWebApiConfig.Secret != "" &&
+						!_twitchClientIsConnected)
+					{
+						ConnectionCredentials credentials = new ConnectionCredentials(_twitchWebApiConfig.ChannelID, _twitchWebApiConfig.Secret);
+						_twitchClient.Initialize(credentials, _twitchWebApiConfig.ChannelID);
+						_twitchClient.Connect();
+					}
 
-				ConnectionCredentials credentials = new ConnectionCredentials(_twitchWebApiConfig.ChannelID, _twitchWebApiConfig.Secret);
-				_twitchClient.Initialize(credentials, _twitchWebApiConfig.ChannelID);
-				_twitchClient.Connect();
+					await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+				}
+			}
+			catch (OperationCanceledException)
+			{
+				// Handle the cancellation
+				Console.WriteLine("Shut down watch dog worker");
 			}
 		}
 
@@ -707,7 +736,6 @@ namespace CameraSlider.UI
 			});
 
 			_twitchClientIsConnected = false;
-			_twitchClientReconnectionPending= false;
 		}
 
 		private async void OnTwitchClientConnected(object sender, OnConnectedArgs e)
@@ -719,7 +747,6 @@ namespace CameraSlider.UI
 			});
 
 			_twitchClientIsConnected = true;
-			_twitchClientReconnectionPending = false;
 		}
 
 		private void OnTwitchClientMessageReceived(object sender, OnMessageReceivedArgs e)
@@ -737,35 +764,50 @@ namespace CameraSlider.UI
 		}
 
 		// OBS Studio Event Handlers
-		private async void ObsStudioWatchdogCallback(Object context)
+		private void ObsCheckBox_Checked(object sender, RoutedEventArgs e)
 		{
-			if (_obsConfig.SocketAddress != "")
-			{
-				if (_obsReconnectionPending)
-				{
-					if (_obsClient.IsConnected)
-					{
-						OnObsConnected(this, new EventArgs { });
-					}
-				}
-				else if (!_obsClient.IsConnected)
-				{
-					await RunOnUiThread(() =>
-					{
-						ObsTxtStatus.Content = "Connecting...";
-					});
+			bool WantEnabled= (bool)ObsCheckBox.IsChecked;
 
-					_obsReconnectionPending = true;
-					_obsClient.Connect("ws://" + _obsConfig.SocketAddress, _obsConfig.Password);
+			if (!_obsConfig.IsEnabled && WantEnabled)
+			{
+				_obsConfig.IsEnabled= true;
+				_ = StartObsStudioWatchdogWorker(_obsClientCancelSignaler.Token);
+			}
+			else if (_obsConfig.IsEnabled && !WantEnabled)
+			{
+				_obsConfig.IsEnabled= false;
+				_obsClientCancelSignaler.Cancel();
+				if (_obsClient.IsConnected)
+					_obsClient.Disconnect();
+			}
+		}
+
+		private async Task StartObsStudioWatchdogWorker(CancellationToken cancellationToken)
+		{
+			try
+			{
+				while (true)
+				{
+					if (!_obsClient.IsConnected)
+					{
+						if (_obsConfig.SocketAddress != "")
+						{
+							await RunOnUiThread(() =>
+							{
+								ObsTxtStatus.Content = "Connecting...";
+							});
+
+							_obsClient.Connect("ws://" + _obsConfig.SocketAddress, _obsConfig.Password);
+						}
+					}
+
+					await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
 				}
 			}
-			else
+			catch (OperationCanceledException)
 			{
-				if (_obsClient.IsConnected || _obsReconnectionPending)
-				{
-					_obsReconnectionPending = false;
-					_obsClient.Disconnect();
-				}
+				// Handle the cancellation
+				Console.WriteLine("Shut down OBS watch dog worker");
 			}
 		}
 
@@ -825,8 +867,6 @@ namespace CameraSlider.UI
 				d("OBS Studio connected");
 				ObsTxtStatus.Content = "Connected";
 			});
-
-			_obsReconnectionPending = false;
 		}
 
 		protected async void OnObsExited(object sender, EventArgs e)
@@ -836,27 +876,22 @@ namespace CameraSlider.UI
 				d("OBS Studio Exited");
 				ObsTxtStatus.Content = "Exited";
 			});
-
-			_obsReconnectionPending = false;
 		}
 
 		protected async void OnObsDisconnected(object sender, EventArgs e)
 		{
-			if (!_obsReconnectionPending)
-				return;
-
 			await RunOnUiThread(() =>
 			{
 				d("OBS Studio disconnected");
 				ObsTxtStatus.Content = "Disconnected";
 			});
-
-			_obsReconnectionPending = false;
 		}
 
 		// UI Functions
 		protected void ApplyConfigToUI()
 		{
+			ObsCheckBox.IsChecked = _obsConfig.IsEnabled;
+
 			SlidePosSlider.Value = _cameraSettingsConfig.SlidePos;
 			SlideSpeedSlider.Value = _cameraSettingsConfig.SlideSpeed;
 			SlideAccelSlider.Value = _cameraSettingsConfig.SlideAccel;

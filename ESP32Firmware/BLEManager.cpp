@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include "BLECharacteristic.h"
 #include "BLEManager.h"
+#include "BLE2902.h"
 #include "BLE2904.h"
 #include "ConfigManager.h"
 #include "SliderManager.h"
@@ -35,12 +36,12 @@ void BLEManager::setup()
   BLEDevice::init("Camera Slider");
   m_pServer = BLEDevice::createServer();
 
-  m_pService = m_pServer->createService(SERVICE_UUID);
+  m_pService = m_pServer->createService(BLEUUID(SERVICE_UUID), 32);
 
   SliderState* silderManager= SliderState::getInstance();
 
-  m_pCommandCharacteristic= makeUTF8Characteristic(COMMAND_CHARACTERISTIC_UUID, true, false, "");
-  m_pEventCharacteristic= makeUTF8Characteristic(EVENT_CHARACTERISTIC_UUID, false, true, "");
+  m_pCommandCharacteristic= makeUTF8InputCharacteristic(COMMAND_CHARACTERISTIC_UUID);
+  m_pEventCharacteristic= makeUTF8OutputCharacteristic(EVENT_CHARACTERISTIC_UUID);
   
   m_pSliderPosCharacteristic= makeFloatCharacteristic(SLIDER_POS_CHARACTERISTIC_UUID, true, silderManager->getSliderPosFraction());
   m_pSliderSpeedCharacteristic= makeFloatCharacteristic(SLIDER_SPEED_CHARACTERISTIC_UUID, true, silderManager->getSliderSpeedFraction());
@@ -62,6 +63,21 @@ void BLEManager::setup()
   m_pAdvertising->setMinPreferred(0x12);  
 
   BLEDevice::startAdvertising();
+}
+
+void BLEManager::onConnect(BLEServer *pServer) 
+{
+  Serial.printf("BLEManager - Device Connected\n");
+  m_deviceConnectedCount++;
+
+  Serial.printf("BLEManager - Restart Advertising BluetoothLE service\n");
+  BLEDevice::startAdvertising();
+}
+
+void BLEManager::onDisconnect(BLEServer *pServer)
+{
+  Serial.printf("BLEManager - Device Disconnected\n");
+  m_deviceConnectedCount--;  
 }
 
 void BLEManager::setCommandHandler(BLECommandHandler *handler)
@@ -106,31 +122,28 @@ BLECharacteristic *BLEManager::makeFloatCharacteristic(const char* UUID, bool bW
   return pCharacteristic;
 }
 
-BLECharacteristic *BLEManager::makeUTF8Characteristic(const char* UUID, bool bWritable, bool bNotifyOnChange, const char* initialValue)
+BLECharacteristic *BLEManager::makeUTF8OutputCharacteristic(const char* UUID)
 {
-  uint32_t properties= BLECharacteristic::PROPERTY_READ;
-  
-  if (bWritable)
-    properties|= BLECharacteristic::PROPERTY_WRITE;
+  BLECharacteristic* pCharacteristic = 
+    m_pService->createCharacteristic(
+      UUID, 
+      BLECharacteristic::PROPERTY_READ   |
+      BLECharacteristic::PROPERTY_WRITE  |
+      BLECharacteristic::PROPERTY_NOTIFY |
+      BLECharacteristic::PROPERTY_INDICATE);
+  pCharacteristic->addDescriptor(new BLE2902());
 
-  if (bNotifyOnChange)
-  {
-    properties|= BLECharacteristic::PROPERTY_NOTIFY;
-    properties|= BLECharacteristic::PROPERTY_INDICATE; // INDICATE == reliable notify
-  }    
+  return pCharacteristic;
+}
 
-  BLECharacteristic* pCharacteristic = m_pService->createCharacteristic(UUID, properties);
+BLECharacteristic *BLEManager::makeUTF8InputCharacteristic(const char* UUID)
+{
+  BLECharacteristic* pCharacteristic = 
+    m_pService->createCharacteristic(
+      UUID, 
+      BLECharacteristic::PROPERTY_WRITE);
 
-  // https://btprodspecificationrefs.blob.core.windows.net/assigned-numbers/Assigned%20Number%20Types/Assigned_Numbers.pdf
-  // 0x2904 - Characteristic Presentation Format
-  BLE2904 *pDescriptor= new BLE2904();
-  pDescriptor->setDescription(BLE2904::FORMAT_UTF8);
-
-  pCharacteristic->addDescriptor(pDescriptor);
-  pCharacteristic->setCallbacks(this);
-  
-  if (bWritable)
-    pCharacteristic->setValue(initialValue);
+  pCharacteristic->setCallbacks(this);  
 
   return pCharacteristic;
 }

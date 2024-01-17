@@ -7,6 +7,7 @@ using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Security.Cryptography;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
+using Windows.Devices.Enumeration;
 
 namespace CameraSlider.Bluetooth
 {
@@ -58,9 +59,31 @@ namespace CameraSlider.Bluetooth
 			CameraSliderEventHandler?.Invoke(this, e);
 		}
 
-		public async Task<bool> ConnectAsync(string deviceId)
+		public async Task<bool> ConnectAsync(string deviceName)
 		{
-			_cameraSliderDevice = await BluetoothLEDevice.FromIdAsync(deviceId);
+			// Get Bluetooth devices
+			//string deviceSelector = BluetoothLEDevice.GetDeviceSelector();
+			string deviceSelector= BluetoothLEDevice.GetDeviceSelectorFromPairingState(true);
+			var devices = await DeviceInformation.FindAllAsync(deviceSelector);
+
+			foreach (var device in devices)
+			{
+				if (device.Name == deviceName)
+				{
+					try
+					{
+						// Connect to the Bluetooth LE device
+						_cameraSliderDevice = await BluetoothLEDevice.FromIdAsync(device.Id);
+					}
+					catch (Exception ex)
+					{
+						// Handle exceptions
+						Console.WriteLine($"Error connecting to device: {ex.Message}");
+					}
+					break;
+				}
+			}
+
 			if (_cameraSliderDevice == null)
 			{
 				return false;
@@ -175,9 +198,9 @@ namespace CameraSlider.Bluetooth
 
 		private async Task<bool> RegisterCharacteristicValueChangeCallback(GattCharacteristic characteristic, TypedEventHandler<GattCharacteristic, GattValueChangedEventArgs> callback)
 		{
-			if (characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Notify))
+			if (characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Indicate))
 			{
-				var status = await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
+				var status = await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Indicate);
 				if (status == GattCommunicationStatus.Success)
 				{
 					characteristic.ValueChanged += callback;

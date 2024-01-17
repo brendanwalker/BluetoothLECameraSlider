@@ -59,7 +59,7 @@ void AppStage_MainMenu::pause()
   BLEManager* bleManager= BLEManager::getInstance();
   bleManager->setBLEControlEnabled(false);
   bleManager->clearCommandHandler(this);
-  Serial.println("DISABLE ArtNet command processing");
+  Serial.println("DISABLE Bluetooth command processing");
 }
 
 void AppStage_MainMenu::resume()
@@ -71,7 +71,7 @@ void AppStage_MainMenu::resume()
   BLEManager* bleManager= BLEManager::getInstance();
   bleManager->setBLEControlEnabled(true);
   bleManager->setCommandHandler(this);
-  Serial.println("ENABLE ArtNet command processing");
+  Serial.println("ENABLE Bluetooth command processing");
 }
 
 void AppStage_MainMenu::exit()
