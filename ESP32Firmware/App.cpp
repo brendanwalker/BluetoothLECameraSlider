@@ -83,6 +83,7 @@ void App::onRotaryEncoderValueChanged(class RotaryHalfStep* rotaryEncoder)
 {  
   if (m_inputStackIndex >= 0 && m_inputStackIndex < MAX_INPUT_LISTENER_DEPTH)
   {
+    Serial.printf("onRotaryEncoderValueChanged - send to listener %d\n", m_inputStackIndex);
     m_inputListenerStack[m_inputStackIndex]->onRotaryEncoderValueChanged(rotaryEncoder);
   }
 }
@@ -91,6 +92,7 @@ void App::onRotaryButtonClicked(class Button2* button)
 {
   if (m_inputStackIndex >= 0 && m_inputStackIndex < MAX_INPUT_LISTENER_DEPTH)
   {
+    Serial.printf("onButtonClicked - send to listener %d\n", m_inputStackIndex);
     m_inputListenerStack[m_inputStackIndex]->onRotaryButtonClicked(button);
   }
 }
@@ -99,7 +101,7 @@ void App::pushInputListener(InputEventListener *inputListener)
 {
   if (m_inputStackIndex < MAX_INPUT_LISTENER_DEPTH)
   {
-    //Serial.printf("Push input listener: %d->%d\n", m_inputStackIndex, m_inputStackIndex+1);
+    Serial.printf("Push input listener: %d->%d\n", m_inputStackIndex, m_inputStackIndex+1);
     m_inputStackIndex++;
     m_inputListenerStack[m_inputStackIndex]= inputListener;
     applyInputListenerSettings();
@@ -112,9 +114,9 @@ void App::pushInputListener(InputEventListener *inputListener)
 
 void App::popInputListener()
 {
-  if (m_inputStackIndex >= 0)
+  if (m_inputStackIndex > 0)
   {
-    //Serial.printf("Pop input listener: %d->%d\n", m_inputStackIndex, m_inputStackIndex-1);
+    Serial.printf("Pop input listener: %d->%d\n", m_inputStackIndex, m_inputStackIndex-1);
     m_inputStackIndex--;
     applyInputListenerSettings();
   }

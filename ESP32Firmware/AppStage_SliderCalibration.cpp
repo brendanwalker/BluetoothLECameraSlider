@@ -68,13 +68,9 @@ void AppStage_SliderCalibration::exit()
 // HallSensorEventListener Events
 void AppStage_SliderCalibration::onSlideMinSensorChanged(bool bActive)
 {
-    if (m_calibrationState == eSliderCalibrationState::FindSlideMin && 
-        (bActive || m_bBypassHallSensorEvent))
+    if (m_calibrationState == eSliderCalibrationState::FindSlideMin && bActive)
     {
         SliderState* silderState= SliderState::getInstance();
-
-        // Clear bypass flag in case it was set
-        m_bBypassHallSensorEvent= false;
 
         // Store the slider min position
         int32_t sliderPosition= silderState->getSlideStepperPosition();
@@ -90,13 +86,9 @@ void AppStage_SliderCalibration::onSlideMinSensorChanged(bool bActive)
 
 void AppStage_SliderCalibration::onSlideMaxSensorChanged(bool bActive)
 {
-    if (m_calibrationState == eSliderCalibrationState::FindSlideMax && 
-        (bActive || m_bBypassHallSensorEvent))
+    if (m_calibrationState == eSliderCalibrationState::FindSlideMax && bActive)
     {
         SliderState* silderState= SliderState::getInstance();
-
-        // Clear bypass flag in case it was set
-        m_bBypassHallSensorEvent= false;
 
         // Store the slider max position
         int32_t sliderPosition= silderState->getSlideStepperPosition();
@@ -117,13 +109,9 @@ void AppStage_SliderCalibration::onSlideMaxSensorChanged(bool bActive)
 
 void AppStage_SliderCalibration::onPanSensorChanged(bool bActive)
 {
-    if (m_calibrationState == eSliderCalibrationState::FindPanCenter && 
-        (bActive || m_bBypassHallSensorEvent))
+    if (m_calibrationState == eSliderCalibrationState::FindPanCenter && bActive)
     {
         SliderState* silderState= SliderState::getInstance();
-
-        // Clear bypass flag in case it was set
-        m_bBypassHallSensorEvent= false;
 
         // Store the pan center position
         int32_t panPosition= silderState->getPanStepperPosition();
@@ -139,13 +127,9 @@ void AppStage_SliderCalibration::onPanSensorChanged(bool bActive)
 
 void AppStage_SliderCalibration::onTiltSensorChanged(bool bActive)
 {
-    if (m_calibrationState == eSliderCalibrationState::FindTiltCenter && 
-        (bActive || m_bBypassHallSensorEvent))
+    if (m_calibrationState == eSliderCalibrationState::FindTiltCenter && bActive)
     {
         SliderState* silderState= SliderState::getInstance();
-
-        // Clear bypass flag in case it was set
-        m_bBypassHallSensorEvent= false;
 
         // Store the tilt center position
         int32_t tiltPosition= silderState->getTiltStepperPosition();
@@ -162,18 +146,35 @@ void AppStage_SliderCalibration::onTiltSensorChanged(bool bActive)
 // Button Bypass for Hall Effect Sensor searches
 void AppStage_SliderCalibration::onRotaryButtonClicked(Button2* button)
 {
-    if (m_calibrationState == eSliderCalibrationState::FindSlideMin ||
-        m_calibrationState == eSliderCalibrationState::FindSlideMax ||
-        m_calibrationState == eSliderCalibrationState::FindPanCenter ||
-        m_calibrationState == eSliderCalibrationState::FindTiltCenter)
+    Serial.println("onRotaryButtonClicked");
+
+    if (m_calibrationState == eSliderCalibrationState::FindSlideMin)
     {
-      m_bBypassHallSensorEvent= true;
+        Serial.println("Bypass find slide min");
+        onSlideMinSensorChanged(true);
+    }
+    else if (m_calibrationState == eSliderCalibrationState::FindSlideMax)
+    {
+        Serial.println("Bypass find slide max");
+        onSlideMaxSensorChanged(true);
+    }
+    else if (m_calibrationState == eSliderCalibrationState::FindPanCenter)
+    {
+        Serial.println("Bypass find pan center");
+        onPanSensorChanged(true);
+    }
+    else if (m_calibrationState == eSliderCalibrationState::FindTiltCenter)
+    {
+        Serial.println("Bypass find tilt center");
+        onTiltSensorChanged(true);
     }
 }
 
 // Selection Events
 void AppStage_SliderCalibration::onOptionClicked(int optionIndex)
 {
+    Serial.println("onOptionClicked");
+
     if (m_calibrationState == eSliderCalibrationState::Setup)
     {
         switch ((eSliderReadyOptions)optionIndex)
@@ -377,6 +378,8 @@ void AppStage_SliderCalibration::onEnterState(eSliderCalibrationState newState)
     BLEManager* bleManager= BLEManager::getInstance();
     SliderState* sliderState= SliderState::getInstance();
 
+    m_activeMenu= nullptr;
+
     switch (m_calibrationState)
     {
     case eSliderCalibrationState::Setup:
@@ -438,7 +441,7 @@ void AppStage_SliderCalibration::onEnterState(eSliderCalibrationState newState)
         m_activeMenu->setListener(this);
         m_activeMenu->show();
     }
-    else
+    else if (m_calibrationState != eSliderCalibrationState::INVALID)
     {
         App::getInstance()->pushInputListener(this);
     }
@@ -452,7 +455,7 @@ void AppStage_SliderCalibration::onLeaveState(eSliderCalibrationState oldState)
         m_activeMenu->clearListener();
         m_activeMenu = nullptr;
     }
-    else
+    else if (m_calibrationState != eSliderCalibrationState::INVALID)
     {
         App::getInstance()->popInputListener();
     }

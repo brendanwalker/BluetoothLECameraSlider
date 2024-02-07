@@ -84,7 +84,6 @@ private:
     SelectionMenu* m_activeMenu= nullptr;
     uint8_t m_moveState= 0;
     eSearchMode m_searchMode= eSearchMode::NotStarted;
-    bool m_bBypassHallSensorEvent= false;
 };
 
 #endif
