@@ -201,9 +201,29 @@ void BLEManager::onRead(BLECharacteristic* pCharacteristic, esp_ble_gatts_cb_par
 
 float BLEManager::readFloat(BLECharacteristic *pCharacteristic) 
 {
-	if (pCharacteristic->getLength() >= 4)
+  int byteCount= pCharacteristic->getLength();
+  u_int8_t* byteArray= pCharacteristic->getData();
+	if (byteCount >= 4)
   {
-    return *(float*)(pCharacteristic->getData());
+    Serial.printf("BLEManager - readFloat(%d bytes) =", byteCount);
+    for (int byteIndex= 0; byteIndex < byteCount; ++byteIndex)
+    {
+      Serial.printf("%c0x%x", byteIndex > 0 ? ',' : ' ', byteArray[byteIndex]);
+    }
+
+    union {
+        byte b[4];
+        float f;
+    } value;
+    value.b[0] = byteArray[0];
+    value.b[1] = byteArray[1];
+    value.b[2] = byteArray[2];
+    value.b[3] = byteArray[3];
+    Serial.printf(" => %f", value.f);
+
+    Serial.println();
+
+    return value.f;
 	}
 
 	return 0.0;
@@ -237,11 +257,11 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
     if (m_bleControlEnabled)
     {
       SliderState::getInstance()->setSliderPosFraction(value);
-      Serial.printf("BLEManager - Setting Slider Pos fraction to: %f");
+      Serial.printf("BLEManager - Setting Slider Pos fraction to: %f\n", value);
     }
     else
     {
-      Serial.printf("BLEManager - Ignoring Slider Pos control");
+      Serial.printf("BLEManager - Ignoring Slider Pos control\n");
     }
   }
   else if (pCharacteristic == m_pSliderSpeedCharacteristic)
@@ -251,11 +271,11 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
     if (m_bleControlEnabled)
     {
       SliderState::getInstance()->setSliderSpeedFraction(value);
-      Serial.printf("BLEManager - Setting Slider Speed fraction to: %f", value);
+      Serial.printf("BLEManager - Setting Slider Speed fraction to: %f\n", value);
     }
     else
     {
-      Serial.printf("BLEManager - Ignoring Slider Speed control");
+      Serial.printf("BLEManager - Ignoring Slider Speed control\n");
     }
   }
   else if (pCharacteristic == m_pSliderAccelCharacteristic)
@@ -265,11 +285,11 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
     if (m_bleControlEnabled)
     {
       SliderState::getInstance()->setSliderAccelFraction(value);
-      Serial.printf("BLEManager - Setting Slider Accel fraction to: %f", value);
+      Serial.printf("BLEManager - Setting Slider Accel fraction to: %f\n", value);
     }
     else
     {
-      Serial.printf("BLEManager - Ignoring Slider Accel control");
+      Serial.printf("BLEManager - Ignoring Slider Accel control\n");
     }
   }
   // Pan Controls
@@ -280,11 +300,11 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
     if (m_bleControlEnabled)
     {
       SliderState::getInstance()->setPanPosFraction(value);
-      Serial.printf("BLEManager - Setting Pan Pos fraction to: %f");
+      Serial.printf("BLEManager - Setting Pan Pos fraction to: %f\n", value);
     }
     else
     {
-      Serial.printf("BLEManager - Ignoring Pan Pos control");
+      Serial.printf("BLEManager - Ignoring Pan Pos control\n");
     }
   }
   else if (pCharacteristic == m_pPanSpeedCharacteristic)
@@ -294,11 +314,11 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
     if (m_bleControlEnabled)
     {
       SliderState::getInstance()->setPanSpeedFraction(value);
-      Serial.printf("BLEManager - Setting Pan Speed fraction to: %f", value);
+      Serial.printf("BLEManager - Setting Pan Speed fraction to: %f\n", value);
     }
     else
     {
-      Serial.printf("BLEManager - Ignoring Pan Speed control");
+      Serial.printf("BLEManager - Ignoring Pan Speed control\n");
     }
   }
   else if (pCharacteristic == m_pPanAccelCharacteristic)
@@ -308,11 +328,11 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
     if (m_bleControlEnabled)
     {
       SliderState::getInstance()->setPanAccelFraction(value);
-      Serial.printf("BLEManager - Setting Pan Accel fraction to: %f", value);
+      Serial.printf("BLEManager - Setting Pan Accel fraction to: %f\n", value);
     }
     else
     {
-      Serial.printf("BLEManager - Ignoring Pan Accel control");
+      Serial.printf("BLEManager - Ignoring Pan Accel control\n");
     }
   }  
   // Tilt Controls
@@ -323,11 +343,11 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
     if (m_bleControlEnabled)
     {
       SliderState::getInstance()->setTiltPosFraction(value);
-      Serial.printf("BLEManager - Setting Tilt Pos fraction to: %f");
+      Serial.printf("BLEManager - Setting Tilt Pos fraction to: %f\n", value);
     }
     else
     {
-      Serial.printf("BLEManager - Ignoring Tilt Pos control");
+      Serial.printf("BLEManager - Ignoring Tilt Pos control\n");
     }
   }
   else if (pCharacteristic == m_pTiltSpeedCharacteristic)
@@ -337,11 +357,11 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
     if (m_bleControlEnabled)
     {
       SliderState::getInstance()->setTiltSpeedFraction(value);
-      Serial.printf("BLEManager - Setting Tilt Speed fraction to: %f", value);
+      Serial.printf("BLEManager - Setting Tilt Speed fraction to: %f\n", value);
     }
     else
     {
-      Serial.printf("BLEManager - Ignoring Tilt Speed control");
+      Serial.printf("BLEManager - Ignoring Tilt Speed control\n");
     }
   }
   else if (pCharacteristic == m_pTiltAccelCharacteristic)
@@ -351,7 +371,7 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
     if (m_bleControlEnabled)
     {
       SliderState::getInstance()->setTiltAccelFraction(value);
-      Serial.printf("BLEManager - Setting Tilt Accel fraction to: %f", value);
+      Serial.printf("BLEManager - Setting Tilt Accel fraction to: %f\n", value);
     }
     else
     {

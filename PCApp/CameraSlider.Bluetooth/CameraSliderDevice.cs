@@ -291,7 +291,7 @@ namespace CameraSlider.Bluetooth
 		{
 			try
 			{
-				byte[] Message = new byte[] { Convert.ToByte(value) };
+				byte[] Message = BitConverter.GetBytes(value);
 				GattWriteResult result = await characteristic.WriteValueWithResultAsync(Message.AsBuffer());
 
 				return result.Status == GattCommunicationStatus.Success;
