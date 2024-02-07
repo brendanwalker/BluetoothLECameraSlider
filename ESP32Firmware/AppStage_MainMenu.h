@@ -11,8 +11,6 @@ enum class eMenuMenuOptions : int
 
   Monitor,
   SliderSettings,
-  DMXSettings,
-  NetworkSettings,  
   Save,
 
   COUNT
