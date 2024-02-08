@@ -474,19 +474,34 @@ namespace CameraSlider.UI
 				SetCameraStatusLabel("Connected");
 				SetUIControlsDisableFlag(UIControlDisableFlags.DeviceDisconnected, false);
 
-				_suppressUIUpdatesToDevice= true;
+        float slidePosSliderValue = await _cameraSliderDevice.GetSlidePosition();
+        float panPosSliderValue = await _cameraSliderDevice.GetPanPosition();
+        float tiltPosSliderValue = await _cameraSliderDevice.GetTiltPosition();
 
-				SlidePosSlider.Value=	await _cameraSliderDevice.GetSlidePosition();
-				PanPosSlider.Value=	await _cameraSliderDevice.GetPanPosition();
-				TiltPosSlider.Value=	await _cameraSliderDevice.GetTiltPosition();
+        float slideSpeedSliderValue = await _cameraSliderDevice.GetSlideSpeed();
+        float panSpeedSliderValue = await _cameraSliderDevice.GetPanSpeed();
+        float tiltSpeedSliderValue = await _cameraSliderDevice.GetTiltSpeed();
 
-				SlideSpeedSlider.Value=	await _cameraSliderDevice.GetSlideSpeed();
-				PanSpeedSlider.Value=	await _cameraSliderDevice.GetPanSpeed();
-				TiltSpeedSlider.Value=	await _cameraSliderDevice.GetTiltSpeed();
+        float slideAccelSliderValue = await _cameraSliderDevice.GetSlideAcceleration();
+        float panAccelSliderValue = await _cameraSliderDevice.GetPanAcceleration();
+        float tiltAccelSliderValue = await _cameraSliderDevice.GetTiltAcceleration();
 
-				SlideAccelSlider.Value=	await _cameraSliderDevice.GetSlideAcceleration();
-				PanAccelSlider.Value=	await _cameraSliderDevice.GetPanAcceleration();
-				TiltAccelSlider.Value=	await _cameraSliderDevice.GetTiltAcceleration();
+        _suppressUIUpdatesToDevice = true;
+
+        await RunOnUiThread(() =>
+        {
+          SlidePosSlider.Value = slidePosSliderValue;
+          PanPosSlider.Value = panPosSliderValue;
+          TiltPosSlider.Value = tiltPosSliderValue;
+
+          SlideSpeedSlider.Value = slideSpeedSliderValue;
+          PanSpeedSlider.Value = panSpeedSliderValue;
+          TiltSpeedSlider.Value = tiltSpeedSliderValue;
+
+          SlideAccelSlider.Value = slideAccelSliderValue;
+          PanAccelSlider.Value = panAccelSliderValue;
+          TiltAccelSlider.Value = tiltAccelSliderValue;
+        });
 
 				_suppressUIUpdatesToDevice= false;
 			}
@@ -1054,7 +1069,7 @@ namespace CameraSlider.UI
 		{
 			_cameraSettingsConfig.PanPos = (float)PanPosSlider.Value;
       if (!_suppressUIUpdatesToDevice)
-        await _cameraSliderDevice.SetSlidePosition(_cameraSettingsConfig.PanPos);
+        await _cameraSliderDevice.SetPanPosition(_cameraSettingsConfig.PanPos);
 			PanPosStatus.Content = _cameraSettingsConfig.PanPos.ToString("0.00");
 		}
 
@@ -1062,7 +1077,7 @@ namespace CameraSlider.UI
 		{
 			_cameraSettingsConfig.TiltPos = (float)TiltPosSlider.Value;
       if (!_suppressUIUpdatesToDevice)
-        await _cameraSliderDevice.SetSlidePosition(_cameraSettingsConfig.TiltPos);
+        await _cameraSliderDevice.SetTiltPosition(_cameraSettingsConfig.TiltPos);
 			TiltPosStatus.Content = _cameraSettingsConfig.TiltPos.ToString("0.00");
 		}
 
@@ -1078,7 +1093,7 @@ namespace CameraSlider.UI
 		{
 			_cameraSettingsConfig.PanSpeed = (float)PanSpeedSlider.Value;
       if (!_suppressUIUpdatesToDevice)
-        await _cameraSliderDevice.SetSlideSpeed(_cameraSettingsConfig.PanSpeed);
+        await _cameraSliderDevice.SetPanSpeed(_cameraSettingsConfig.PanSpeed);
 			PanSpeedStatus.Content = _cameraSettingsConfig.PanSpeed.ToString("0.00");
 		}
 
@@ -1086,7 +1101,7 @@ namespace CameraSlider.UI
 		{
 			_cameraSettingsConfig.TiltSpeed = (float)TiltSpeedSlider.Value;
       if (!_suppressUIUpdatesToDevice)
-        await _cameraSliderDevice.SetSlideSpeed(_cameraSettingsConfig.TiltSpeed);
+        await _cameraSliderDevice.SetTiltSpeed(_cameraSettingsConfig.TiltSpeed);
 			TiltSpeedStatus.Content = _cameraSettingsConfig.TiltSpeed.ToString("0.00");
 		}
 
@@ -1102,7 +1117,7 @@ namespace CameraSlider.UI
 		{
 			_cameraSettingsConfig.PanAccel = (float)PanAccelSlider.Value;
       if (!_suppressUIUpdatesToDevice)
-        await _cameraSliderDevice.SetSlideAcceleration(_cameraSettingsConfig.PanAccel);
+        await _cameraSliderDevice.SetPanAcceleration(_cameraSettingsConfig.PanAccel);
 			PanAccelStatus.Content = _cameraSettingsConfig.PanAccel.ToString("0.00");
 		}
 
@@ -1110,7 +1125,7 @@ namespace CameraSlider.UI
 		{
 			_cameraSettingsConfig.TiltAccel = (float)TiltAccelSlider.Value;
       if (!_suppressUIUpdatesToDevice)
-        await _cameraSliderDevice.SetSlideAcceleration(_cameraSettingsConfig.TiltAccel);
+        await _cameraSliderDevice.SetTiltAcceleration(_cameraSettingsConfig.TiltAccel);
 			TiltAccelStatus.Content = _cameraSettingsConfig.TiltAccel.ToString("0.00");
 		}
 
