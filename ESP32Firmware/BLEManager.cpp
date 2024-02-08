@@ -156,6 +156,7 @@ void BLEManager::onRead(BLECharacteristic* pCharacteristic, esp_ble_gatts_cb_par
   if (pCharacteristic == m_pSliderPosCharacteristic)
   {
     value= SliderState::getInstance()->getSliderPosFraction();
+    Serial.printf("BLEManager - read slider pos = %f\n", value);
   }
   else if (pCharacteristic == m_pSliderSpeedCharacteristic)
   {
@@ -199,7 +200,7 @@ void BLEManager::onRead(BLECharacteristic* pCharacteristic, esp_ble_gatts_cb_par
   pCharacteristic->setValue(value);
 }
 
-float BLEManager::readFloat(BLECharacteristic *pCharacteristic) 
+float BLEManager::getFloatCharacteristicValue(BLECharacteristic *pCharacteristic) 
 {
   int byteCount= pCharacteristic->getLength();
   u_int8_t* byteArray= pCharacteristic->getData();
@@ -252,7 +253,7 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
   // Slider Controls
   else if (pCharacteristic == m_pSliderPosCharacteristic)
   {
-    float value = readFloat(pCharacteristic);
+    float value = getFloatCharacteristicValue(pCharacteristic);
 
     if (m_bleControlEnabled)
     {
@@ -266,7 +267,7 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
   }
   else if (pCharacteristic == m_pSliderSpeedCharacteristic)
   {
-    float value = readFloat(pCharacteristic);
+    float value = getFloatCharacteristicValue(pCharacteristic);
 
     if (m_bleControlEnabled)
     {
@@ -280,7 +281,7 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
   }
   else if (pCharacteristic == m_pSliderAccelCharacteristic)
   {
-    float value = readFloat(pCharacteristic);
+    float value = getFloatCharacteristicValue(pCharacteristic);
 
     if (m_bleControlEnabled)
     {
@@ -295,7 +296,7 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
   // Pan Controls
   else if (pCharacteristic == m_pPanPosCharacteristic)
   {
-    float value = readFloat(pCharacteristic);
+    float value = getFloatCharacteristicValue(pCharacteristic);
 
     if (m_bleControlEnabled)
     {
@@ -309,7 +310,7 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
   }
   else if (pCharacteristic == m_pPanSpeedCharacteristic)
   {
-    float value = readFloat(pCharacteristic);
+    float value = getFloatCharacteristicValue(pCharacteristic);
 
     if (m_bleControlEnabled)
     {
@@ -323,7 +324,7 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
   }
   else if (pCharacteristic == m_pPanAccelCharacteristic)
   {
-    float value = readFloat(pCharacteristic);
+    float value = getFloatCharacteristicValue(pCharacteristic);
 
     if (m_bleControlEnabled)
     {
@@ -338,7 +339,7 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
   // Tilt Controls
   else if (pCharacteristic == m_pTiltPosCharacteristic)
   {
-    float value = readFloat(pCharacteristic);
+    float value = getFloatCharacteristicValue(pCharacteristic);
 
     if (m_bleControlEnabled)
     {
@@ -352,7 +353,7 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
   }
   else if (pCharacteristic == m_pTiltSpeedCharacteristic)
   {
-    float value = readFloat(pCharacteristic);
+    float value = getFloatCharacteristicValue(pCharacteristic);
 
     if (m_bleControlEnabled)
     {
@@ -366,7 +367,7 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
   }
   else if (pCharacteristic == m_pTiltAccelCharacteristic)
   {
-    float value = readFloat(pCharacteristic);
+    float value = getFloatCharacteristicValue(pCharacteristic);
 
     if (m_bleControlEnabled)
     {

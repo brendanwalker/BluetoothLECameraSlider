@@ -3,26 +3,26 @@
 
 #include "AppStage.h"
 #include "SelectionMenu.h"
-#include "BLEManager.h"
 
 enum class eMenuMenuOptions : int
 {
   INVALID= -1,
 
-  Monitor,
   SliderSettings,
   Save,
+  Back,
 
   COUNT
 };
 
 class AppStage_MainMenu : 
   public AppStage, 
-  public SelectionMenuListener,
-  public BLECommandHandler
+  public SelectionMenuListener
 {
 public:
 	AppStage_MainMenu(class App* app);
+
+  static AppStage_MainMenu* getInstance() { return s_instance; }
 
 	virtual void enter() override;
   virtual void pause() override;
@@ -32,13 +32,12 @@ public:
 
   // SelectionMenuListener
   virtual void onOptionClicked(int optionIndex) override;
-
-  // BLECommandHandler
-  virtual void onCommand(const std::string& command) override;
   
 	static const char* APP_STAGE_NAME;	
 
 private:
+  static AppStage_MainMenu* s_instance;
+
   SelectionMenu m_selectionMenu;
 };
 

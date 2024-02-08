@@ -2,9 +2,12 @@
 #define AppStage_Monitor_h
 
 #include "AppStage.h"
-#include "SelectionMenu.h"
+#include "BLEManager.h"
 
-class AppStage_Monitor : public AppStage, public SelectionMenuListener
+class AppStage_Monitor : 
+    public AppStage, 
+    public BLECommandHandler,
+    public InputEventListener
 {
 public:
 	AppStage_Monitor(class App* app);
@@ -17,14 +20,21 @@ public:
     virtual void exit() override;  
     virtual void render() override;
 
-    virtual void onOptionClicked(int optionIndex) override;
+    // BLECommandHandler
+    virtual void onCommand(const std::string& command) override;
+
+    // Input Event Handling (active when menu is not active)
+    virtual bool getIsRotaryEncoderWrapped() const override { return true; }
+    virtual int getRotaryEncoderDefaultValue() const override { return 0; }
+    virtual int getRotaryEncoderLowerBound() const override { return 0; }
+    virtual int getRotaryEncoderUpperBound() const override { return 100; }  
+    virtual void onRotaryEncoderValueChanged(class RotaryHalfStep* rotaryEncoder) override {}
+    virtual void onRotaryButtonClicked(class Button2* button) override;        
 
 	static const char* APP_STAGE_NAME;	
 
 private:
     static AppStage_Monitor* s_instance;
-
-    SelectionMenu m_selectionMenu;
 };
 
 #endif

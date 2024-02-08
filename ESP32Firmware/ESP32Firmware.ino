@@ -18,6 +18,7 @@
 #include "AppStage_MotorTest.h"
 #include "AppStage_SliderSettings.h"
 #include "AppStage_SliderCalibration.h"
+#include "AppStage_Test.h"
 #include "BLEManager.h"
 #include "HallSensorManager.h"
 #include "SliderManager.h"
@@ -73,12 +74,13 @@ BLEManager bleManager(&configManager);
 
 // Application States
 App app(&display, &rotaryEncoder);
-AppStage_MainMenu mainMenu(&app);
 AppStage_Monitor monitorMenu(&app);
+AppStage_MainMenu mainMenu(&app);
 AppStage_MagnetTest magnetTestMenu(&app);
 AppStage_MotorTest motorTestMenu(&app);
 AppStage_SliderCalibration sliderCalibration(&app);
 AppStage_SliderSettings sliderSettings(&app);
+AppStage_Test testMenu(&app);
 
 #if defined(ARDUINO_ARCH_ESP8266) || defined(ARDUINO_ARCH_ESP32)
 ICACHE_RAM_ATTR
@@ -143,7 +145,7 @@ void setup()
   app.setup();
 
   // Push Main Menu on to the stack first
-  app.pushAppStage(&mainMenu);
+  app.pushAppStage(&monitorMenu);
 
   // Then push on slider calibration state, if no saved calibration exists
   if (!sliderState.areSteppersCalibrated())

@@ -40,7 +40,7 @@ private:
   BLECharacteristic *makeFloatCharacteristic(const char* UUID, bool bWritable, float initialValue);
   BLECharacteristic *makeUTF8OutputCharacteristic(const char* UUID);
   BLECharacteristic *makeUTF8InputCharacteristic(const char* UUID);
-  float readFloat(BLECharacteristic *pCharacteristic);
+  float getFloatCharacteristicValue(BLECharacteristic *pCharacteristic);
   void onRead(BLECharacteristic* pCharacteristic, esp_ble_gatts_cb_param_t* param) override;
   void onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_param_t* param) override;
 

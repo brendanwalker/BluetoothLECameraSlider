@@ -52,8 +52,11 @@ void SelectionMenu::render()
 
   int yPos= m_startYPos;
   display->setCursor(2, m_startYPos);
-  display->print(m_title);
-  yPos+= m_lineHeight;
+  if (m_title.length() > 0)
+  {
+    display->print(m_title);
+    yPos+= m_lineHeight;
+  }
 
   if (m_headerCount > 0 || m_optionCount > 0)
   {

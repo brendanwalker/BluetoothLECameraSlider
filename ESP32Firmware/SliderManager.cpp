@@ -190,15 +190,26 @@ void SliderState::finalizeCalibration()
 }
 
 float SliderState::remapFloatToFloat(
-  float inMin, float inMax, 
-  float outMin, float outMax, 
+  float inA, float inB, 
+  float outA, float outB, 
   float inValue)
 {
-  float clampedValue= max(min(inValue, inMax), inMin);
-  float u= (clampedValue - inMin) / (inMax - inMin);  
-  float rempappedValue= ((1.f - u)*outMin + u*outMax);
+  if (inB > inA)
+  {
+    float clampedValue= max(min(inValue, inB), inA);
+    float u= (clampedValue - inA) / (inB - inA);  
+    float rempappedValue= ((1.f - u)*outA + u*outB);
 
-  return rempappedValue;
+    return rempappedValue;
+  }
+  else
+  {
+    float clampedValue= max(min(inValue, inA), inB);
+    float u= (clampedValue - inB) / (inA - inB);  
+    float rempappedValue= (u*outA + (1.f - u)*outB);
+
+    return rempappedValue;
+  }
 }
 
 int32_t SliderState::remapFloatToInt32(
@@ -404,7 +415,7 @@ void SliderState::setPanStepperTargetDegrees(float cameraDegrees)
   }
 }
 
-float SliderState::getPanStepperTargetDegrees() const
+float SliderState::getPanStepperDegrees() const
 {
   int32_t rawPosition= getPanStepperPosition();
   float motorDegrees = stepsToMotorAngle(rawPosition - m_panStepperCenter);
@@ -432,7 +443,7 @@ void SliderState::setTiltStepperTargetDegrees(float cameraDegrees)
   }
 }
 
-float SliderState::getTiltStepperTargetDegrees() const
+float SliderState::getTiltStepperDegrees() const
 {
   int32_t rawPosition= getTiltStepperPosition();
   float motorDegrees = stepsToMotorAngle(rawPosition - m_tiltStepperCenter);
@@ -544,7 +555,7 @@ void SliderState::setPanPosFraction(float fraction)
 
 float SliderState::getPanPosFraction()
 {
-  return remapFloatToFloat(PAN_MIN_ANGLE, PAN_MAX_ANGLE, -1.f, 1.f, getPanStepperTargetDegrees());
+  return remapFloatToFloat(PAN_MIN_ANGLE, PAN_MAX_ANGLE, -1.f, 1.f, getPanStepperDegrees());
 }
 
 void SliderState::setPanSpeedFraction(float fraction)
@@ -577,7 +588,11 @@ void SliderState::setTiltPosFraction(float fraction)
 
 float SliderState::getTiltPosFraction()
 {
-  return remapFloatToFloat(TILT_MIN_ANGLE, TILT_MAX_ANGLE, -1.f, 1.f, getTiltStepperTargetDegrees());
+  return remapFloatToFloat(TILT_MIN_ANGLE, TILT_MAX_ANGLE, -1.f, 1.f, getTiltStepperDegrees());
+  // float tiltStepperPos= getTiltStepperDegrees();
+  // float fraction= remapFloatToFloat(TILT_MIN_ANGLE, TILT_MAX_ANGLE, -1.f, 1.f, tiltStepperPos);
+  // Serial.printf("getTiltPosFraction: %.2f[%.2f, %.2f] -> %.2f\n", tiltStepperPos, TILT_MIN_ANGLE, TILT_MAX_ANGLE, fraction);  
+  //return fraction;
 }
 
 void SliderState::setTiltSpeedFraction(float fraction)

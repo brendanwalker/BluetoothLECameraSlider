@@ -36,9 +36,9 @@ public:
   float getSlideStepperLinearSpeed();
 
   void setPanStepperTargetDegrees(float cameraDegrees);
-  float getPanStepperTargetDegrees() const;
+  float getPanStepperDegrees() const;
   void setTiltStepperTargetDegrees(float cameraDegrees);
-  float getTiltStepperTargetDegrees() const;
+  float getTiltStepperDegrees() const;
 
   int8_t movePanStepperDegrees(float degrees);
   int8_t moveTiltStepperDegrees(float degrees);
