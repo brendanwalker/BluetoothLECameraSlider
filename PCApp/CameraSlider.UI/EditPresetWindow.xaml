@@ -5,9 +5,13 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:CameraSlider.UI"
         mc:Ignorable="d"
-        Title="Edit Preset"  Width="400">
+        Title="Edit Preset"  Width="400" Height="280">
     <Grid>
-        <StackPanel x:Name="ControlsStackPanel" Margin="0,0,0,0" RenderTransformOrigin="0.5,0.5" Grid.ColumnSpan="5">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="321*"/>
+            <ColumnDefinition Width="79*"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel x:Name="ControlsStackPanel" RenderTransformOrigin="0.5,0.5" Grid.ColumnSpan="2">
             <StackPanel.RenderTransform>
                 <TransformGroup>
                     <ScaleTransform/>

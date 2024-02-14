@@ -44,17 +44,17 @@
                             <Label Content="Position" HorizontalAlignment="Left" Width="150"/>
                             <StackPanel Orientation="Horizontal">
                                 <Label Content="Slide: " Width="60" HorizontalAlignment="Right"/>
-                                <Slider x:Name="SlidePosSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="SlidePos_ValueChanged" Maximum="1" Minimum="-1" LargeChange="0.1" SmallChange="0.01"/>
+                                <Slider x:Name="SlidePosSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="SlidePos_ValueChanged" Thumb.DragStarted="SlidePosSlider_DragStarted" Thumb.DragCompleted="SlidePosSlider_DragCompleted" Maximum="1" Minimum="-1" LargeChange="0.1" SmallChange="0.01"/>
                                 <Label x:Name="SlidePosStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <Label Content="Pan: " Width="60" HorizontalAlignment="Right"/>
-                                <Slider x:Name="PanPosSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="PanPos_ValueChanged" Maximum="1" Minimum="-1" LargeChange="0.1" SmallChange="0.01"/>
+                                <Slider x:Name="PanPosSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="PanPos_ValueChanged" Thumb.DragStarted="PanPosSlider_DragStarted" Thumb.DragCompleted="PanPosSlider_DragCompleted" Maximum="1" Minimum="-1" LargeChange="0.1" SmallChange="0.01"/>
                                 <Label x:Name="PanPosStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <Label Content="Tilt: " Width="60" HorizontalAlignment="Right"/>
-                                <Slider x:Name="TiltPosSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="TiltPos_ValueChanged" Maximum="1" Minimum="-1" LargeChange="0.1" SmallChange="0.01"/>
+                                <Slider x:Name="TiltPosSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="TiltPos_ValueChanged" Thumb.DragStarted="TiltPosSlider_DragStarted" Thumb.DragCompleted="TiltPosSlider_DragCompleted" Maximum="1" Minimum="-1" LargeChange="0.1" SmallChange="0.01"/>
                                 <Label x:Name="TiltPosStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </StackPanel>
@@ -65,17 +65,17 @@
                             <Label Content="Speed" HorizontalAlignment="Left" Width="150"/>
                             <StackPanel Orientation="Horizontal">
                                 <Label Content="Slide: " Width="60" HorizontalAlignment="Right"/>
-                                <Slider x:Name="SlideSpeedSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="SlideSpeed_ValueChanged" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
+                                <Slider x:Name="SlideSpeedSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="SlideSpeed_ValueChanged" Thumb.DragStarted="SlideSpeedSlider_DragStarted" Thumb.DragCompleted="SlideSpeedSlider_DragCompleted" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
                                 <Label x:Name="SlideSpeedStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <Label Content="Pan: " Width="60" HorizontalAlignment="Right"/>
-                                <Slider x:Name="PanSpeedSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="PanSpeed_ValueChanged" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
+                                <Slider x:Name="PanSpeedSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="PanSpeed_ValueChanged" Thumb.DragStarted="PanSpeedSlider_DragStarted" Thumb.DragCompleted="PanSpeedSlider_DragCompleted" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
                                 <Label x:Name="PanSpeedStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <Label Content="Tilt: " Width="60" HorizontalAlignment="Right"/>
-                                <Slider x:Name="TiltSpeedSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="TiltSpeed_ValueChanged" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
+                                <Slider x:Name="TiltSpeedSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="TiltSpeed_ValueChanged" Thumb.DragStarted="TiltSpeedSlider_DragStarted" Thumb.DragCompleted="TiltSpeedSlider_DragCompleted" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
                                 <Label x:Name="TiltSpeedStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </StackPanel>
@@ -86,17 +86,17 @@
                             <Label Content="Acceleration" HorizontalAlignment="Left" Width="150"/>
                             <StackPanel Orientation="Horizontal">
                                 <Label Content="Slide: " Width="60" HorizontalAlignment="Right"/>
-                                <Slider x:Name="SlideAccelSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="SlideAccel_ValueChanged" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
+                                <Slider x:Name="SlideAccelSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="SlideAccel_ValueChanged" Thumb.DragStarted="SlideAccelSlider_DragStarted" Thumb.DragCompleted="SlideAccelSlider_DragCompleted" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
                                 <Label x:Name="SlideAccelStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <Label Content="Pan: " Width="60" HorizontalAlignment="Right"/>
-                                <Slider x:Name="PanAccelSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="PanAccel_ValueChanged" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
+                                <Slider x:Name="PanAccelSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="PanAccel_ValueChanged" Thumb.DragStarted="PanAccelSlider_DragStarted" Thumb.DragCompleted="PanAccelSlider_DragCompleted" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
                                 <Label x:Name="PanAccelStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <Label Content="Tilt: " Width="60" HorizontalAlignment="Right"/>
-                                <Slider x:Name="TiltAccelSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="TiltAccel_ValueChanged" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
+                                <Slider x:Name="TiltAccelSlider" Width="200" HorizontalAlignment="Left" Margin="10,0,10,10" ValueChanged="TiltAccel_ValueChanged" Thumb.DragStarted="TiltAccelSlider_DragStarted" Thumb.DragCompleted="TiltAccelSlider_DragCompleted" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.01"/>
                                 <Label x:Name="TiltAccelStatus" Content="0.00" Width="50" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </StackPanel>

@@ -49,6 +49,9 @@ namespace CameraSlider.UI
 			{
 				_preset= new PresetSettings();
 				_preset.PresetName= "Preset_"+presets.Count;
+				_preset.PanPosition= cameraSettings.PanPos;
+				_preset.SlidePosition= cameraSettings.SlidePos;
+				_preset.TiltPosition= cameraSettings.TiltPos;
 			}
 
 			// Copy the preset settings to the UI
@@ -67,23 +70,36 @@ namespace CameraSlider.UI
 
 		private void PresetNameTxt_TextChanged(object sender, TextChangedEventArgs e)
 		{
-			_preset.PresetName = PresetNameTxt.Text;
-        }
+			if (_preset != null)
+				_preset.PresetName = PresetNameTxt.Text;
+		}
 
 		private void SlidePosTxt_TextChanged(object sender, TextChangedEventArgs e)
 		{
-			_preset.SlidePosition = float.Parse(SlidePosTxt.Text);
-		}
+      float pos;
+      if (_preset != null && float.TryParse(SlidePosTxt.Text, out pos))
+			{
+          _preset.SlidePosition = pos;
+      }
+    }
 
 		private void PanPosTxt_TextChanged(object sender, TextChangedEventArgs e)
 		{
-			_preset.PanPosition = int.Parse(PanPosTxt.Text);
-		}
+			float pos;
+			if (_preset != null && float.TryParse(PanPosTxt.Text, out pos))
+			{
+        _preset.PanPosition= pos;
+      }
+    }
 
 		private void TiltPosTxt_TextChanged(object sender, TextChangedEventArgs e)
 		{
-			_preset.TiltPosition = int.Parse(TiltPosTxt.Text);
-		}
+			float pos;
+			if (_preset != null && float.TryParse(TiltPosTxt.Text, out pos))
+			{
+        _preset.TiltPosition = pos;
+      }
+    }
 
 		private void UpdatePosBtn_Click(object sender, RoutedEventArgs e)
 		{

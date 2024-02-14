@@ -91,19 +91,27 @@ void AppStage_Monitor::render()
   Adafruit_SSD1306 *display = getApp()->getDisplay();
 
   SliderState* sliderState= SliderState::getInstance();
-  float slide= sliderState->getSliderPosFraction();
-  float pan= sliderState->getPanPosFraction();
-  float tilt= sliderState->getTiltPosFraction();
+  float slidePos= sliderState->getSliderPosFraction();
+  float slideSpeed= sliderState->getSliderSpeedFraction();
+  float slideAccel= sliderState->getSliderAccelFraction();
+
+  float panPos= sliderState->getPanPosFraction();
+  float panSpeed= sliderState->getPanSpeedFraction();
+  float panAccel= sliderState->getPanAccelFraction();
+
+  float tiltPos= sliderState->getTiltPosFraction();
+  float tiltSpeed= sliderState->getTiltSpeedFraction();
+  float tiltAccel= sliderState->getTiltAccelFraction();
 
   display->clearDisplay();
   display->setTextSize(1);
   display->setCursor(2, 2);
   display->print("Monitor");  
   display->setCursor(2, 12);
-  display->printf(" Slide: %.2f", slide);
+  display->printf("S: %+.2f %+.2f %+.2f", slidePos, slideSpeed, slideAccel);
   display->setCursor(2, 22);
-  display->printf("   Pan: %.2f", pan);
+  display->printf("P: %+.2f %+.2f %+.2f", panPos, panSpeed, panAccel);
   display->setCursor(2, 32);
-  display->printf("  Tilt: %.2f", tilt);  
+  display->printf("T: %+.2f %+.2f %+.2f", tiltPos, tiltSpeed, tiltAccel);  
   display->display();    
 }

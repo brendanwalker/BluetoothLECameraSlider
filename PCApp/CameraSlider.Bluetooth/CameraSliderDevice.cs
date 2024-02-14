@@ -275,6 +275,9 @@ namespace CameraSlider.Bluetooth
 		{
 			try
 			{
+				if (_commandCharacteristic == null)
+          return false;
+
 				GattWriteResult result =
 					await _commandCharacteristic.WriteValueWithResultAsync(
 						CryptographicBuffer.ConvertStringToBinary(command, BinaryStringEncoding.Utf8));
@@ -291,7 +294,10 @@ namespace CameraSlider.Bluetooth
 		{
 			try
 			{
-				byte[] Message = BitConverter.GetBytes(value);
+        if (characteristic == null)
+          return false;
+
+        byte[] Message = BitConverter.GetBytes(value);
 				GattWriteResult result = await characteristic.WriteValueWithResultAsync(Message.AsBuffer());
 
 				return result.Status == GattCommunicationStatus.Success;
@@ -351,7 +357,10 @@ namespace CameraSlider.Bluetooth
 		{
 			try
 			{
-				GattReadResult result = await characteristic.ReadValueAsync();
+        if (characteristic == null)
+          return 0f;
+
+        GattReadResult result = await characteristic.ReadValueAsync();
 
 				return BitConverter.ToSingle(result.Value.ToArray(), 0);
 			}

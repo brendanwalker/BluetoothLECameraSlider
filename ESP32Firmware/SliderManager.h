@@ -99,11 +99,8 @@ private:
   float remapInt32ToFloat(int32_t intMin, int32_t intMax, float floatMin, float floatMax, int32_t value);
   int32_t remapFloatToInt32(float floatMin, float floatMax, int32_t intMin, int32_t intMax, float value);
 
-  uint32_t motorAngleToSteps(float degrees) const;
-  float stepsToMotorAngle(uint32_t steps) const;
-
-  uint32_t millimetersToSteps(float millimeters) const;
-  float stepsToMillimeters(uint32_t steps) const;
+  int32_t motorAngleToSteps(float degrees) const;
+  float stepsToMotorAngle(int32_t steps) const;
 
   uint8_t m_enPin;
   uint8_t m_panStepPin;

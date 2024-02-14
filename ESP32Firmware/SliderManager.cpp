@@ -228,12 +228,12 @@ float SliderState::remapInt32ToFloat(
   return remapFloatToFloat((float)intMin, (float)intMax, floatMin, floatMax, (float)inValue);
 }
 
-uint32_t SliderState::motorAngleToSteps(float degrees) const
+int32_t SliderState::motorAngleToSteps(float degrees) const
 {
   return (uint32_t)(degrees * STEPS_PER_DEGREE);
 }
 
-float SliderState::stepsToMotorAngle(uint32_t steps) const
+float SliderState::stepsToMotorAngle(int32_t steps) const
 {
   return (float)steps * DEGREES_PER_STEP;
 }
@@ -309,7 +309,8 @@ void SliderState::setSlideStepperLinearAcceleration(float cameraLinAccelMM)
 
 float SliderState::getSlideStepperLinearAcceleration()
 {
-  const float motorAngAccelDegrees= stepsToMotorAngle(m_tiltStepper->getAcceleration());
+  const int32_t rawStepsAccel= (int32_t)m_tiltStepper->getAcceleration();
+  const float motorAngAccelDegrees= stepsToMotorAngle(rawStepsAccel);
   const float motorAngAccelRadians= motorAngAccelDegrees * (PI / 180.f);
   const float cameraLinAccelMM= motorAngAccelRadians * SLIDER_GEAR_RADIUS;
 
@@ -589,10 +590,6 @@ void SliderState::setTiltPosFraction(float fraction)
 float SliderState::getTiltPosFraction()
 {
   return remapFloatToFloat(TILT_MIN_ANGLE, TILT_MAX_ANGLE, -1.f, 1.f, getTiltStepperDegrees());
-  // float tiltStepperPos= getTiltStepperDegrees();
-  // float fraction= remapFloatToFloat(TILT_MIN_ANGLE, TILT_MAX_ANGLE, -1.f, 1.f, tiltStepperPos);
-  // Serial.printf("getTiltPosFraction: %.2f[%.2f, %.2f] -> %.2f\n", tiltStepperPos, TILT_MIN_ANGLE, TILT_MAX_ANGLE, fraction);  
-  //return fraction;
 }
 
 void SliderState::setTiltSpeedFraction(float fraction)
