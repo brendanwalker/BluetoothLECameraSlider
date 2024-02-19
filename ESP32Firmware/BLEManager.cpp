@@ -33,11 +33,18 @@ BLEManager::BLEManager(ConfigManager* config)
 void BLEManager::setup()
 {
   Serial.println(F("BLEDevice::createServer"));
-  BLEDevice::init("Camera Slider");
-  m_pServer = BLEDevice::createServer();
 
+  // Create the BLE Device
+  BLEDevice::init("Camera Slider");
+
+  // Create the BLE Server and register connection callbacks
+  m_pServer = BLEDevice::createServer();
+  m_pServer->setCallbacks(this);
+
+  // Create the BLE service
   m_pService = m_pServer->createService(BLEUUID(SERVICE_UUID), 32);
 
+  // Create slider BLE Characteristics
   SliderState* silderManager= SliderState::getInstance();
 
   m_pCommandCharacteristic= makeUTF8InputCharacteristic(COMMAND_CHARACTERISTIC_UUID);
@@ -55,20 +62,34 @@ void BLEManager::setup()
   m_pTiltSpeedCharacteristic= makeFloatCharacteristic(TILT_SPEED_CHARACTERISTIC_UUID, true, silderManager->getTiltSpeedFraction());
   m_pTiltAccelCharacteristic= makeFloatCharacteristic(TILT_ACCEL_CHARACTERISTIC_UUID, true, silderManager->getTiltAccelFraction());    
 
+  // Start the service
   m_pService->start();
 
-  Serial.println(F("Start Advertising BluetoothLE service"));
-  m_pAdvertising = BLEDevice::getAdvertising();
-  m_pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
-  m_pAdvertising->setMinPreferred(0x12);  
-
+  // Start advertising
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->addServiceUUID(SERVICE_UUID);
+  pAdvertising->setScanResponse(false);
+  pAdvertising->setMinPreferred(0x0);  // set value to 0x00 to not advertise this parameter
   BLEDevice::startAdvertising();
+  Serial.println(F("Start Advertising BluetoothLE service"));
+}
+
+void BLEManager::loop()
+{
+  // Restart advertising on disconnection
+  if (m_wasDeviceConnected && !m_isDeviceConnected)
+  {
+    //delay(500);
+    m_pServer->startAdvertising();
+    Serial.println("BLEManager - Restart advertising");    
+  }
+  m_wasDeviceConnected= m_isDeviceConnected;
 }
 
 void BLEManager::onConnect(BLEServer *pServer) 
 {
   Serial.printf("BLEManager - Device Connected\n");
-  m_deviceConnectedCount++;
+  m_isDeviceConnected= true;
 
   Serial.printf("BLEManager - Restart Advertising BluetoothLE service\n");
   BLEDevice::startAdvertising();
@@ -77,7 +98,7 @@ void BLEManager::onConnect(BLEServer *pServer)
 void BLEManager::onDisconnect(BLEServer *pServer)
 {
   Serial.printf("BLEManager - Device Disconnected\n");
-  m_deviceConnectedCount--;  
+  m_isDeviceConnected= false; 
 }
 
 void BLEManager::setCommandHandler(BLECommandHandler *handler)

@@ -309,7 +309,7 @@ void SliderState::setSlideStepperLinearAcceleration(float cameraLinAccelMM)
 
 float SliderState::getSlideStepperLinearAcceleration()
 {
-  const int32_t rawStepsAccel= (int32_t)m_tiltStepper->getAcceleration();
+  const int32_t rawStepsAccel= (int32_t)m_slideStepper->getAcceleration();
   const float motorAngAccelDegrees= stepsToMotorAngle(rawStepsAccel);
   const float motorAngAccelRadians= motorAngAccelDegrees * (PI / 180.f);
   const float cameraLinAccelMM= motorAngAccelRadians * SLIDER_GEAR_RADIUS;
@@ -357,12 +357,14 @@ void SliderState::setTiltStepperAngularSpeed(float cameraDegreesPerSecond)
     // Remember new target tilt angle angular speed
     Serial.printf("New Tilt Speed Target: %d -> %d\n", m_lastTargetTiltSpeed, newTargetTiltSpeed);
     m_lastTargetTiltSpeed= newTargetTiltSpeed;    
+    getTiltStepperAngularSpeed();
   }
 }
 
 float SliderState::getTiltStepperAngularSpeed()
 {
-  const float speedInHz= (float)m_tiltStepper->getSpeedInMilliHz() / 1000.f;
+  const int32_t speedInMilliHz= m_tiltStepper->getSpeedInMilliHz();
+  const float speedInHz= (float)speedInMilliHz / 1000.f;
   const float motorDegreesPerSecond= stepsToMotorAngle(speedInHz);
   const float cameraDegreesPerSecond= motorDegreesPerSecond / TILT_GEAR_RATIO;
 
@@ -594,7 +596,7 @@ float SliderState::getTiltPosFraction()
 
 void SliderState::setTiltSpeedFraction(float fraction)
 {
-  float newTargetSpeed= fraction > 0.f ? remapFloatToFloat(-1.f, 1.f, TILT_MIN_SPEED, TILT_MAX_SPEED, fraction) : 0.f;
+  float newTargetSpeed= fraction > 0.f ? remapFloatToFloat(0.f, 1.f, TILT_MIN_SPEED, TILT_MAX_SPEED, fraction) : 0.f;
   setTiltStepperAngularSpeed(newTargetSpeed);
 }
 

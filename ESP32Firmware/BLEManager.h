@@ -24,6 +24,7 @@ public:
   void sendEvent(const std::string& event);
 
   void setup();
+  void loop();
 
 private:
   static BLEManager* s_instance;
@@ -33,16 +34,16 @@ private:
   ConfigManager* m_config= nullptr;
 
   // BLEServerCallbacks
-  void onConnect(BLEServer *pServer) override;
-  void onDisconnect(BLEServer *pServer) override;
+  virtual void onConnect(BLEServer *pServer) override;
+  virtual void onDisconnect(BLEServer *pServer) override;
 
   // BLECharacteristicCallbacks
   BLECharacteristic *makeFloatCharacteristic(const char* UUID, bool bWritable, float initialValue);
   BLECharacteristic *makeUTF8OutputCharacteristic(const char* UUID);
   BLECharacteristic *makeUTF8InputCharacteristic(const char* UUID);
   float getFloatCharacteristicValue(BLECharacteristic *pCharacteristic);
-  void onRead(BLECharacteristic* pCharacteristic, esp_ble_gatts_cb_param_t* param) override;
-  void onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_param_t* param) override;
+  virtual void onRead(BLECharacteristic* pCharacteristic, esp_ble_gatts_cb_param_t* param) override;
+  virtual void onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_param_t* param) override;
 
   BLEServer *m_pServer= nullptr;
   BLEService *m_pService= nullptr;
@@ -60,7 +61,8 @@ private:
   BLEAdvertising *m_pAdvertising= nullptr;
 
   bool m_bleControlEnabled= true;
-  int m_deviceConnectedCount= 0;
+  bool m_isDeviceConnected= false;
+  bool m_wasDeviceConnected= false;
 };
 
 #endif // BLE_MANAGER_H__

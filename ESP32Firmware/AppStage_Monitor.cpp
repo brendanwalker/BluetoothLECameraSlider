@@ -106,7 +106,7 @@ void AppStage_Monitor::render()
   display->clearDisplay();
   display->setTextSize(1);
   display->setCursor(2, 2);
-  display->print("Monitor");  
+  display->print ("    Pos   Vel   Acc");  
   display->setCursor(2, 12);
   display->printf("S: %+.2f %+.2f %+.2f", slidePos, slideSpeed, slideAccel);
   display->setCursor(2, 22);

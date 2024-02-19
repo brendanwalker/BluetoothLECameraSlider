@@ -265,9 +265,6 @@ namespace CameraSlider.Bluetooth
 				_tiltPosCharacteristic = null;
 				_tiltSpeedCharacteristic = null;
 				_tiltAccelCharacteristic = null;
-
-				_cameraSliderDevice.Dispose();
-				_cameraSliderDevice = null;
 			}
 		}
 
