@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:CameraSlider.UI"
         mc:Ignorable="d"
-        Title="CameraSlider" Width="400" Height="645" HorizontalAlignment="Center" VerticalAlignment="Center" >
+        Title="CameraSlider" Width="400" Height="712" HorizontalAlignment="Center" VerticalAlignment="Center" >
     <Grid >
         <TabControl>
             <TabItem Header="Controls">

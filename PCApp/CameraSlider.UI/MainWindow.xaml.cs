@@ -302,6 +302,7 @@ namespace CameraSlider.UI
 		private float _presetTargetPanPosition = 0.0f;
 		private float _presetTargetTiltPosition = 0.0f;
 		private string _presetBackupObsScene = "";
+		private bool _hasPendingPresetTarget = false;
 
 		// Slider state
 		private bool _isSliderPosDragging = false;
@@ -453,6 +454,11 @@ namespace CameraSlider.UI
 
 			switch(arg.Message)
 			{
+			case "move_complete":
+				{
+          _hasPendingPresetTarget= false;
+        }
+			break;
 			case "calibration_started":
 				{
 					_deviceCalibrationRunning = true;
@@ -600,6 +606,7 @@ namespace CameraSlider.UI
 
 			// Update the UI to show the preset target
 			SetActivePresetStatusLabel("Moving To " + preset.PresetName);
+			_hasPendingPresetTarget= true;
 			await _cameraSliderDevice.SetSlidePosition(_presetTargetSlidePosition);
 			await _cameraSliderDevice.SetPanPosition(_presetTargetPanPosition);
 			await _cameraSliderDevice.SetTiltPosition(_presetTargetTiltPosition);
@@ -627,20 +634,9 @@ namespace CameraSlider.UI
 			// Wait for the camera to reach the target position
 			try
 			{
-				bool bHasReachedTarget = false;
-				while (!bHasReachedTarget)
+				while (_hasPendingPresetTarget)
 				{
-					float slidePos = await _cameraSliderDevice.GetSlidePosition();
-					float panPos = await _cameraSliderDevice.GetPanPosition();
-					float tiltPos = await _cameraSliderDevice.GetTiltPosition();
-
-					if (Math.Abs(slidePos - _presetTargetSlidePosition) < kEpsilon &&
-						Math.Abs(panPos - _presetTargetPanPosition) < kEpsilon &&
-						Math.Abs(tiltPos - _presetTargetTiltPosition) < kEpsilon)
-					{
-						bHasReachedTarget = true;
-						await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
-					}
+					await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
 				}
 			}
 			catch (OperationCanceledException)

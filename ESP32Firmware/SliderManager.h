@@ -4,6 +4,12 @@
 #include "Arduino.h"
 #include "FastAccelStepper.h"
 
+class SliderStateEventListener
+{
+public:
+  virtual void onMoveToTargetComplete() {}
+};
+
 class SliderState
 {
 public:
@@ -15,6 +21,9 @@ public:
   );
 
   static SliderState* getInstance() { return s_instance; }
+
+  void setListener(SliderStateEventListener *listener);
+  void clearListener(SliderStateEventListener *listener);    
 
   void setup();
   void loop();
@@ -93,6 +102,9 @@ public:
 private:
   static SliderState* s_instance;
 
+  // Listener
+  SliderStateEventListener* m_listener= nullptr;  
+
   void writeCalibrationToConfig();
 
   float remapFloatToFloat(float inMin, float inMax, float outMin, float outMax, float inValue);
@@ -132,6 +144,8 @@ private:
   int32_t m_sliderStepperMin= INT_MIN;
   int32_t m_sliderStepperMax= INT_MAX;
   bool m_calibrated= false;
+
+  bool m_isMovingToTarget= false;
 };
 
 #endif

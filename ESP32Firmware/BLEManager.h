@@ -5,6 +5,7 @@
 #include <BLEUtils.h>
 #include <BLEServer.h>
 #include "ConfigManager.h"
+#include "SliderManager.h"
 
 class BLECommandHandler
 {
@@ -12,7 +13,7 @@ public:
   virtual void onCommand(const std::string& command) {}
 };
 
-class BLEManager : public BLECharacteristicCallbacks, public BLEServerCallbacks
+class BLEManager : public BLECharacteristicCallbacks, public BLEServerCallbacks, public SliderStateEventListener
 {
 public:
   BLEManager(ConfigManager* config);
@@ -32,6 +33,9 @@ private:
   BLECommandHandler* m_commandHandler= nullptr;
 
   ConfigManager* m_config= nullptr;
+
+  // SliderManager Events
+  virtual void onMoveToTargetComplete() override;
 
   // BLEServerCallbacks
   virtual void onConnect(BLEServer *pServer) override;

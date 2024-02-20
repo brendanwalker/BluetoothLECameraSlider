@@ -72,6 +72,9 @@ void BLEManager::setup()
   pAdvertising->setMinPreferred(0x0);  // set value to 0x00 to not advertise this parameter
   BLEDevice::startAdvertising();
   Serial.println(F("Start Advertising BluetoothLE service"));
+
+  // Listen to motor events
+  silderManager->setListener(this);
 }
 
 void BLEManager::loop()
@@ -79,11 +82,19 @@ void BLEManager::loop()
   // Restart advertising on disconnection
   if (m_wasDeviceConnected && !m_isDeviceConnected)
   {
-    //delay(500);
     m_pServer->startAdvertising();
     Serial.println("BLEManager - Restart advertising");    
   }
   m_wasDeviceConnected= m_isDeviceConnected;
+}
+
+void BLEManager::onMoveToTargetComplete()
+{
+  if (m_isDeviceConnected)
+  {
+    Serial.println("Send move_complete");
+    sendEvent("move_complete");
+  }
 }
 
 void BLEManager::onConnect(BLEServer *pServer) 

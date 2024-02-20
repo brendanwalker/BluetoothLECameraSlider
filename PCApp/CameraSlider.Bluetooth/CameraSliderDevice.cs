@@ -198,9 +198,10 @@ namespace CameraSlider.Bluetooth
 
 		private async Task<bool> RegisterCharacteristicValueChangeCallback(GattCharacteristic characteristic, TypedEventHandler<GattCharacteristic, GattValueChangedEventArgs> callback)
 		{
-			if (characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Indicate))
+			if (characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Notify))
 			{
-				var status = await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Indicate);
+				var status = await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
+					GattClientCharacteristicConfigurationDescriptorValue.Notify);
 				if (status == GattCommunicationStatus.Success)
 				{
 					characteristic.ValueChanged += callback;

@@ -63,6 +63,17 @@ SliderState::SliderState(
   m_lastTargetTiltAcceleration= 0; // steps / s²
 }
 
+void SliderState::setListener(SliderStateEventListener *listener)
+{
+    m_listener= listener;
+}
+
+void SliderState::clearListener(SliderStateEventListener *listener)
+{
+  if (m_listener == listener)
+    m_listener= nullptr;
+}
+
 void SliderState::setup()
 {
   m_engine.init();
@@ -140,9 +151,29 @@ void SliderState::loop()
 {
   ConfigManager* configManager= ConfigManager::getInstance();
 
-  configManager->setMotorPanPosition(m_panStepper->getCurrentPosition());
-  configManager->setMotorTiltPosition(m_tiltStepper->getCurrentPosition());
-  configManager->setMotorSlidePosition(m_slideStepper->getCurrentPosition());
+  int32_t motorPanPos= m_panStepper->getCurrentPosition();
+  int32_t motorTiltPos= m_tiltStepper->getCurrentPosition();
+  int32_t motorSlidePos= m_slideStepper->getCurrentPosition();
+
+  configManager->setMotorPanPosition(motorPanPos);
+  configManager->setMotorTiltPosition(motorTiltPos);
+  configManager->setMotorSlidePosition(motorSlidePos);
+
+  if (m_isMovingToTarget)
+  {
+    if (abs(motorSlidePos - m_lastTargetSlidePosition) <= 10 && 
+        abs(motorPanPos - m_lastTargetPanPosition) <= 10 && 
+        abs(motorTiltPos - m_lastTargetTiltPosition) <= 10)
+      {
+        m_isMovingToTarget= false;
+        Serial.printf("Finished move to: Slide=%d, Pad=%d, Tilt=%d\n", motorSlidePos, motorPanPos, motorTiltPos);
+        
+        if (m_listener != nullptr)
+        {
+          m_listener->onMoveToTargetComplete();
+        }
+      }
+  }
 }
 
 void SliderState::stopAll()
@@ -386,7 +417,7 @@ void SliderState::setSlideStepperLinearSpeed(float cameraMMPerSecond)
 
     // Remember new target slider linear speed
     Serial.printf("New Slide Speed Target: %d -> %d\n", m_lastTargetSlideSpeed, newTargetSlideSpeed);
-    m_lastTargetSlideSpeed= newTargetSlideSpeed;        
+    m_lastTargetSlideSpeed= newTargetSlideSpeed;
   }
 }
 
@@ -415,6 +446,7 @@ void SliderState::setPanStepperTargetDegrees(float cameraDegrees)
     // Remember new target pan position
     Serial.printf("New Pan Position Target: %d -> %d\n", m_lastTargetPanPosition, newTargetPanPosition);
     m_lastTargetPanPosition= newTargetPanPosition;
+    m_isMovingToTarget= true;    
   }
 }
 
@@ -443,6 +475,7 @@ void SliderState::setTiltStepperTargetDegrees(float cameraDegrees)
     // Remember new target tilt position
     Serial.printf("New Tilt Position Target: %d -> %d\n", m_lastTargetTiltPosition, newTargetTiltPosition);
     m_lastTargetTiltPosition= newTargetTiltPosition;
+    m_isMovingToTarget= true;    
   }
 }
 
@@ -516,7 +549,8 @@ void SliderState::setSliderPosFraction(float fraction)
 
     // Remember new target slide position
     Serial.printf("New Slide Position Target: %d -> %d\n", m_lastTargetSlidePosition, newTargetSliderPosition);
-    m_lastTargetSlidePosition= newTargetSliderPosition;      
+    m_lastTargetSlidePosition= newTargetSliderPosition;
+    m_isMovingToTarget= true;
   }
 }
 
