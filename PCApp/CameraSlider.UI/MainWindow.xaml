@@ -21,20 +21,17 @@
                     <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <Label Content="CameraSlider Device:" Margin="26,0,0,0" Width="175" HorizontalAlignment="Right"/>
+                                <Label Content="CameraSlider Device:" Margin="26,0,0,0" Width="125" HorizontalAlignment="Right"/>
                                 <Label x:Name="CameraTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <Label Content="Twitch Client: " Margin="26,0,0,0"  Width="175" HorizontalAlignment="Right"/>
+                                <Label Content="Twitch API: " Margin="26,0,0,0"  Width="125" HorizontalAlignment="Right"/>
                                 <Label x:Name="TwitchClientTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <Label Content="Twitch PubSub: " Margin="26,0,0,0"  Width="175" HorizontalAlignment="Right"/>
-                                <Label x:Name="TwitchPubSubTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
+                                <Button x:Name="BtnTwitchConnect" Content="Connect" Width="100" Margin="20,0,0,0" Click="BtnTwitchConnect_Click" VerticalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <CheckBox x:Name="ObsCheckBox" HorizontalAlignment="Left" Margin="5,5,5,5" IsChecked="False" Checked="ObsCheckBox_Checked"/>
-                                <Label Content="OBS Studio Websocket: " Width="175" HorizontalAlignment="Right"/>
+                                <Label Content="OBS Studio Websocket: " Width="125" HorizontalAlignment="Right"/>
                                 <Label x:Name="ObsTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
                             </StackPanel>
                         </StackPanel>
@@ -148,16 +145,16 @@
                         <StackPanel>
                             <Label Content="Twitch Settings" HorizontalAlignment="Center"/>
                             <StackPanel Orientation="Horizontal">
-                                <Label Content="Twitch Channel ID"  Width="140" HorizontalAlignment="Left"/>
+                                <Label Content="Channel ID"  Width="140" HorizontalAlignment="Left"/>
                                 <TextBox x:Name="TwitchChannelIdInput" Width="200" HorizontalAlignment="Left" TextChanged="TwitchChannelIdInput_Changed"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <Label Content="Twitch Client ID"  Width="140" HorizontalAlignment="Left"/>
-                                <TextBox x:Name="TwitchClientIdInput" Width="200" HorizontalAlignment="Left" TextChanged="TwitchClientIdInput_Changed"/>
+                                <Label Content="Client ID"  Width="140" HorizontalAlignment="Left"/>
+                                <PasswordBox x:Name="TwitchClientIdInput" Width="200" HorizontalAlignment="Left" PasswordChanged="TwitchClientIdInput_Changed"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <Label Content="Twitch Secret" Width="140" HorizontalAlignment="Left"/>
-                                <PasswordBox x:Name="TwitchSecretKeyInput" Width="200" HorizontalAlignment="Left" PasswordChanged="TwitchSecretInput_Changed"/>
+                                <Label Content="Client Secret" Width="140" HorizontalAlignment="Left"/>
+                                <PasswordBox x:Name="TwitchClientSecretKeyInput" Width="200" HorizontalAlignment="Left" PasswordChanged="TwitchClientSecretInput_Changed"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
