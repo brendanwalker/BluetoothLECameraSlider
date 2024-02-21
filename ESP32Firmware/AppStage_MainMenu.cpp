@@ -1,5 +1,6 @@
 #include "App.h"
 #include "AppStage_MainMenu.h"
+#include "AppStage_Test.h"
 #include "AppStage_SliderSettings.h"
 #include "AppStage_SliderCalibration.h"
 #include "SliderManager.h"
