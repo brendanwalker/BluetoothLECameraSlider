@@ -9,6 +9,7 @@ enum class eMenuMenuOptions : int
   INVALID= -1,
 
   SliderSettings,
+  Testing,
   Save,
   Back,
 

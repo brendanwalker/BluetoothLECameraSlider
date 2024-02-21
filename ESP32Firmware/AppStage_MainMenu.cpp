@@ -11,6 +11,7 @@ AppStage_MainMenu* AppStage_MainMenu::s_instance= nullptr;
 static const String kMenuStrings[(int)eMenuMenuOptions::COUNT]= 
 {
   "Slider Settings",
+  "Testing",
   "Save Pose",
   "Back",
 };
@@ -60,6 +61,9 @@ void AppStage_MainMenu::onOptionClicked(int optionIndex)
   case eMenuMenuOptions::SliderSettings:
     m_app->pushAppStage(AppStage_SliderSettings::getInstance());
     break;
+  case eMenuMenuOptions::Testing:
+    m_app->pushAppStage(AppStage_Test::getInstance());
+    break;    
   case eMenuMenuOptions::Save:
     m_app->save();
     break;
