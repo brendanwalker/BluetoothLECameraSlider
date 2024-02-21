@@ -155,7 +155,7 @@ namespace CameraSlider.UI
         _configState._presets.Add(_preset);
       }
       _configState._arePresetsDirty = true;
-      _configState._areCameraSettingsDirty = true;
+      _configState._areConfigSettingsDirty = true;
 
       this.Close();
     }

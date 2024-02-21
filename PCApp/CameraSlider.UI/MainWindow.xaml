@@ -145,10 +145,6 @@
                         <StackPanel>
                             <Label Content="Twitch Settings" HorizontalAlignment="Center"/>
                             <StackPanel Orientation="Horizontal">
-                                <Label Content="Channel ID"  Width="140" HorizontalAlignment="Left"/>
-                                <TextBox x:Name="TwitchChannelIdInput" Width="200" HorizontalAlignment="Left" TextChanged="TwitchChannelIdInput_Changed"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal">
                                 <Label Content="Client ID"  Width="140" HorizontalAlignment="Left"/>
                                 <PasswordBox x:Name="TwitchClientIdInput" Width="200" HorizontalAlignment="Left" PasswordChanged="TwitchClientIdInput_Changed"/>
                             </StackPanel>

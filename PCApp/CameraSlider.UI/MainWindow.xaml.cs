@@ -36,6 +36,8 @@ using System.Net.Http;
 using NHttp;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using TwitchLib.Api.Auth;
+using TwitchLib.PubSub.Interfaces;
 
 namespace CameraSlider.UI
 {
@@ -442,8 +444,8 @@ namespace CameraSlider.UI
     public TwitchWebAPISection _twitchWebApiConfig;
     public ObsConfigSection _obsConfig;
     public CameraSettingsSection _cameraSettingsConfig;
-    public bool _areCameraSettingsDirty = false;
     public List<PresetSettings> _presets = new List<PresetSettings>();
+    public bool _areConfigSettingsDirty = false;
     public bool _arePresetsDirty = false;
 
     public void LoadConfig()
@@ -491,7 +493,7 @@ namespace CameraSlider.UI
         _cameraSettingsConfig.PresetJson = JsonConvert.SerializeObject(_presets, Formatting.None);
         _arePresetsDirty = false;
       }
-      _areCameraSettingsDirty = false;
+      _areConfigSettingsDirty = false;
       _configFile.Save();
     }
   }
@@ -554,8 +556,15 @@ namespace CameraSlider.UI
     {
       InitializeComponent();
 
+      // Load the config settings first
+      _configState.LoadConfig();
+
       // Start up local web server to handle Twitch OAuth requests
       InitializeTwitchOAuthWebServer();
+
+      // Initialize the Twitch API
+      _twitchAPI = new TwitchAPI();
+      _twitchAPI.Settings.ClientId = _configState._twitchWebApiConfig.ClientID;
 
       // Register to OBS Studio websocket API to control OBS Scene remotely
       _obsClient = new OBSWebsocket();
@@ -568,9 +577,8 @@ namespace CameraSlider.UI
       _cameraSliderDevice.ConnectionStatusChanged += OnDeviceConnectionStatusChanged;
       _cameraSliderDevice.CameraSliderEventHandler += CameraSliderEventReceived;
 
-      // Load the config file and update the UI based on saved settings
+      // Setup the UI
       SetUIControlsDisableFlag(UIControlDisableFlags.DeviceDisconnected, true);
-      _configState.LoadConfig();
       ApplyConfigToUI();
 
       // Kick off the watchdog workers
@@ -747,7 +755,7 @@ namespace CameraSlider.UI
             }
           }
 
-          if (_configState._areCameraSettingsDirty)
+          if (_configState._areConfigSettingsDirty)
           {
             _configState.SaveConfig();
           }
@@ -845,7 +853,7 @@ namespace CameraSlider.UI
     private void OnChannelPointsRewardRedeemed(object sender, OnChannelPointsRewardRedeemedArgs e)
     {
       var reward = e.RewardRedeemed.Redemption.Reward;
-      string rewardId = reward.Id;
+      string rewardId = reward.Title;
 
       foreach (PresetSettings preset in _configState._presets)
       {
@@ -871,6 +879,7 @@ namespace CameraSlider.UI
     private void OnTwitchPubsubConnected(object sender, EventArgs e)
     {
       d("Twitch PubSub connected");
+      _twitchPubsub.SendTopics(_configState._twitchWebApiConfig.AccessToken);
     }
 
     // Twitch Client Event Handlers
@@ -1060,7 +1069,6 @@ namespace CameraSlider.UI
       RebuildPresetComboBox();
 
       // Apply the config settings to the settings tab
-      TwitchChannelIdInput.Text = _configState._twitchWebApiConfig.ChannelID;
       TwitchClientIdInput.Password = _configState._twitchWebApiConfig.ClientID;
       TwitchClientSecretKeyInput.Password = _configState._twitchWebApiConfig.ClientSecret;
 
@@ -1117,23 +1125,12 @@ namespace CameraSlider.UI
       });
     }
 
-    private void TwitchChannelIdInput_Changed(object sender, RoutedEventArgs e)
-    {
-      if (_configState._twitchWebApiConfig.ChannelID != TwitchChannelIdInput.Text)
-      {
-        _configState._twitchWebApiConfig.ChannelID = TwitchChannelIdInput.Text;
-        _configState.SaveConfig();
-
-        _twitchPubsub.Disconnect();
-      }
-    }
-
     private void TwitchClientIdInput_Changed(object sender, RoutedEventArgs e)
     {
       if (_configState._twitchWebApiConfig.ClientID != TwitchClientIdInput.Password)
       {
         _configState._twitchWebApiConfig.ClientID = TwitchClientIdInput.Password;
-        _configState.SaveConfig();
+        _configState._areConfigSettingsDirty = true;
 
         _twitchPubsub.Disconnect();
       }
@@ -1144,7 +1141,7 @@ namespace CameraSlider.UI
       if (_configState._twitchWebApiConfig.ClientSecret != TwitchClientSecretKeyInput.Password)
       {
         _configState._twitchWebApiConfig.ClientSecret = TwitchClientSecretKeyInput.Password;
-        _configState.SaveConfig();
+        _configState._areConfigSettingsDirty = true;
 
         _twitchPubsub.Disconnect();
       }
@@ -1161,7 +1158,7 @@ namespace CameraSlider.UI
       if (_configState._obsConfig.SocketAddress != SocketAddressInput.Text)
       {
         _configState._obsConfig.SocketAddress = SocketAddressInput.Text;
-        _configState.SaveConfig();
+        _configState._areConfigSettingsDirty = true;
 
         if (_obsClient.IsConnected)
         {
@@ -1175,7 +1172,7 @@ namespace CameraSlider.UI
       if (_configState._obsConfig.Password != SocketPasswordInput.Password)
       {
         _configState._obsConfig.Password = SocketPasswordInput.Password;
-        _configState.SaveConfig();
+        _configState._areConfigSettingsDirty = true;
 
         if (_obsClient.IsConnected)
         {
@@ -1187,7 +1184,7 @@ namespace CameraSlider.UI
     private async void SlidePos_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
       _configState._cameraSettingsConfig.SlidePos = (float)SlidePosSlider.Value;
-      _configState._areCameraSettingsDirty = true;
+      _configState._areConfigSettingsDirty = true;
       if (!_suppressUIUpdatesToDevice && !_isSliderPosDragging)
         await _cameraSliderDevice.SetSlidePosition(_configState._cameraSettingsConfig.SlidePos);
       SlidePosStatus.Content = _configState._cameraSettingsConfig.SlidePos.ToString("0.00");
@@ -1196,7 +1193,7 @@ namespace CameraSlider.UI
     private async void PanPos_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
       _configState._cameraSettingsConfig.PanPos = (float)PanPosSlider.Value;
-      _configState._areCameraSettingsDirty = true;
+      _configState._areConfigSettingsDirty = true;
       if (!_suppressUIUpdatesToDevice && !_isPanPosDragging)
         await _cameraSliderDevice.SetPanPosition(_configState._cameraSettingsConfig.PanPos);
       PanPosStatus.Content = _configState._cameraSettingsConfig.PanPos.ToString("0.00");
@@ -1205,7 +1202,7 @@ namespace CameraSlider.UI
     private async void TiltPos_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
       _configState._cameraSettingsConfig.TiltPos = (float)TiltPosSlider.Value;
-      _configState._areCameraSettingsDirty = true;
+      _configState._areConfigSettingsDirty = true;
       if (!_suppressUIUpdatesToDevice && !_isTiltPosDragging)
         await _cameraSliderDevice.SetTiltPosition(_configState._cameraSettingsConfig.TiltPos);
       TiltPosStatus.Content = _configState._cameraSettingsConfig.TiltPos.ToString("0.00");
@@ -1214,7 +1211,7 @@ namespace CameraSlider.UI
     private async void SlideSpeed_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
       _configState._cameraSettingsConfig.SlideSpeed = (float)SlideSpeedSlider.Value;
-      _configState._areCameraSettingsDirty = true;
+      _configState._areConfigSettingsDirty = true;
       if (!_suppressUIUpdatesToDevice && !_isSliderSpeedDragging)
         await _cameraSliderDevice.SetSlideSpeed(_configState._cameraSettingsConfig.SlideSpeed);
       SlideSpeedStatus.Content = _configState._cameraSettingsConfig.SlideSpeed.ToString("0.00");
@@ -1223,7 +1220,7 @@ namespace CameraSlider.UI
     private async void PanSpeed_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
       _configState._cameraSettingsConfig.PanSpeed = (float)PanSpeedSlider.Value;
-      _configState._areCameraSettingsDirty = true;
+      _configState._areConfigSettingsDirty = true;
       if (!_suppressUIUpdatesToDevice && !_isPanSpeedDragging)
         await _cameraSliderDevice.SetPanSpeed(_configState._cameraSettingsConfig.PanSpeed);
       PanSpeedStatus.Content = _configState._cameraSettingsConfig.PanSpeed.ToString("0.00");
@@ -1232,7 +1229,7 @@ namespace CameraSlider.UI
     private async void TiltSpeed_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
       _configState._cameraSettingsConfig.TiltSpeed = (float)TiltSpeedSlider.Value;
-      _configState._areCameraSettingsDirty = true;
+      _configState._areConfigSettingsDirty = true;
       if (!_suppressUIUpdatesToDevice && !_isTiltSpeedDragging)
         await _cameraSliderDevice.SetTiltSpeed(_configState._cameraSettingsConfig.TiltSpeed);
       TiltSpeedStatus.Content = _configState._cameraSettingsConfig.TiltSpeed.ToString("0.00");
@@ -1241,7 +1238,7 @@ namespace CameraSlider.UI
     private async void SlideAccel_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
       _configState._cameraSettingsConfig.SlideAccel = (float)SlideAccelSlider.Value;
-      _configState._areCameraSettingsDirty = true;
+      _configState._areConfigSettingsDirty = true;
       if (!_suppressUIUpdatesToDevice && !_isSliderAccelDragging)
         await _cameraSliderDevice.SetSlideAcceleration(_configState._cameraSettingsConfig.SlideAccel);
       SlideAccelStatus.Content = _configState._cameraSettingsConfig.SlideAccel.ToString("0.00");
@@ -1250,7 +1247,7 @@ namespace CameraSlider.UI
     private async void PanAccel_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
       _configState._cameraSettingsConfig.PanAccel = (float)PanAccelSlider.Value;
-      _configState._areCameraSettingsDirty = true;
+      _configState._areConfigSettingsDirty = true;
       if (!_suppressUIUpdatesToDevice && !_isPanAccelDragging)
         await _cameraSliderDevice.SetPanAcceleration(_configState._cameraSettingsConfig.PanAccel);
       PanAccelStatus.Content = _configState._cameraSettingsConfig.PanAccel.ToString("0.00");
@@ -1259,7 +1256,7 @@ namespace CameraSlider.UI
     private async void TiltAccel_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
       _configState._cameraSettingsConfig.TiltAccel = (float)TiltAccelSlider.Value;
-      _configState._areCameraSettingsDirty = true;
+      _configState._areConfigSettingsDirty = true;
       if (!_suppressUIUpdatesToDevice && !_isTiltAccelDragging)
         await _cameraSliderDevice.SetTiltAcceleration(_configState._cameraSettingsConfig.TiltAccel);
       TiltAccelStatus.Content = _configState._cameraSettingsConfig.TiltAccel.ToString("0.00");
@@ -1443,8 +1440,10 @@ namespace CameraSlider.UI
 
     // Twitch API Functions
     private HttpServer _twitchOAuthWebServer = null;
-    string _twitchRedirectUri = "http://localhost";
+    string _twitchRedirectUri = "http://localhost:8080/redirect/";
     List<string> _twitchAccesScopes = new List<string> { 
+      "chat:read", 
+      "whispers:read",
       "bits:read",
       "channel:read:subscriptions",
       "channel:read:redemptions"
@@ -1457,10 +1456,10 @@ namespace CameraSlider.UI
         TwitchClientTxtStatus.Content = "Connecting...";
       });
 
-      await LaunchTwitchAuthFlow();
+      LaunchTwitchAuthFlow();
     }
 
-    async Task LaunchTwitchAuthFlow()
+    void LaunchTwitchAuthFlow()
     {
       string clientId = _configState._twitchWebApiConfig.ClientID;
       string clientSecret = _configState._twitchWebApiConfig.ClientSecret;
@@ -1477,71 +1476,110 @@ namespace CameraSlider.UI
         }
         else
         {
-          await ConnectToTwichAPI();
+          ConnectToTwichAPI();
         }
       }
     }
 
-    async Task FetchTwitchAPITokens(string code)
+    async Task<bool> FetchAndCacheTwitchAPIConfig(string code)
     {
-      HttpClient client = new HttpClient();
-      var values = new Dictionary<string, string>
+      bool bSuccess = false;
+
+      try
       {
-        { "client_id", _configState._twitchWebApiConfig.ClientID },
-        { "client_secret", _configState._twitchWebApiConfig.ClientSecret },
-        { "code", code },
-        { "grant_type", "authorization_code" },
-        { "redirect_uri", _twitchRedirectUri }
-      };
+        var resp =
+          await _twitchAPI.Auth.GetAccessTokenFromCodeAsync(
+            code,
+            _configState._twitchWebApiConfig.ClientSecret,
+            _twitchRedirectUri);
 
-      var content = new FormUrlEncodedContent(values);
-      var response = await client.PostAsync("https://id.twitch.tv/oauth2/token", content);
-      var responseString = await response.Content.ReadAsStringAsync();
-      var responseJson = JObject.Parse(responseString);
+        // Store the result on the config state
+        _configState._twitchWebApiConfig.AccessToken = resp.AccessToken;
+        _configState._twitchWebApiConfig.RefreshToken = resp.RefreshToken;
 
-      // Store the result on the config state
-      _configState._twitchWebApiConfig.AccessToken = responseJson["access_token"].ToString();
-      _configState._twitchWebApiConfig.RefreshToken = responseJson["refresh_token"].ToString();
+        // Also copy the access token cached in the config to the Twitch API settings 
+        _twitchAPI.Settings.AccessToken = resp.AccessToken;
+
+        // Fetch the authenticated user associated with the access token
+        var authenticatedUsers = await _twitchAPI.Helix.Users.GetUsersAsync();
+
+        if (authenticatedUsers.Users.Length > 0)
+        {
+          // Store the user ID and name on the config state
+          var firstUser = authenticatedUsers.Users[0];
+          _configState._twitchWebApiConfig.ChannelID = firstUser.Id;
+          _configState._twitchWebApiConfig.ChannelName = firstUser.Login;
+
+          // Save out config on update
+          _configState._areConfigSettingsDirty = true;
+
+          bSuccess = true;
+        }
+      }
+      catch (Exception ex)
+      {
+        Console.WriteLine("Error fetching Twitch API tokens: " + ex.Message);
+      }
+
+      return bSuccess;
     }
 
-    async Task ConnectToTwichAPI()
+    bool ConnectToTwichAPI()
     {
-      _twitchAPI = new TwitchAPI();
-      _twitchAPI.Settings.ClientId = _configState._twitchWebApiConfig.ClientID;
-      _twitchAPI.Settings.AccessToken = _configState._twitchWebApiConfig.AccessToken;
+      bool bSuccess = false;
 
-      var authenticatedUser = await _twitchAPI.Helix.Users.GetUsersAsync();
-      _configState._twitchWebApiConfig.ChannelID = authenticatedUser.Users[0].Id;
-      _configState._twitchWebApiConfig.ChannelName = authenticatedUser.Users[0].Login;
+      if (_configState._twitchWebApiConfig.AccessToken != "")
+      {
+        // Make sure the access token is set on the Twitch API settings
+        _twitchAPI.Settings.AccessToken = _configState._twitchWebApiConfig.AccessToken;
 
-      _twitchClient = new TwitchClient();
-      _twitchClient.Initialize(
-        new ConnectionCredentials(
-          _configState._twitchWebApiConfig.ChannelID, 
-          _configState._twitchWebApiConfig.AccessToken), 
-        _configState._twitchWebApiConfig.ChannelName);
+        // Connect to the Twitch Client API
+        _twitchClient = new TwitchClient();
+        _twitchClient.Initialize(
+          new ConnectionCredentials(
+            _configState._twitchWebApiConfig.ChannelID,
+            _configState._twitchWebApiConfig.AccessToken),
+          _configState._twitchWebApiConfig.ChannelName);
+        _twitchClient.OnConnected += OnTwitchClientConnected;
+        _twitchClient.OnDisconnected += OnTwitchClientDisconnected;
+        _twitchClient.OnLog += OnTwitchClientLog;
+        _twitchClient.OnMessageReceived += OnTwitchClientMessageReceived;
 
-      _twitchClient.OnConnected += OnTwitchClientConnected;
-      _twitchClient.OnDisconnected += OnTwitchClientDisconnected;
-      _twitchClient.OnMessageReceived += OnTwitchClientMessageReceived;
+        if (_twitchClient.Connect())
+        {
+          // Next connect to the Twitch PubSub API (allowed to fail)
+          _twitchPubsub = new TwitchPubSub();
+          _twitchPubsub.OnPubSubServiceConnected += OnTwitchPubsubConnected;
+          _twitchPubsub.OnPubSubServiceClosed += OnTwitchPubsubClosed;
+          _twitchPubsub.OnPubSubServiceError += OnTwitchPubsubError;
+          _twitchPubsub.OnLog += OnTwitchPubSubLog;
+          _twitchPubsub.ListenToChannelPoints(_configState._twitchWebApiConfig.ChannelID);
+          _twitchPubsub.OnChannelPointsRewardRedeemed += OnChannelPointsRewardRedeemed;
 
-      _twitchClient.Connect();
+          _twitchPubsub.Connect();
 
-      _twitchPubsub = new TwitchPubSub();
-      _twitchPubsub.OnPubSubServiceConnected += OnTwitchPubsubConnected;
-      _twitchPubsub.OnPubSubServiceClosed += OnTwitchPubsubClosed;
-      _twitchPubsub.OnPubSubServiceError += OnTwitchPubsubError;
-      _twitchPubsub.ListenToChannelPoints(_configState._twitchWebApiConfig.ChannelID);
-      _twitchPubsub.OnChannelPointsRewardRedeemed += OnChannelPointsRewardRedeemed;
+          bSuccess = true;
+        }
+      }
 
-      _twitchPubsub.Connect();
+      return bSuccess;
+    }
+
+    private void OnTwitchPubSubLog(object sender, TwitchLib.PubSub.Events.OnLogArgs e)
+    {
+      Console.WriteLine("TwitchPubSub Log: "+e.Data);
+    }
+
+    private void OnTwitchClientLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
+    {
+      Console.WriteLine("TwitchClient Log: "+e.Data);
     }
 
     void InitializeTwitchOAuthWebServer()
     {
       // Create a new HTTP server locally so that we can make the request for OAUTH token related stuff
       _twitchOAuthWebServer = new HttpServer();
-      _twitchOAuthWebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 80);
+      _twitchOAuthWebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 8080);
       _twitchOAuthWebServer.RequestReceived += HandleTwitchOAuthRequest;
        
       _twitchOAuthWebServer.Start();
@@ -1557,10 +1595,11 @@ namespace CameraSlider.UI
           var code = e.Request.QueryString["code"];
 
           // Fetch the Access Token and Refresh Token from Twitch using ClientID and ClientSecret
-          await FetchTwitchAPITokens(code);
-
-          // Connect to the Twitch Client and PubSub APIs
-          await ConnectToTwichAPI();
+          if (await FetchAndCacheTwitchAPIConfig(code))
+          {
+            // Connect to the Twitch Client and PubSub APIs
+            ConnectToTwichAPI();
+          }
         }
       }
     }
