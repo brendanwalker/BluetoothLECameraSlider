@@ -51,6 +51,9 @@
     <Reference Include="NHttp, Version=0.1.9.0, Culture=neutral, PublicKeyToken=156364e4f7b202d9, processorArchitecture=MSIL">
       <HintPath>..\packages\NHttp.0.1.9.0\lib\net20\NHttp.dll</HintPath>
     </Reference>
+    <Reference Include="obs-websocket-dotnet, Version=5.0.0.3, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\obs-websocket-dotnet.5.0.0.3\lib\netstandard2.0\obs-websocket-dotnet.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
@@ -75,6 +78,9 @@
     <Reference Include="System.Numerics" />
     <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive, Version=4.3.0.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Reactive.4.3.2\lib\net46\System.Reactive.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime, Version=4.1.1.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Runtime.4.3.1\lib\net462\System.Runtime.dll</HintPath>
@@ -105,6 +111,11 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Threading.Channels, Version=4.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Threading.Channels.4.7.0\lib\netstandard2.0\System.Threading.Channels.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Windows" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -148,6 +159,9 @@
     </Reference>
     <Reference Include="TwitchLib.PubSub, Version=3.2.6.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\TwitchLib.PubSub.3.2.6\lib\netstandard2.0\TwitchLib.PubSub.dll</HintPath>
+    </Reference>
+    <Reference Include="Websocket.Client, Version=4.4.0.0, Culture=neutral, PublicKeyToken=ae648c6d12f59b1b, processorArchitecture=MSIL">
+      <HintPath>..\packages\Websocket.Client.4.4.43\lib\netstandard2.0\Websocket.Client.dll</HintPath>
     </Reference>
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
@@ -210,10 +224,6 @@
     <ProjectReference Include="..\CameraSlider.Bluetooth\CameraSlider.Bluetooth.csproj">
       <Project>{ce863405-a1f9-464d-aeed-e265c8244689}</Project>
       <Name>CameraSlider.Bluetooth</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\OBSWebsocket\OBSWebsocket.csproj">
-      <Project>{947ca65c-aa3a-49a0-9d94-bb6e89a6d566}</Project>
-      <Name>OBSWebsocket</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

@@ -7,8 +7,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CameraSlider.Bluetooth", "C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CameraSlider.UI", "CameraSlider.UI\CameraSlider.UI.csproj", "{B585EF35-DC34-48CE-A070-0BB2095756D4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OBSWebsocket", "OBSWebsocket\OBSWebsocket.csproj", "{947CA65C-AA3A-49A0-9D94-BB6E89A6D566}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,10 +21,6 @@ Global
 		{B585EF35-DC34-48CE-A070-0BB2095756D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B585EF35-DC34-48CE-A070-0BB2095756D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B585EF35-DC34-48CE-A070-0BB2095756D4}.Release|Any CPU.Build.0 = Release|Any CPU
-		{947CA65C-AA3A-49A0-9D94-BB6E89A6D566}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{947CA65C-AA3A-49A0-9D94-BB6E89A6D566}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{947CA65C-AA3A-49A0-9D94-BB6E89A6D566}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{947CA65C-AA3A-49A0-9D94-BB6E89A6D566}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

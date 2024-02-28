@@ -1,11 +1,11 @@
 ﻿<Window x:Class="CameraSlider.UI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:EmitLog="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:CameraSlider.UI"
-        mc:Ignorable="d"
-        Title="CameraSlider" Width="400" Height="712" HorizontalAlignment="Center" VerticalAlignment="Center" >
+        mc:Ignorable="EmitLog"
+        Title="CameraSlider" Width="400" Height="720" HorizontalAlignment="Center" VerticalAlignment="Center" >
     <Grid >
         <TabControl>
             <TabItem Header="Controls">
@@ -31,7 +31,7 @@
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <CheckBox x:Name="ObsCheckBox" HorizontalAlignment="Left" Margin="5,5,5,5" IsChecked="False" Checked="ObsCheckBox_Checked"/>
-                                <Label Content="OBS Studio Websocket: " Width="125" HorizontalAlignment="Right"/>
+                                <Label Content="OBS Studio: " Width="125" HorizontalAlignment="Right"/>
                                 <Label x:Name="ObsTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
                             </StackPanel>
                         </StackPanel>
@@ -166,7 +166,32 @@
                                 <PasswordBox x:Name="SocketPasswordInput" Width="200" HorizontalAlignment="Left" PasswordChanged="SocketPasswordInput_TextChanged" />
                             </StackPanel>
                         </StackPanel>
-                    </Border>                    
+                    </Border>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Log">
+                <StackPanel x:Name="LogPanel" Margin="0,0,0,0" RenderTransformOrigin="0.5,0.5" Grid.ColumnSpan="5">
+                    <StackPanel.RenderTransform>
+                        <TransformGroup>
+                            <ScaleTransform/>
+                            <SkewTransform AngleY="0"/>
+                            <RotateTransform/>
+                            <TranslateTransform Y="0"/>
+                        </TransformGroup>
+                    </StackPanel.RenderTransform>
+                    <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1" Margin="10">
+                        <StackPanel>
+                            <TextBox  x:Name="logTextBlock"
+                                    VerticalScrollBarVisibility="Auto"
+                                    HorizontalScrollBarVisibility="Auto"
+                                    IsReadOnlyCaretVisible="True"
+                                    FontSize="12" FontFamily="Cascadia Mono"
+                                    Foreground="Black"
+                                    Padding="3"
+                                    Text=""  
+                                    Height="630" Width="340"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </TabItem>
         </TabControl>
