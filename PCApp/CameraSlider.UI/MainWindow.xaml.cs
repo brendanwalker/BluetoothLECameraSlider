@@ -889,6 +889,27 @@ namespace CameraSlider.UI
       });
     }
 
+    private async void OnTwitchIncorrectLogin(object sender, OnIncorrectLoginArgs e)
+    {
+      EmitLog("Twitch Client incorrect login: "+e.Exception.Message);
+
+      // Clear out the access token and refresh token in hopes that re-loggin in will work
+      _configState._twitchWebApiConfig.AccessToken = "";
+      _configState._twitchWebApiConfig.RefreshToken = "";
+      _configState._areConfigSettingsDirty = true;
+
+      await RunOnUiThread(() =>
+      {
+        TwitchClientTxtStatus.Content = "Login Failed";
+      });
+    }
+
+    private void OnTwitchConnectionError(object sender, OnConnectionErrorArgs e)
+    {
+      EmitLog("Twitch Client connection error: "+e.Error);
+    }
+
+
     private async void OnTwitchClientConnected(object sender, OnConnectedArgs e)
     {
       EmitLog("Twitch Client connected");
@@ -1570,6 +1591,8 @@ namespace CameraSlider.UI
           _configState._twitchWebApiConfig.ChannelName);
         _twitchClient.OnConnected += OnTwitchClientConnected;
         _twitchClient.OnDisconnected += OnTwitchClientDisconnected;
+        _twitchClient.OnIncorrectLogin += OnTwitchIncorrectLogin;
+        _twitchClient.OnConnectionError += OnTwitchConnectionError;
         _twitchClient.OnLog += OnTwitchClientLog;
         _twitchClient.OnMessageReceived += OnTwitchClientMessageReceived;
 
