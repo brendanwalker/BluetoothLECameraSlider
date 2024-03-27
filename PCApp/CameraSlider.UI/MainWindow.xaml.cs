@@ -1151,7 +1151,15 @@ namespace CameraSlider.UI
         _configState._twitchWebApiConfig.ClientID = TwitchClientIdInput.Password;
         _configState._areConfigSettingsDirty = true;
 
-        _twitchPubsub.Disconnect();
+        if (_twitchPubsub != null)
+        {
+          _twitchPubsub.Disconnect();
+        }
+
+        if (_twitchClient != null)
+        {
+          _twitchClient.Disconnect();
+        }
       }
     }
 
@@ -1162,7 +1170,15 @@ namespace CameraSlider.UI
         _configState._twitchWebApiConfig.ClientSecret = TwitchClientSecretKeyInput.Password;
         _configState._areConfigSettingsDirty = true;
 
-        _twitchPubsub.Disconnect();
+        if (_twitchPubsub != null)
+        {
+          _twitchPubsub.Disconnect();
+        }
+
+        if (_twitchClient != null)
+        {
+          _twitchClient.Disconnect();
+        }
       }
     }
 
