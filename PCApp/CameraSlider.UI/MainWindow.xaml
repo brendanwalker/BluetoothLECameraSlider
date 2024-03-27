@@ -30,7 +30,7 @@
                                 <Button x:Name="BtnTwitchConnect" Content="Connect" Width="100" Margin="20,0,0,0" Click="BtnTwitchConnect_Click" VerticalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <CheckBox x:Name="ObsCheckBox" HorizontalAlignment="Left" Margin="5,5,5,5" IsChecked="False" Checked="ObsCheckBox_Checked"/>
+                                <CheckBox x:Name="ObsCheckBox" HorizontalAlignment="Left" Margin="5,5,5,5" IsChecked="False" Unchecked="ObsCheckBox_Unchecked" Checked="ObsCheckBox_Checked"/>
                                 <Label Content="OBS Studio: " Width="125" HorizontalAlignment="Right"/>
                                 <Label x:Name="ObsTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
                             </StackPanel>

@@ -600,7 +600,7 @@ namespace CameraSlider.UI
       {
         _twitchClient.Disconnect();
       }
-      
+
       if (_twitchPubsub != null)
       {
         _twitchPubsub.Disconnect();
@@ -813,13 +813,13 @@ namespace CameraSlider.UI
 
         while (_hasPendingPresetTarget && activeDurationSeconds < maxWaitDurationSeconds)
         {
-          var waitDuration= TimeSpan.FromMilliseconds(100);
-          activeDurationSeconds+= ((float)waitDuration.TotalSeconds);
+          var waitDuration = TimeSpan.FromMilliseconds(100);
+          activeDurationSeconds += ((float)waitDuration.TotalSeconds);
 
           await Task.Delay(waitDuration, cancellationToken);
         }
 
-        _hasPendingPresetTarget= false;
+        _hasPendingPresetTarget = false;
       }
       catch (OperationCanceledException)
       {
@@ -916,21 +916,21 @@ namespace CameraSlider.UI
     // OBS Studio Event Handlers
     private void ObsCheckBox_Checked(object sender, RoutedEventArgs e)
     {
-      bool WantEnabled = (bool)ObsCheckBox.IsChecked;
+      _configState._obsConfig.IsEnabled = true;
+      _configState._areConfigSettingsDirty = true;
 
-      if (!_configState._obsConfig.IsEnabled && WantEnabled)
+      _ = StartObsStudioWatchdogWorker(_obsClientCancelSignaler.Token);
+    }
+
+    private void ObsCheckBox_Unchecked(object sender, RoutedEventArgs e)
+    {
+      _configState._obsConfig.IsEnabled = false;
+      _configState._areConfigSettingsDirty = true;
+
+      _obsClientCancelSignaler.Cancel();
+      if (_obsClient.IsConnected)
       {
-        _configState._obsConfig.IsEnabled = true;
-        _ = StartObsStudioWatchdogWorker(_obsClientCancelSignaler.Token);
-      }
-      else if (_configState._obsConfig.IsEnabled && !WantEnabled)
-      {
-        _configState._obsConfig.IsEnabled = false;
-        _obsClientCancelSignaler.Cancel();
-        if (_obsClient.IsConnected)
-        {
-          _obsClient.Disconnect();
-        }
+        _obsClient.Disconnect();
       }
     }
 
@@ -1133,7 +1133,7 @@ namespace CameraSlider.UI
         _twitchPubsub.Disconnect();
       }
     }
-    
+
     private void TwitchClientSecretInput_Changed(object sender, RoutedEventArgs e)
     {
       if (_configState._twitchWebApiConfig.ClientSecret != TwitchClientSecretKeyInput.Password)
@@ -1310,18 +1310,18 @@ namespace CameraSlider.UI
 
     private void RebuildPresetComboBox()
     {
-      string oldSelectedPresetName= (string)PresetComboBox.SelectedValue ?? "";
+      string oldSelectedPresetName = (string)PresetComboBox.SelectedValue ?? "";
       int newSelectedIndex = -1;
 
       PresetComboBox.Items.Clear();
-      for (int presetIndex= 0; presetIndex < _configState._presets.Count; presetIndex++)
+      for (int presetIndex = 0; presetIndex < _configState._presets.Count; presetIndex++)
       {
-        PresetSettings preset= _configState._presets[presetIndex];
+        PresetSettings preset = _configState._presets[presetIndex];
         PresetComboBox.Items.Add(preset.PresetName);
 
         if (preset.PresetName == oldSelectedPresetName && newSelectedIndex == -1)
         {
-          newSelectedIndex= presetIndex;
+          newSelectedIndex = presetIndex;
         }
       }
 
@@ -1353,7 +1353,7 @@ namespace CameraSlider.UI
     {
       await RunOnUiThread(() =>
       {
-        logTextBlock.Text+= txt + "\n";
+        logTextBlock.Text += txt + "\n";
       });
 
       Debug.WriteLine(txt);
@@ -1461,14 +1461,14 @@ namespace CameraSlider.UI
     // Twitch API Functions
     private HttpServer _twitchOAuthWebServer = null;
     string _twitchRedirectUri = "http://localhost:8080/redirect/";
-    List<string> _twitchAccesScopes = new List<string> { 
-      "chat:read", 
+    List<string> _twitchAccesScopes = new List<string> {
+      "chat:read",
       "whispers:read",
       "bits:read",
       "channel:read:subscriptions",
       "channel:read:redemptions"
     };
-    
+
     private async void BtnTwitchConnect_Click(object sender, RoutedEventArgs e)
     {
       await RunOnUiThread(() =>
@@ -1595,12 +1595,12 @@ namespace CameraSlider.UI
 
     private void OnTwitchPubSubLog(object sender, TwitchLib.PubSub.Events.OnLogArgs e)
     {
-      EmitLog("TwitchPubSub Log: "+e.Data);
+      EmitLog("TwitchPubSub Log: " + e.Data);
     }
 
     private void OnTwitchClientLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
     {
-      EmitLog("TwitchClient Log: "+e.Data);
+      EmitLog("TwitchClient Log: " + e.Data);
     }
 
     void InitializeTwitchOAuthWebServer()
@@ -1609,7 +1609,7 @@ namespace CameraSlider.UI
       _twitchOAuthWebServer = new HttpServer();
       _twitchOAuthWebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 8080);
       _twitchOAuthWebServer.RequestReceived += HandleTwitchOAuthRequest;
-       
+
       _twitchOAuthWebServer.Start();
       EmitLog($"Web server started on: {_twitchOAuthWebServer.EndPoint}");
     }
