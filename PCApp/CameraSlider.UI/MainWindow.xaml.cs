@@ -439,7 +439,11 @@ namespace CameraSlider.UI
     public void LoadConfig()
     {
       // Open App.Config of executable
-      _configFile = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+      string app_data = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+
+      ExeConfigurationFileMap fileMap = new ExeConfigurationFileMap();
+      fileMap.ExeConfigFilename = app_data + "\\CameraSliderUI\\CameraSliderUI.config.txt";
+      _configFile = ConfigurationManager.OpenMappedExeConfiguration(fileMap, ConfigurationUserLevel.None);
 
       _twitchWebApiConfig = (TwitchWebAPISection)_configFile.GetSection("twitch_webapi_settings");
       if (_twitchWebApiConfig == null)
