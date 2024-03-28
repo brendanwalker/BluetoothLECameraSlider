@@ -247,6 +247,10 @@ namespace CameraSlider.UI
     {
       get; set;
     }
+    public float HoldDuration
+    { 
+      get; set;
+    }
     public TriggerSettings ChatTrigger
     {
       get; set;
@@ -263,6 +267,7 @@ namespace CameraSlider.UI
       PanPosition = 0;
       TiltPosition = 0;
       ObsScene = "";
+      HoldDuration = 0;
       ChatTrigger = new TriggerSettings();
       RedeemTrigger = new TriggerSettings();
     }
@@ -274,6 +279,7 @@ namespace CameraSlider.UI
       PanPosition = other.PanPosition;
       TiltPosition = other.TiltPosition;
       ObsScene = other.ObsScene;
+      HoldDuration = other.HoldDuration;
       ChatTrigger = new TriggerSettings(other.ChatTrigger);
       RedeemTrigger = new TriggerSettings(other.RedeemTrigger);
     }
@@ -812,7 +818,7 @@ namespace CameraSlider.UI
       // Wait for the camera to reach the target position
       try
       {
-        const float maxWaitDurationSeconds = 15f;
+        const float maxWaitDurationSeconds = 10f;
         float activeDurationSeconds = 0f;
 
         while (_hasPendingPresetTarget && activeDurationSeconds < maxWaitDurationSeconds)
@@ -834,6 +840,14 @@ namespace CameraSlider.UI
       // Restore back to the previous OBS scene
       if (_presetBackupObsScene.Length > 0)
       {
+        // See if we have a hold duration on the scene
+        if (preset.HoldDuration > 0f)
+        {
+          var waitDuration = TimeSpan.FromSeconds(preset.HoldDuration);
+          
+          await Task.Delay(waitDuration, cancellationToken);
+        }
+
         SetObsSceneByName(_presetBackupObsScene);
         _presetBackupObsScene = "";
       }

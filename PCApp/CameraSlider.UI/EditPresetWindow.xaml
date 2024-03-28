@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:CameraSlider.UI"
         mc:Ignorable="EmitLog"
-        Title="Edit Preset"  Width="400" Height="300">
+        Title="Edit Preset"  Width="400" Height="330">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="321*"/>
@@ -52,6 +52,10 @@
                         <Label Content="OBS Scene" Width="100"/>
                         <TextBox x:Name="OBSSceneTxt" Text="" VerticalAlignment="Center" Width="100" TextChanged="ObsSceneTxt_TextChanged"/>
                     </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="Hold Duration" Width="100"/>
+                        <TextBox x:Name="HoldDurationTxt" Text="" VerticalAlignment="Center" Width="100" TextChanged="HoldDurationTxt_TextChanged"/>
+                    </StackPanel>                    
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Chat Trigger" Width="100"/>
                         <TextBox x:Name="ChatCommandTxt" Text="" VerticalAlignment="Center" Width="100" TextChanged="ChatCommandTxt_TextChanged"/>

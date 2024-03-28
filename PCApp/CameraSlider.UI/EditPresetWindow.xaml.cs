@@ -46,6 +46,7 @@ namespace CameraSlider.UI
       PanPosTxt.Text = _preset.PanPosition.ToString("0.00");
       TiltPosTxt.Text = _preset.TiltPosition.ToString("0.00");
       OBSSceneTxt.Text = _preset.ObsScene;
+      HoldDurationTxt.Text = _preset.HoldDuration.ToString("0.00");
       ChatCommandTxt.Text = _preset.ChatTrigger.TriggerName;
       IsChatModOnlyChk.IsChecked = _preset.ChatTrigger.IsModOnly;
       IsChatTriggeredChk.IsChecked = _preset.ChatTrigger.IsActive;
@@ -101,6 +102,15 @@ namespace CameraSlider.UI
     private void ObsSceneTxt_TextChanged(object sender, TextChangedEventArgs e)
     {
       _preset.ObsScene = OBSSceneTxt.Text;
+    }
+
+    private void HoldDurationTxt_TextChanged(object sender, TextChangedEventArgs e)
+    {
+      float holdDuration= 0f;
+      if (float.TryParse(HoldDurationTxt.Text, out holdDuration))
+      {
+        _preset.HoldDuration= holdDuration;
+      }
     }
 
     private void ChatCommandTxt_TextChanged(object sender, TextChangedEventArgs e)
