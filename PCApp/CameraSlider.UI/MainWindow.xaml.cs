@@ -930,7 +930,7 @@ namespace CameraSlider.UI
       {
         if (preset.ChatTrigger.IsActive &&
           e.ChatMessage.Message.StartsWith(preset.ChatTrigger.TriggerName) &&
-          (!preset.ChatTrigger.IsModOnly || e.ChatMessage.IsModerator))
+          (!preset.ChatTrigger.IsModOnly || e.ChatMessage.IsModerator || e.ChatMessage.IsBroadcaster))
         {
           ActivatePreset(preset);
           break;
