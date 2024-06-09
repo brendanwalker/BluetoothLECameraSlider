@@ -5,13 +5,13 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:CameraSlider.UI"
         mc:Ignorable="EmitLog"
-        Title="Edit Preset"  Width="400" Height="330">
+        Title="Edit Preset"  Width="321" Height="330">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="321*"/>
             <ColumnDefinition Width="79*"/>
         </Grid.ColumnDefinitions>
-        <StackPanel x:Name="ControlsStackPanel" RenderTransformOrigin="0.5,0.5" Grid.ColumnSpan="2">
+        <StackPanel x:Name="ControlsStackPanel" RenderTransformOrigin="0.5,0.5" Margin="0,0,0,129">
             <StackPanel.RenderTransform>
                 <TransformGroup>
                     <ScaleTransform/>
@@ -48,26 +48,10 @@
                         <TextBox x:Name="TiltPosTxt" Text="0.00" VerticalAlignment="Center" Width="50" InputScope="Number" TextChanged="TiltPosTxt_TextChanged"/>
                     </StackPanel>
                     <Button x:Name="UpdatePosBtn" Content="Update Positions" HorizontalAlignment="Left" Margin="10,10,10,10" VerticalAlignment="Top" Width="105" Click="UpdatePosBtn_Click"/>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="OBS Scene" Width="100"/>
-                        <TextBox x:Name="OBSSceneTxt" Text="" VerticalAlignment="Center" Width="100" TextChanged="ObsSceneTxt_TextChanged"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Hold Duration" Width="100"/>
-                        <TextBox x:Name="HoldDurationTxt" Text="" VerticalAlignment="Center" Width="100" TextChanged="HoldDurationTxt_TextChanged"/>
-                    </StackPanel>                    
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Chat Trigger" Width="100"/>
-                        <TextBox x:Name="ChatCommandTxt" Text="" VerticalAlignment="Center" Width="100" TextChanged="ChatCommandTxt_TextChanged"/>
-                        <CheckBox x:Name="IsChatModOnlyChk" Content="Mod Only" VerticalAlignment="Center" Margin="10,0,0,0" Checked="IsChatModOnlyChk_Checked"/>
-                        <CheckBox x:Name="IsChatTriggeredChk" Content="Active" VerticalAlignment="Center" Margin="10,0,0,0" Checked="IsChatTriggeredChk_Checked"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Redeem Trigger" Width="100"/>
-                        <TextBox x:Name="RedeemTxt" Text="" VerticalAlignment="Center" Width="100" TextChanged="RedeemTxt_TextChanged"/>
-                        <CheckBox x:Name="IsRedeemModOnlyChk" Content="Mod Only" VerticalAlignment="Center" Margin="10,0,0,0" Checked="IsRedeemModOnlyChk_Checked"/>
-                        <CheckBox x:Name="IsRedeemActiveChk" Content="Active" VerticalAlignment="Center" Margin="10,0,0,0" Checked="IsRedeemActiveChk_Checked"/>
-                    </StackPanel>
+                    <StackPanel Orientation="Horizontal"/>
+                    <StackPanel Orientation="Horizontal"/>
+                    <StackPanel Orientation="Horizontal"/>
+                    <StackPanel Orientation="Horizontal"/>
                     <StackPanel Orientation="Horizontal">
                         <Button x:Name="SavePresetBtn" Content="Save Preset" HorizontalAlignment="Left" Margin="10,10,10,10" VerticalAlignment="Top" Width="105" Click="SavePresetBtn_Click"/>
                         <Button x:Name="CancelChangesBtn" Content="Cancel" HorizontalAlignment="Left" Margin="10,10,10,10" VerticalAlignment="Top" Width="105" Click="CancelChangesBtn_Click"/>

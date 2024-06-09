@@ -11,16 +11,7 @@ using CameraSlider.Bluetooth;
 using System.Threading;
 using System.Configuration;
 using System.Text.RegularExpressions;
-using OBSWebsocketDotNet;
-using TwitchLib.PubSub;
-using TwitchLib.Api.Interfaces;
-using TwitchLib.Api;
-using TwitchLib.PubSub.Events;
 using System.Collections.Generic;
-using TwitchLib.Client;
-using TwitchLib.Client.Models;
-using TwitchLib.Client.Events;
-using TwitchLib.Communication.Events;
 using Newtonsoft.Json;
 using System.Net;
 using System.IO;
@@ -29,202 +20,6 @@ using System.Linq;
 
 namespace CameraSlider.UI
 {
-	public class ObsConfigSection : ConfigurationSection
-	{
-		public ObsConfigSection()
-		{
-			IsEnabled = false;
-			PatternSceneName = "Main";
-			PatternSceneDuration = 3000;
-			SocketAddress = "127.0.0.1:4455";
-			Password = "";
-		}
-
-		[ConfigurationProperty("is_enabled")]
-		public bool IsEnabled
-		{
-			get
-			{
-				return (bool)this["is_enabled"];
-			}
-			set
-			{
-				this["is_enabled"] = value;
-			}
-		}
-
-		[ConfigurationProperty("pattern_scene_name")]
-		public string PatternSceneName
-		{
-			get
-			{
-				return (string)this["pattern_scene_name"];
-			}
-			set
-			{
-				this["pattern_scene_name"] = value;
-			}
-		}
-
-		[ConfigurationProperty("pattern_scene_duration")]
-		public int PatternSceneDuration
-		{
-			get
-			{
-				return (int)this["pattern_scene_duration"];
-			}
-			set
-			{
-				this["pattern_scene_duration"] = value;
-			}
-		}
-
-		[ConfigurationProperty("socket_address")]
-		public string SocketAddress
-		{
-			get
-			{
-				return (string)this["socket_address"];
-			}
-			set
-			{
-				this["socket_address"] = value;
-			}
-		}
-
-		[ConfigurationProperty("password")]
-		public string Password
-		{
-			get
-			{
-				return (string)this["password"];
-			}
-			set
-			{
-				this["password"] = value;
-			}
-		}
-	}
-
-	public class TwitchWebAPISection : ConfigurationSection
-	{
-		public TwitchWebAPISection()
-		{
-			ChannelID = "";
-			ClientID = "";
-			ClientSecret = "";
-			AccessToken = "";
-		}
-
-		[ConfigurationProperty("channel_id")]
-		public string ChannelID
-		{
-			get
-			{
-				return (string)this["channel_id"];
-			}
-			set
-			{
-				this["channel_id"] = value;
-			}
-		}
-
-		[ConfigurationProperty("channel_name")]
-		public string ChannelName
-		{
-			get
-			{
-				return (string)this["channel_name"];
-			}
-			set
-			{
-				this["channel_name"] = value;
-			}
-		}
-
-		[ConfigurationProperty("client_id")]
-		public string ClientID
-		{
-			get
-			{
-				return (string)this["client_id"];
-			}
-			set
-			{
-				this["client_id"] = value;
-			}
-		}
-
-		[ConfigurationProperty("client_secret")]
-		public string ClientSecret
-		{
-			get
-			{
-				return (string)this["client_secret"];
-			}
-			set
-			{
-				this["client_secret"] = value;
-			}
-		}
-
-		[ConfigurationProperty("access_token")]
-		public string AccessToken
-		{
-			get
-			{
-				return (string)this["access_token"];
-			}
-			set
-			{
-				this["access_token"] = value;
-			}
-		}
-
-		[ConfigurationProperty("refresh_token")]
-		public string RefreshToken
-		{
-			get
-			{
-				return (string)this["refresh_token"];
-			}
-			set
-			{
-				this["refresh_token"] = value;
-			}
-		}
-	}
-
-	public class TriggerSettings
-	{
-		public string TriggerName
-		{
-			get; set;
-		}
-		public bool IsModOnly
-		{
-			get; set;
-		}
-		public bool IsActive
-		{
-			get; set;
-		}
-
-		public TriggerSettings()
-		{
-			TriggerName = "";
-			IsModOnly = false;
-			IsActive = false;
-		}
-
-		public TriggerSettings(TriggerSettings other)
-		{
-			TriggerName = other.TriggerName;
-			IsModOnly = other.IsModOnly;
-			IsActive = other.IsActive;
-		}
-	}
-
 	public class PresetSettings
 	{
 		public string PresetName
@@ -243,22 +38,6 @@ namespace CameraSlider.UI
 		{
 			get; set;
 		}
-		public String ObsScene
-		{
-			get; set;
-		}
-		public float HoldDuration
-		{
-			get; set;
-		}
-		public TriggerSettings ChatTrigger
-		{
-			get; set;
-		}
-		public TriggerSettings RedeemTrigger
-		{
-			get; set;
-		}
 
 		public PresetSettings()
 		{
@@ -266,10 +45,6 @@ namespace CameraSlider.UI
 			SlidePosition = 0;
 			PanPosition = 0;
 			TiltPosition = 0;
-			ObsScene = "";
-			HoldDuration = 0;
-			ChatTrigger = new TriggerSettings();
-			RedeemTrigger = new TriggerSettings();
 		}
 
 		public PresetSettings(PresetSettings other)
@@ -278,10 +53,6 @@ namespace CameraSlider.UI
 			SlidePosition = other.SlidePosition;
 			PanPosition = other.PanPosition;
 			TiltPosition = other.TiltPosition;
-			ObsScene = other.ObsScene;
-			HoldDuration = other.HoldDuration;
-			ChatTrigger = new TriggerSettings(other.ChatTrigger);
-			RedeemTrigger = new TriggerSettings(other.RedeemTrigger);
 		}
 	}
 
@@ -435,8 +206,6 @@ namespace CameraSlider.UI
 	public class ConfigState
 	{
 		public Configuration _configFile;
-		public TwitchWebAPISection _twitchWebApiConfig;
-		public ObsConfigSection _obsConfig;
 		public CameraSettingsSection _cameraSettingsConfig;
 		public List<PresetSettings> _presets = new List<PresetSettings>();
 		public bool _areConfigSettingsDirty = false;
@@ -450,20 +219,6 @@ namespace CameraSlider.UI
 			ExeConfigurationFileMap fileMap = new ExeConfigurationFileMap();
 			fileMap.ExeConfigFilename = app_data + "\\CameraSliderUI\\CameraSliderUI.config.txt";
 			_configFile = ConfigurationManager.OpenMappedExeConfiguration(fileMap, ConfigurationUserLevel.None);
-
-			_twitchWebApiConfig = (TwitchWebAPISection)_configFile.GetSection("twitch_webapi_settings");
-			if (_twitchWebApiConfig == null)
-			{
-				_twitchWebApiConfig = new TwitchWebAPISection();
-				_configFile.Sections.Add("twitch_webapi_settings", _twitchWebApiConfig);
-			}
-
-			_obsConfig = (ObsConfigSection)_configFile.GetSection("obs_socket_settings");
-			if (_obsConfig == null)
-			{
-				_obsConfig = new ObsConfigSection();
-				_configFile.Sections.Add("obs_socket_settings", _obsConfig);
-			}
 
 			_presets = new List<PresetSettings>();
 			_arePresetsDirty = false;
@@ -520,23 +275,11 @@ namespace CameraSlider.UI
 		private int _deviceKeepAliveCountdown = _deviceKeepAliveDelay;
 		private bool _suppressUIUpdatesToDevice = false;
 
-		// Twitch Chat Client
-		private ITwitchAPI _twitchAPI;
-		private TwitchClient _twitchClient;
-
-		// Twitch PubSub Client
-		private TwitchPubSub _twitchPubsub;
-
-		// OBS Web Socket
-		CancellationTokenSource _obsClientCancelSignaler = new CancellationTokenSource();
-		private OBSWebsocket _obsClient;
-
 		// Preset state
 		CancellationTokenSource _presetCancelSignaler = null;
 		private float _presetTargetSlidePosition = 0.0f;
 		private float _presetTargetPanPosition = 0.0f;
 		private float _presetTargetTiltPosition = 0.0f;
-		private string _presetBackupObsScene = "";
 		private bool _hasPendingPresetTarget = false;
 
 		// Slider state
@@ -557,19 +300,6 @@ namespace CameraSlider.UI
 			// Load the config settings first
 			_configState.LoadConfig();
 
-			// Start up local web server to handle Twitch OAuth requests
-			InitializeTwitchOAuthWebServer();
-
-			// Initialize the Twitch API
-			_twitchAPI = new TwitchAPI();
-			_twitchAPI.Settings.ClientId = _configState._twitchWebApiConfig.ClientID;
-
-			// Register to OBS Studio websocket API to control OBS Scene remotely
-			_obsClient = new OBSWebsocket();
-			_obsClient.Connected += OnObsConnected;
-			_obsClient.ExitStarted += OnObsExited;
-			_obsClient.Disconnected += OnObsDisconnected;
-
 			// Register to Bluetooth LE Camera Slider Device Manager
 			_cameraSliderDevice = new CameraSliderDevice();
 			_cameraSliderDevice.ConnectionStatusChanged += OnDeviceConnectionStatusChanged;
@@ -581,11 +311,6 @@ namespace CameraSlider.UI
 
 			// Kick off the watchdog workers
 			_ = StartDeviceWatchdogWorker(_deviceWatchdogCancelSignaler.Token);
-
-			if (_configState._obsConfig.IsEnabled)
-			{
-				_ = StartObsStudioWatchdogWorker(_obsClientCancelSignaler.Token);
-			}
 		}
 
 		protected async override void OnClosing(CancelEventArgs e)
@@ -594,7 +319,6 @@ namespace CameraSlider.UI
 
 			// Stop any running async tasks
 			_deviceWatchdogCancelSignaler.Cancel();
-			_obsClientCancelSignaler.Cancel();
 			if (_presetCancelSignaler != null)
 			{
 				_presetCancelSignaler.Cancel();
@@ -604,24 +328,6 @@ namespace CameraSlider.UI
 			if (_cameraSliderDevice.IsConnected)
 			{
 				await _cameraSliderDevice.DisconnectAsync();
-			}
-
-			if (_twitchClient != null)
-			{
-				_twitchClient.Disconnect();
-			}
-
-			if (_twitchPubsub != null)
-			{
-				_twitchPubsub.Disconnect();
-			}
-
-			//_obsClient.Disconnect();
-
-			if (_twitchOAuthWebServer != null)
-			{
-				_twitchOAuthWebServer.Stop();
-				_twitchOAuthWebServer.Dispose();
 			}
 		}
 
@@ -802,19 +508,6 @@ namespace CameraSlider.UI
 				TiltPosSlider.Value = preset.TiltPosition;
 			});
 
-			// Switch to the desired scene
-			if (preset.ObsScene.Length > 0)
-			{
-				// If there wasn't already a backup OBS scene, save the current scene
-				if (_presetBackupObsScene.Length == 0)
-				{
-					_presetBackupObsScene = GetObsSceneName();
-				}
-
-				// Switch to the new OBS scene
-				SetObsSceneByName(preset.ObsScene);
-			}
-
 			// Wait for the camera to reach the target position
 			try
 			{
@@ -837,21 +530,6 @@ namespace CameraSlider.UI
 				Console.WriteLine("Preset was cancelled.");
 			}
 
-			// Restore back to the previous OBS scene
-			if (_presetBackupObsScene.Length > 0)
-			{
-				// See if we have a hold duration on the scene
-				if (preset.HoldDuration > 0f)
-				{
-					var waitDuration = TimeSpan.FromSeconds(preset.HoldDuration);
-
-					await Task.Delay(waitDuration, cancellationToken);
-				}
-
-				SetObsSceneByName(_presetBackupObsScene);
-				_presetBackupObsScene = "";
-			}
-
 			SetActivePresetStatusLabel("");
 		}
 
@@ -863,226 +541,9 @@ namespace CameraSlider.UI
 			});
 		}
 
-		// Twitch PubSub Event Handlers
-		private void OnChannelPointsRewardRedeemed(object sender, OnChannelPointsRewardRedeemedArgs e)
-		{
-			var reward = e.RewardRedeemed.Redemption.Reward;
-			string rewardId = reward.Title;
-
-			foreach (PresetSettings preset in _configState._presets)
-			{
-				if (preset.RedeemTrigger.IsActive &&
-				  preset.RedeemTrigger.TriggerName == rewardId)
-				{
-					ActivatePreset(preset);
-					break;
-				}
-			}
-		}
-
-		private void OnTwitchPubsubError(object sender, OnPubSubServiceErrorArgs e)
-		{
-			EmitLog("Twitch PubSub failed to connect");
-		}
-
-		private void OnTwitchPubsubClosed(object sender, EventArgs e)
-		{
-			EmitLog("Twitch PubSub disconnected");
-		}
-
-		private void OnTwitchPubsubConnected(object sender, EventArgs e)
-		{
-			EmitLog("Twitch PubSub connected");
-			_twitchPubsub.SendTopics(_configState._twitchWebApiConfig.AccessToken);
-		}
-
-		// Twitch Client Event Handlers
-		private async void OnTwitchClientDisconnected(object sender, OnDisconnectedEventArgs e)
-		{
-			EmitLog("Twitch Client disconnected");
-
-			await RunOnUiThread(() =>
-			{
-				TwitchClientTxtStatus.Content = "Disconnected";
-			});
-		}
-
-		private async void OnTwitchIncorrectLogin(object sender, OnIncorrectLoginArgs e)
-		{
-			EmitLog("Twitch Client incorrect login: " + e.Exception.Message);
-
-			// Clear out the access token and refresh token in hopes that re-loggin in will work
-			_configState._twitchWebApiConfig.AccessToken = "";
-			_configState._twitchWebApiConfig.RefreshToken = "";
-			_configState._areConfigSettingsDirty = true;
-
-			await RunOnUiThread(() =>
-			{
-				TwitchClientTxtStatus.Content = "Login Failed";
-			});
-		}
-
-		private void OnTwitchConnectionError(object sender, OnConnectionErrorArgs e)
-		{
-			EmitLog("Twitch Client connection error: " + e.Error);
-		}
-
-
-		private async void OnTwitchClientConnected(object sender, OnConnectedArgs e)
-		{
-			EmitLog("Twitch Client connected");
-
-			await RunOnUiThread(() =>
-			{
-				TwitchClientTxtStatus.Content = "Connected";
-			});
-		}
-
-		private void OnTwitchClientMessageReceived(object sender, OnMessageReceivedArgs e)
-		{
-			foreach (PresetSettings preset in _configState._presets)
-			{
-				if (preset.ChatTrigger.IsActive &&
-				  e.ChatMessage.Message.StartsWith(preset.ChatTrigger.TriggerName) &&
-				  (!preset.ChatTrigger.IsModOnly || e.ChatMessage.IsModerator || e.ChatMessage.IsBroadcaster))
-				{
-					ActivatePreset(preset);
-					break;
-				}
-			}
-		}
-
-		// OBS Studio Event Handlers
-		private void ObsCheckBox_Checked(object sender, RoutedEventArgs e)
-		{
-			_configState._obsConfig.IsEnabled = true;
-			_configState._areConfigSettingsDirty = true;
-
-			_ = StartObsStudioWatchdogWorker(_obsClientCancelSignaler.Token);
-		}
-
-		private void ObsCheckBox_Unchecked(object sender, RoutedEventArgs e)
-		{
-			_configState._obsConfig.IsEnabled = false;
-			_configState._areConfigSettingsDirty = true;
-
-			_obsClientCancelSignaler.Cancel();
-			if (_obsClient.IsConnected)
-			{
-				_obsClient.Disconnect();
-			}
-		}
-
-		private async Task StartObsStudioWatchdogWorker(CancellationToken cancellationToken)
-		{
-			try
-			{
-				while (true)
-				{
-					if (!_obsClient.IsConnected)
-					{
-						if (_configState._obsConfig.SocketAddress != "")
-						{
-							await RunOnUiThread(() =>
-							{
-								ObsTxtStatus.Content = "Connecting...";
-							});
-
-							_obsClient.ConnectAsync("ws://" + _configState._obsConfig.SocketAddress, _configState._obsConfig.Password);
-						}
-					}
-
-					await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
-				}
-			}
-			catch (OperationCanceledException)
-			{
-				// Handle the cancellation
-				Console.WriteLine("Shut down OBS watch dog worker");
-			}
-		}
-
-		protected string GetObsSceneName()
-		{
-			if (_obsClient == null || !_obsClient.IsConnected)
-				return "";
-
-			try
-			{
-				return _obsClient.GetCurrentProgramScene();
-			}
-			catch (System.InvalidOperationException)
-			{
-				return "";
-			}
-		}
-
-		protected bool SetObsSceneByName(string SceneName)
-		{
-			if (_obsClient == null || !_obsClient.IsConnected)
-				return false;
-
-			try
-			{
-				_obsClient.SetCurrentProgramScene(SceneName);
-
-				return GetObsSceneName() == SceneName;
-			}
-			catch (System.InvalidOperationException)
-			{
-				return false;
-			}
-		}
-
-		protected async Task SetObsSceneForDuration(string NewSceneName, int Milliseconds)
-		{
-			if (NewSceneName != "")
-			{
-				string OrigSceneName = GetObsSceneName();
-				if (OrigSceneName != NewSceneName)
-				{
-					bool bSuccess = SetObsSceneByName(NewSceneName);
-					if (bSuccess)
-					{
-						await Task.Delay(Milliseconds);
-						SetObsSceneByName(OrigSceneName);
-					}
-				}
-			}
-		}
-
-		protected async void OnObsConnected(object sender, EventArgs e)
-		{
-			await RunOnUiThread(() =>
-			{
-				EmitLog("OBS Studio connected");
-				ObsTxtStatus.Content = "Connected";
-			});
-		}
-
-		protected async void OnObsExited(object sender, EventArgs e)
-		{
-			await RunOnUiThread(() =>
-			{
-				EmitLog("OBS Studio Exited");
-				ObsTxtStatus.Content = "Exited";
-			});
-		}
-
-		protected async void OnObsDisconnected(object sender, OBSWebsocketDotNet.Communication.ObsDisconnectionInfo e)
-		{
-			await RunOnUiThread(() =>
-			{
-				EmitLog("OBS Studio disconnected");
-				ObsTxtStatus.Content = "Disconnected";
-			});
-		}
-
 		// UI Functions
 		protected void ApplyConfigToUI()
 		{
-			ObsCheckBox.IsChecked = _configState._obsConfig.IsEnabled;
-
 			SlidePosSlider.Value = _configState._cameraSettingsConfig.SlidePos;
 			SlideSpeedSlider.Value = _configState._cameraSettingsConfig.SlideSpeed;
 			SlideAccelSlider.Value = _configState._cameraSettingsConfig.SlideAccel;
@@ -1104,13 +565,6 @@ namespace CameraSlider.UI
 			TiltAccelStatus.Content = _configState._cameraSettingsConfig.TiltAccel.ToString("0.00");
 
 			RebuildPresetComboBox();
-
-			// Apply the config settings to the settings tab
-			TwitchClientIdInput.Password = _configState._twitchWebApiConfig.ClientID;
-			TwitchClientSecretKeyInput.Password = _configState._twitchWebApiConfig.ClientSecret;
-
-			SocketAddressInput.Text = _configState._obsConfig.SocketAddress;
-			SocketPasswordInput.Password = _configState._obsConfig.Password;
 		}
 
 		private void SetUIControlsDisableFlag(UIControlDisableFlags flag, bool bSetFlag)
@@ -1162,76 +616,10 @@ namespace CameraSlider.UI
 			});
 		}
 
-		private void TwitchClientIdInput_Changed(object sender, RoutedEventArgs e)
-		{
-			if (_configState._twitchWebApiConfig.ClientID != TwitchClientIdInput.Password)
-			{
-				_configState._twitchWebApiConfig.ClientID = TwitchClientIdInput.Password;
-				_configState._areConfigSettingsDirty = true;
-
-				if (_twitchPubsub != null)
-				{
-					_twitchPubsub.Disconnect();
-				}
-
-				if (_twitchClient != null)
-				{
-					_twitchClient.Disconnect();
-				}
-			}
-		}
-
-		private void TwitchClientSecretInput_Changed(object sender, RoutedEventArgs e)
-		{
-			if (_configState._twitchWebApiConfig.ClientSecret != TwitchClientSecretKeyInput.Password)
-			{
-				_configState._twitchWebApiConfig.ClientSecret = TwitchClientSecretKeyInput.Password;
-				_configState._areConfigSettingsDirty = true;
-
-				if (_twitchPubsub != null)
-				{
-					_twitchPubsub.Disconnect();
-				}
-
-				if (_twitchClient != null)
-				{
-					_twitchClient.Disconnect();
-				}
-			}
-		}
-
 		private void NumericalInput_PreviewTextInput(object sender, TextCompositionEventArgs e)
 		{
 			Regex regex = new Regex("[^0-9]+");
 			e.Handled = regex.IsMatch(e.Text);
-		}
-
-		private void SocketAddressInput_TextChanged(object sender, TextChangedEventArgs e)
-		{
-			if (_configState._obsConfig.SocketAddress != SocketAddressInput.Text)
-			{
-				_configState._obsConfig.SocketAddress = SocketAddressInput.Text;
-				_configState._areConfigSettingsDirty = true;
-
-				if (_obsClient.IsConnected)
-				{
-					_obsClient.Disconnect();
-				}
-			}
-		}
-
-		private void SocketPasswordInput_TextChanged(object sender, RoutedEventArgs e)
-		{
-			if (_configState._obsConfig.Password != SocketPasswordInput.Password)
-			{
-				_configState._obsConfig.Password = SocketPasswordInput.Password;
-				_configState._areConfigSettingsDirty = true;
-
-				if (_obsClient.IsConnected)
-				{
-					_obsClient.Disconnect();
-				}
-			}
 		}
 
 		private async void SlidePos_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -1511,206 +899,6 @@ namespace CameraSlider.UI
 		{
 			await _cameraSliderDevice.SetTiltAcceleration((float)((Slider)sender).Value);
 			_isTiltAccelDragging = false;
-		}
-
-		// Twitch API Functions
-		private HttpServer _twitchOAuthWebServer = null;
-		string _twitchRedirectUri = "http://localhost:8080/redirect/";
-		List<string> _twitchAccesScopes = new List<string> {
-			"chat:read",
-			"whispers:read",
-			"bits:read",
-			"channel:read:subscriptions",
-			"channel:read:redemptions"
-		};
-
-		private async void BtnTwitchConnect_Click(object sender, RoutedEventArgs e)
-		{
-			await RunOnUiThread(() =>
-			{
-				TwitchClientTxtStatus.Content = "Connecting...";
-			});
-
-			if (!LaunchTwitchAuthFlow())
-			{
-				await RunOnUiThread(() =>
-				{
-					TwitchClientTxtStatus.Content = "Failed";
-				});
-			}
-		}
-
-		private async void BtnTwitchReset_Click(object sender, RoutedEventArgs e)
-		{
-			await RunOnUiThread(() =>
-			{
-				TwitchClientTxtStatus.Content = "Reset";
-			});
-
-			if (_twitchClient != null)
-			{
-				_twitchClient.Disconnect();
-			}
-
-			if (_twitchPubsub != null)
-			{
-				_twitchPubsub.Disconnect();
-			}
-
-			_configState._twitchWebApiConfig.AccessToken= "";
-			_configState._twitchWebApiConfig.RefreshToken = "";
-			_configState._twitchWebApiConfig.ChannelID = "";
-			_configState._twitchWebApiConfig.ChannelName = "";
-			_configState._areConfigSettingsDirty = true;
-		}
-
-		bool LaunchTwitchAuthFlow()
-		{
-			string clientId = _configState._twitchWebApiConfig.ClientID;
-			string clientSecret = _configState._twitchWebApiConfig.ClientSecret;
-			string accessToken = _configState._twitchWebApiConfig.AccessToken;
-
-			if (clientId != "" && clientSecret != "")
-			{
-				if (accessToken == "")
-				{
-					string scopesString = string.Join("+", _twitchAccesScopes);
-					string url = $"https://id.twitch.tv/oauth2/authorize?response_type=code&client_id={clientId}&redirect_uri={_twitchRedirectUri}&scope={scopesString}";
-
-					return System.Diagnostics.Process.Start(url) != null;
-				}
-				else
-				{
-					return ConnectToTwichAPI();
-				}
-			}
-
-			return false;
-		}
-
-		async Task<bool> FetchAndCacheTwitchAPIConfig(string code)
-		{
-			bool bSuccess = false;
-
-			try
-			{
-				var resp =
-				  await _twitchAPI.Auth.GetAccessTokenFromCodeAsync(
-					code,
-					_configState._twitchWebApiConfig.ClientSecret,
-					_twitchRedirectUri);
-
-				// Store the result on the config state
-				_configState._twitchWebApiConfig.AccessToken = resp.AccessToken;
-				_configState._twitchWebApiConfig.RefreshToken = resp.RefreshToken;
-
-				// Also copy the access token cached in the config to the Twitch API settings 
-				_twitchAPI.Settings.AccessToken = resp.AccessToken;
-
-				// Fetch the authenticated user associated with the access token
-				var authenticatedUsers = await _twitchAPI.Helix.Users.GetUsersAsync();
-
-				if (authenticatedUsers.Users.Length > 0)
-				{
-					// Store the user ID and name on the config state
-					var firstUser = authenticatedUsers.Users[0];
-					_configState._twitchWebApiConfig.ChannelID = firstUser.Id;
-					_configState._twitchWebApiConfig.ChannelName = firstUser.Login;
-
-					// Save out config on update
-					_configState._areConfigSettingsDirty = true;
-
-					bSuccess = true;
-				}
-			}
-			catch (Exception ex)
-			{
-				EmitLog("Error fetching Twitch API tokens: " + ex.Message);
-			}
-
-			return bSuccess;
-		}
-
-		bool ConnectToTwichAPI()
-		{
-			bool bSuccess = false;
-
-			if (_configState._twitchWebApiConfig.AccessToken != "")
-			{
-				// Make sure the access token is set on the Twitch API settings
-				_twitchAPI.Settings.AccessToken = _configState._twitchWebApiConfig.AccessToken;
-
-				// Connect to the Twitch Client API
-				_twitchClient = new TwitchClient();
-				_twitchClient.Initialize(
-				  new ConnectionCredentials(
-					_configState._twitchWebApiConfig.ChannelID,
-					_configState._twitchWebApiConfig.AccessToken),
-				  _configState._twitchWebApiConfig.ChannelName);
-				_twitchClient.OnConnected += OnTwitchClientConnected;
-				_twitchClient.OnDisconnected += OnTwitchClientDisconnected;
-				_twitchClient.OnIncorrectLogin += OnTwitchIncorrectLogin;
-				_twitchClient.OnConnectionError += OnTwitchConnectionError;
-				_twitchClient.OnLog += OnTwitchClientLog;
-				_twitchClient.OnMessageReceived += OnTwitchClientMessageReceived;
-
-				if (_twitchClient.Connect())
-				{
-					// Next connect to the Twitch PubSub API (allowed to fail)
-					_twitchPubsub = new TwitchPubSub();
-					_twitchPubsub.OnPubSubServiceConnected += OnTwitchPubsubConnected;
-					_twitchPubsub.OnPubSubServiceClosed += OnTwitchPubsubClosed;
-					_twitchPubsub.OnPubSubServiceError += OnTwitchPubsubError;
-					_twitchPubsub.OnLog += OnTwitchPubSubLog;
-					_twitchPubsub.ListenToChannelPoints(_configState._twitchWebApiConfig.ChannelID);
-					_twitchPubsub.OnChannelPointsRewardRedeemed += OnChannelPointsRewardRedeemed;
-
-					_twitchPubsub.Connect();
-
-					bSuccess = true;
-				}
-			}
-
-			return bSuccess;
-		}
-
-		private void OnTwitchPubSubLog(object sender, TwitchLib.PubSub.Events.OnLogArgs e)
-		{
-			EmitLog("TwitchPubSub Log: " + e.Data);
-		}
-
-		private void OnTwitchClientLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
-		{
-			EmitLog("TwitchClient Log: " + e.Data);
-		}
-
-		void InitializeTwitchOAuthWebServer()
-		{
-			// Create a new HTTP server locally so that we can make the request for OAUTH token related stuff
-			_twitchOAuthWebServer = new HttpServer();
-			_twitchOAuthWebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 8080);
-			_twitchOAuthWebServer.RequestReceived += HandleTwitchOAuthRequest;
-
-			_twitchOAuthWebServer.Start();
-			EmitLog($"Web server started on: {_twitchOAuthWebServer.EndPoint}");
-		}
-
-		async void HandleTwitchOAuthRequest(object sender, HttpRequestEventArgs e)
-		{
-			using (var writer = new StreamWriter(e.Response.OutputStream))
-			{
-				if (e.Request.QueryString.AllKeys.Contains("code"))
-				{
-					var code = e.Request.QueryString["code"];
-
-					// Fetch the Access Token and Refresh Token from Twitch using ClientID and ClientSecret
-					if (await FetchAndCacheTwitchAPIConfig(code))
-					{
-						// Connect to the Twitch Client and PubSub APIs
-						ConnectToTwichAPI();
-					}
-				}
-			}
 		}
 	}
 }

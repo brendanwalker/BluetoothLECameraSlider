@@ -45,14 +45,6 @@ namespace CameraSlider.UI
       SlidePosTxt.Text = _preset.SlidePosition.ToString("0.00");
       PanPosTxt.Text = _preset.PanPosition.ToString("0.00");
       TiltPosTxt.Text = _preset.TiltPosition.ToString("0.00");
-      OBSSceneTxt.Text = _preset.ObsScene;
-      HoldDurationTxt.Text = _preset.HoldDuration.ToString("0.00");
-      ChatCommandTxt.Text = _preset.ChatTrigger.TriggerName;
-      IsChatModOnlyChk.IsChecked = _preset.ChatTrigger.IsModOnly;
-      IsChatTriggeredChk.IsChecked = _preset.ChatTrigger.IsActive;
-      RedeemTxt.Text = _preset.RedeemTrigger.TriggerName;
-      IsRedeemModOnlyChk.IsChecked = _preset.RedeemTrigger.IsModOnly;
-      IsRedeemActiveChk.IsChecked = _preset.RedeemTrigger.IsActive;
     }
 
     private void PresetNameTxt_TextChanged(object sender, TextChangedEventArgs e)
@@ -97,50 +89,6 @@ namespace CameraSlider.UI
       SlidePosTxt.Text = _preset.SlidePosition.ToString("0.00");
       PanPosTxt.Text = _preset.PanPosition.ToString("0.00");
       TiltPosTxt.Text = _preset.TiltPosition.ToString("0.00");
-    }
-
-    private void ObsSceneTxt_TextChanged(object sender, TextChangedEventArgs e)
-    {
-      _preset.ObsScene = OBSSceneTxt.Text;
-    }
-
-    private void HoldDurationTxt_TextChanged(object sender, TextChangedEventArgs e)
-    {
-      float holdDuration= 0f;
-      if (float.TryParse(HoldDurationTxt.Text, out holdDuration))
-      {
-        _preset.HoldDuration= holdDuration;
-      }
-    }
-
-    private void ChatCommandTxt_TextChanged(object sender, TextChangedEventArgs e)
-    {
-      _preset.ChatTrigger.TriggerName = ChatCommandTxt.Text;
-    }
-
-    private void IsChatModOnlyChk_Checked(object sender, RoutedEventArgs e)
-    {
-      _preset.ChatTrigger.IsModOnly = IsChatModOnlyChk.IsChecked.Value;
-    }
-
-    private void IsChatTriggeredChk_Checked(object sender, RoutedEventArgs e)
-    {
-      _preset.ChatTrigger.IsActive = IsChatTriggeredChk.IsChecked.Value;
-    }
-
-    private void RedeemTxt_TextChanged(object sender, TextChangedEventArgs e)
-    {
-      _preset.RedeemTrigger.TriggerName = RedeemTxt.Text;
-    }
-
-    private void IsRedeemModOnlyChk_Checked(object sender, RoutedEventArgs e)
-    {
-      _preset.RedeemTrigger.IsModOnly = IsRedeemModOnlyChk.IsChecked.Value;
-    }
-
-    private void IsRedeemActiveChk_Checked(object sender, RoutedEventArgs e)
-    {
-      _preset.RedeemTrigger.IsActive = IsRedeemActiveChk.IsChecked.Value;
     }
 
     private void SavePresetBtn_Click(object sender, RoutedEventArgs e)

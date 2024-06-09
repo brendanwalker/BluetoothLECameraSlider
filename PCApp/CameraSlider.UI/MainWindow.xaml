@@ -9,7 +9,7 @@
     <Grid >
         <TabControl>
             <TabItem Header="Controls">
-                <StackPanel x:Name="ControlsStackPanel" Margin="0,0,0,0" RenderTransformOrigin="0.5,0.5" Grid.ColumnSpan="5">
+                <StackPanel x:Name="ControlsStackPanel" RenderTransformOrigin="0.5,0.5" Grid.ColumnSpan="5" Height="565">
                     <StackPanel.RenderTransform>
                         <TransformGroup>
                             <ScaleTransform/>
@@ -24,17 +24,8 @@
                                 <Label Content="CameraSlider Device:" Margin="26,0,0,0" Width="125" HorizontalAlignment="Right"/>
                                 <Label x:Name="CameraTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <Label Content="Twitch API: " Margin="26,0,0,0"  Width="125" HorizontalAlignment="Right"/>
-                                <Label x:Name="TwitchClientTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
-                                <Button x:Name="BtnTwitchConnect" Content="Connect" Width="60" Margin="20,0,0,0" Click="BtnTwitchConnect_Click" VerticalAlignment="Center"/>
-                                <Button x:Name="BtnTwitchReset" Content="Reset" Width="50" Margin="10,0,0,0" Click="BtnTwitchReset_Click" VerticalAlignment="Center"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <CheckBox x:Name="ObsCheckBox" HorizontalAlignment="Left" Margin="5,5,5,5" IsChecked="False" Unchecked="ObsCheckBox_Unchecked" Checked="ObsCheckBox_Checked"/>
-                                <Label Content="OBS Studio: " Width="125" HorizontalAlignment="Right"/>
-                                <Label x:Name="ObsTxtStatus" Content="Disconnected" HorizontalAlignment="Left"/>
-                            </StackPanel>
+                            <StackPanel Orientation="Horizontal"/>
+                            <StackPanel Orientation="Horizontal"/>
                         </StackPanel>
                     </Border>
                     <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1">
@@ -132,7 +123,7 @@
                     </Border>
                 </StackPanel>
             </TabItem>
-            <TabItem Header="Settings">
+            <TabItem Header="Settings" Height="20" VerticalAlignment="Bottom">
                 <StackPanel x:Name="SettingsStackPanel" Margin="0,0,0,0" RenderTransformOrigin="0.5,0.5" Grid.ColumnSpan="5">
                     <StackPanel.RenderTransform>
                         <TransformGroup>
@@ -144,27 +135,10 @@
                     </StackPanel.RenderTransform>
                     <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1" Margin="10">
                         <StackPanel>
-                            <Label Content="Twitch Settings" HorizontalAlignment="Center"/>
+                            <Label Content="Slider Settings" HorizontalAlignment="Center"/>
                             <StackPanel Orientation="Horizontal">
-                                <Label Content="Client ID"  Width="140" HorizontalAlignment="Left"/>
-                                <PasswordBox x:Name="TwitchClientIdInput" Width="200" HorizontalAlignment="Left" PasswordChanged="TwitchClientIdInput_Changed"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <Label Content="Client Secret" Width="140" HorizontalAlignment="Left"/>
-                                <PasswordBox x:Name="TwitchClientSecretKeyInput" Width="200" HorizontalAlignment="Left" PasswordChanged="TwitchClientSecretInput_Changed"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-                    <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1" Margin="10">
-                        <StackPanel>
-                            <Label Content="OBS Studio Settings" HorizontalAlignment="Center"/>
-                            <StackPanel Orientation="Horizontal">
-                                <Label Content="Socket Address" Width="140" HorizontalAlignment="Left"/>
-                                <TextBox x:Name="SocketAddressInput" Width="200" HorizontalAlignment="Left" TextChanged="SocketAddressInput_TextChanged" />
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <Label Content="Password" Width="140" HorizontalAlignment="Left"/>
-                                <PasswordBox x:Name="SocketPasswordInput" Width="200" HorizontalAlignment="Left" PasswordChanged="SocketPasswordInput_TextChanged" />
+                                <Label Content="Pitch Enabled" Width="140" HorizontalAlignment="Left"/>
+                                <CheckBox x:Name="PitchEnabledCheckBox" Width="200" HorizontalAlignment="Left"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
