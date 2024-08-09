@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using CameraSlider.UI.Config;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace CameraSlider.UI

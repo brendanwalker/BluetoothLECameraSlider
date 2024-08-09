@@ -145,6 +145,9 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Config\CameraSettingsSection.cs" />
+    <Compile Include="Config\ConfigState.cs" />
+    <Compile Include="Config\PresetSettings.cs" />
     <Compile Include="EditPresetWindow.xaml.cs">
       <DependentUpon>EditPresetWindow.xaml</DependentUpon>
     </Compile>
