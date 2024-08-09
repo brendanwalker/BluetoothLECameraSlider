@@ -189,10 +189,15 @@
       <Project>{ce863405-a1f9-464d-aeed-e265c8244689}</Project>
       <Name>CameraSlider.Bluetooth</Name>
     </ProjectReference>
+    <ProjectReference Include="..\CameraSlider.WebSocket\CameraSlider.WebSocket.csproj">
+      <Project>{05bdf8d8-2c0d-43c8-bc53-82637cb3b493}</Project>
+      <Name>CameraSlider.WebSocket</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Resource Include="head_idea_pencil_brain_lamp_icon_142342.ico" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
