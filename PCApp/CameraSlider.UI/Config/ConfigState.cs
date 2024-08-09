@@ -9,6 +9,7 @@ namespace CameraSlider.UI.Config
 	{
 		public Configuration _configFile;
 		public CameraSettingsSection _cameraSettingsConfig;
+		public WebSocketSection _webSocketConfig;
 		public List<PresetSettings> _presets = new List<PresetSettings>();
 		public bool _areConfigSettingsDirty = false;
 		public bool _arePresetsDirty = false;
@@ -36,6 +37,13 @@ namespace CameraSlider.UI.Config
 			{
 				_cameraSettingsConfig = new CameraSettingsSection();
 				_configFile.Sections.Add("camera_settings", _cameraSettingsConfig);
+			}
+
+			_webSocketConfig = (WebSocketSection)_configFile.GetSection("web_socket");
+			if (_webSocketConfig == null)
+			{
+				_webSocketConfig = new WebSocketSection();
+				_configFile.Sections.Add("web_socket", _webSocketConfig);
 			}
 
 			_configFile.Save();

@@ -7,13 +7,14 @@ using System.Diagnostics;
 using CameraSlider.Bluetooth.Events;
 using System.ComponentModel;
 using CameraSlider.Bluetooth;
+using CameraSlider.WebSocket;
 using System.Threading;
 using System.Text.RegularExpressions;
 using CameraSlider.UI.Config;
+using System.Net;
 
 namespace CameraSlider.UI
 {
-
 	public partial class MainWindow : Window
 	{
 		[Flags]
@@ -28,6 +29,9 @@ namespace CameraSlider.UI
 
 		// Config
 		private ConfigState _configState = new ConfigState();
+
+		// Web Socket Server
+		private Server _webSocketServer;
 
 		// Camera Slider
 		CancellationTokenSource _deviceWatchdogCancelSignaler = new CancellationTokenSource();
@@ -63,6 +67,12 @@ namespace CameraSlider.UI
 			// Load the config settings first
 			_configState.LoadConfig();
 
+			// Create a	websocket server, if desired
+			if (_configState._webSocketConfig.IsServerEnabled)
+			{
+				StartWebSocketServer();
+			}
+
 			// Register to Bluetooth LE Camera Slider Device Manager
 			_cameraSliderDevice = new CameraSliderDevice();
 			_cameraSliderDevice.ConnectionStatusChanged += OnDeviceConnectionStatusChanged;
@@ -91,6 +101,71 @@ namespace CameraSlider.UI
 			if (_cameraSliderDevice.IsConnected)
 			{
 				await _cameraSliderDevice.DisconnectAsync();
+			}
+		}
+
+		// Web Socket Functions
+		private void StartWebSocketServer()
+		{
+			if (_webSocketServer == null)
+			{
+				_webSocketServer = new Server(
+					new IPEndPoint(
+						IPAddress.Parse("127.0.0.1"),
+						_configState._webSocketConfig.ServerPort));
+				_webSocketServer.OnClientConnected += OnWebSocketClientConnected;
+				_webSocketServer.OnClientDisconnected += OnWebSocketClientDisconnected;
+				_webSocketServer.OnMessageReceived += OnWebSocketMessageReceived;
+			}
+		}
+
+		private void StopWebSocketServer()
+		{
+			if (_webSocketServer != null)
+			{
+				_webSocketServer.Stop();
+				_webSocketServer = null;
+			}
+		}
+
+		private void OnWebSocketClientConnected(object sender, OnClientConnectedHandler e)
+		{
+			EmitLog($"Client with GUID: {e.GetClient().GetGuid()} Connected!");
+		}
+
+		private void OnWebSocketClientDisconnected(object sender, OnClientDisconnectedHandler e)
+		{
+			EmitLog($"Client {e.GetClient().GetGuid()} Disconnected!");
+		}
+
+		private void OnWebSocketMessageReceived(object sender, OnMessageReceivedHandler  e)
+		{
+			string rawMessage= e.GetMessage();
+			EmitLog($"Received Message: '{rawMessage}' from client: {e.GetClient().GetGuid()}");
+
+			string[] messageParts = rawMessage.Split(' ');
+			if (messageParts.Length > 0)
+			{
+				switch (messageParts[0])
+				{
+				case "goto_preset":
+				{
+					if (messageParts.Length > 1)
+					{
+						PresetSettings preset= GetPresetByName(messageParts[1]);
+						if (preset != null)
+						{
+							EmitLog($"Preset '{messageParts[1]}' activate requested.");
+							ActivatePreset(preset);
+						}
+						else
+						{
+							EmitLog($"Preset '{messageParts[1]}' not found!");
+						}
+					}
+				}
+				break;
+				}
 			}
 		}
 
@@ -235,6 +310,11 @@ namespace CameraSlider.UI
 				// Handle the cancellation
 				Console.WriteLine("Shut down watch dog worker");
 			}
+		}
+
+		private PresetSettings GetPresetByName(string name)
+		{
+			return _configState._presets.Find(p => p.PresetName == name);
 		}
 
 		private void ActivatePreset(PresetSettings preset)
