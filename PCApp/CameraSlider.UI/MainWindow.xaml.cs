@@ -7,11 +7,13 @@ using System.Diagnostics;
 using CameraSlider.Bluetooth.Events;
 using System.ComponentModel;
 using CameraSlider.Bluetooth;
-using CameraSlider.WebSocket;
 using System.Threading;
 using System.Text.RegularExpressions;
 using CameraSlider.UI.Config;
+using CameraSlider.UI.WebSocketServer;
 using System.Net;
+using System.Linq;
+using vtortola.WebSockets;
 
 namespace CameraSlider.UI
 {
@@ -31,7 +33,7 @@ namespace CameraSlider.UI
 		private ConfigState _configState = new ConfigState();
 
 		// Web Socket Server
-		private Server _webSocketServer;
+		private WebSocketEventListener _webSocketServer;
 
 		// Camera Slider
 		CancellationTokenSource _deviceWatchdogCancelSignaler = new CancellationTokenSource();
@@ -109,13 +111,14 @@ namespace CameraSlider.UI
 		{
 			if (_webSocketServer == null)
 			{
-				_webSocketServer = new Server(
-					new IPEndPoint(
-						IPAddress.Parse("127.0.0.1"),
-						_configState._webSocketConfig.ServerPort));
-				_webSocketServer.OnClientConnected += OnWebSocketClientConnected;
-				_webSocketServer.OnClientDisconnected += OnWebSocketClientDisconnected;
-				_webSocketServer.OnMessageReceived += OnWebSocketMessageReceived;
+				_webSocketServer = new WebSocketEventListener(
+					new IPEndPoint(IPAddress.Any, _configState._webSocketConfig.ServerPort),
+					new WebSocketListenerOptions() { SubProtocols=new String[]{"text"} } );
+				_webSocketServer.OnConnect += OnWebSocketClientConnected;
+				_webSocketServer.OnDisconnect  += OnWebSocketClientDisconnected;
+				_webSocketServer.OnError += OnWebSocketClientError;
+				_webSocketServer.OnMessage += OnWebSocketMessageReceived;
+				_webSocketServer.Start();
 			}
 		}
 
@@ -128,44 +131,57 @@ namespace CameraSlider.UI
 			}
 		}
 
-		private void OnWebSocketClientConnected(object sender, OnClientConnectedHandler e)
+		private void OnWebSocketClientConnected(WebSocket ws)
 		{
-			EmitLog($"Client with GUID: {e.GetClient().GetGuid()} Connected!");
+			EmitLog($"Client with GUID: {ws.RemoteEndpoint.ToString()} Connected!");
 		}
 
-		private void OnWebSocketClientDisconnected(object sender, OnClientDisconnectedHandler e)
+		private void OnWebSocketClientDisconnected(WebSocket ws)
 		{
-			EmitLog($"Client {e.GetClient().GetGuid()} Disconnected!");
+			EmitLog($"Client {ws.RemoteEndpoint.ToString()} Disconnected!");
 		}
 
-		private void OnWebSocketMessageReceived(object sender, OnMessageReceivedHandler  e)
+		private void OnWebSocketClientError(WebSocket ws, Exception ex)
 		{
-			string rawMessage= e.GetMessage();
-			EmitLog($"Received Message: '{rawMessage}' from client: {e.GetClient().GetGuid()}");
+			EmitLog($"Client {ws.RemoteEndpoint.ToString()} Error: {ex.Message}");
+		}
+
+		private void OnWebSocketMessageReceived(WebSocket ws, string rawMessage)
+		{
+			EmitLog($"Received Message: '{rawMessage}' from client: {ws.RemoteEndpoint.ToString()}");
 
 			string[] messageParts = rawMessage.Split(' ');
 			if (messageParts.Length > 0)
 			{
 				switch (messageParts[0])
 				{
-				case "goto_preset":
-				{
-					if (messageParts.Length > 1)
+					case "activatePreset":
 					{
-						PresetSettings preset= GetPresetByName(messageParts[1]);
-						if (preset != null)
+						if (messageParts.Length > 1)
 						{
-							EmitLog($"Preset '{messageParts[1]}' activate requested.");
-							ActivatePreset(preset);
+							PresetSettings preset= GetPresetByName(messageParts[1]);
+							if (preset != null)
+							{
+								EmitLog($"Preset '{messageParts[1]}' activate requested.");
+								ActivatePreset(preset);
+							}
+							else
+							{
+								EmitLog($"Preset '{messageParts[1]}' not found!");
+							}
 						}
-						else
-						{
-							EmitLog($"Preset '{messageParts[1]}' not found!");
-						}
-					}
-				}
-				break;
-				}
+					} break;
+
+					case "getPresetList":
+					{
+						EmitLog($"getPresetList requested.");
+
+						string[] presetNames= _configState._presets.Select(p => p.PresetName).ToArray();
+						string response= "getPresetList "+string.Join(" ", presetNames);
+
+						ws.WriteString(response);
+					} break;
+				}				
 			}
 		}
 
