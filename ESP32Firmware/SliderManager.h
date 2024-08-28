@@ -65,26 +65,19 @@ public:
   inline int32_t getTiltStepperPosition() const { return m_tiltStepper->getCurrentPosition(); }
   inline int32_t getSlideStepperPosition() const { return m_slideStepper->getCurrentPosition(); }
 
+  void setSlideStepperPosition(int32_t position);
+
   void setSliderPosFraction(float fraction);
   float getSliderPosFraction(); // [-1.f, 1.f]
-  void setSliderSpeedFraction(float fraction);
-  float getSliderSpeedFraction(); // [0.f, 1.f]
-  void setSliderAccelFraction(float fraction);
-  float getSliderAccelFraction(); // [0.f, 1.f]
-
   void setPanPosFraction(float fraction);
   float getPanPosFraction(); // [-1.f, 1.f]
-  void setPanSpeedFraction(float fraction);
-  float getPanSpeedFraction(); // [0.f, 1.f]
-  void setPanAccelFraction(float fraction);
-  float getPanAccelFraction(); // [0.f, 1.f]
-
   void setTiltPosFraction(float fraction);
   float getTiltPosFraction(); // [-1.f, 1.f]
-  void setTiltSpeedFraction(float fraction);
-  float getTiltSpeedFraction(); // [0.f, 1.f]
-  void setTiltAccelFraction(float fraction);
-  float getTiltAccelFraction(); // [0.f, 1.f]
+
+  void setSpeedFraction(float fraction);
+  float getSpeedFraction(); // [0.f, 1.f]
+  void setAccelFraction(float fraction);
+  float getAccelFraction(); // [0.f, 1.f]
 
   inline bool areSteppersCalibrated() const { return m_calibrated; }
   inline void setPanStepperCenter(int32_t position) { m_panStepperCenter= position; }
@@ -95,6 +88,7 @@ public:
   inline int32_t getTiltStepperCenter() const { return m_tiltStepperCenter; }
   inline int32_t getSlideStepperMin() const { return m_sliderStepperMin; }
   inline int32_t getSlideStepperMax() const { return m_sliderStepperMax; }
+  void writeCalibrationToConfig();
   void finalizeCalibration();
 
   void writePositionsToConfig();
@@ -104,8 +98,6 @@ private:
 
   // Listener
   SliderStateEventListener* m_listener= nullptr;  
-
-  void writeCalibrationToConfig();
 
   float remapFloatToFloat(float inMin, float inMax, float outMin, float outMax, float inValue);
   float remapInt32ToFloat(int32_t intMin, int32_t intMax, float floatMin, float floatMax, int32_t value);
@@ -127,17 +119,12 @@ private:
   FastAccelStepper* m_tiltStepper;
   FastAccelStepper* m_slideStepper;
 
+  float m_lastSpeedFraction; // [0,1]
+  float m_lastAccelerationFraction; // [0,1]
+
   int32_t m_lastTargetSlidePosition; // steps
-  int32_t m_lastTargetSlideSpeed; // steps / s
-  int32_t m_lastTargetSlideAcceleration; // steps / s²
-
   int32_t m_lastTargetPanPosition; // steps
-  int32_t m_lastTargetPanSpeed; // steps / s
-  int32_t m_lastTargetPanAcceleration; // steps / s²
-
   int32_t m_lastTargetTiltPosition; // steps
-  int32_t m_lastTargetTiltSpeed; // steps / s
-  int32_t m_lastTargetTiltAcceleration; // steps / s²
 
   int32_t m_panStepperCenter= INT_MIN;
   int32_t m_tiltStepperCenter= INT_MIN;

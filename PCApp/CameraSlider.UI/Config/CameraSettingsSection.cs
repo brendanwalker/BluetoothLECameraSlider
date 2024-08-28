@@ -7,14 +7,14 @@ namespace CameraSlider.UI.Config
 		public CameraSettingsSection()
 		{
 			SlidePos = 0.0f;
-			SlideSpeed = 0.0f;
-			SlideAccel = 0.0f;
 			PanPos = 0.0f;
-			PanSpeed = 0.0f;
-			PanAccel = 0.0f;
 			TiltPos = 0.0f;
-			TiltSpeed = 0.0f;
-			TiltAccel = 0.0f;
+			Speed = 0.0f;
+			Accel = 0.0f;
+			ManualSlideStepSize = 100;
+			AutoSlideCalibration = true;
+			AutoPanCalibration = true;
+			AutoTiltCalibration = true;
 			PresetJson = "";
 		}
 
@@ -31,32 +31,6 @@ namespace CameraSlider.UI.Config
 			}
 		}
 
-		[ConfigurationProperty("slide_speed")]
-		public float SlideSpeed
-		{
-			get
-			{
-				return (float)this["slide_speed"];
-			}
-			set
-			{
-				this["slide_speed"] = value;
-			}
-		}
-
-		[ConfigurationProperty("slide_accel")]
-		public float SlideAccel
-		{
-			get
-			{
-				return (float)this["slide_accel"];
-			}
-			set
-			{
-				this["slide_accel"] = value;
-			}
-		}
-
 		[ConfigurationProperty("pan_pos")]
 		public float PanPos
 		{
@@ -67,32 +41,6 @@ namespace CameraSlider.UI.Config
 			set
 			{
 				this["pan_pos"] = value;
-			}
-		}
-
-		[ConfigurationProperty("pan_speed")]
-		public float PanSpeed
-		{
-			get
-			{
-				return (float)this["pan_speed"];
-			}
-			set
-			{
-				this["pan_speed"] = value;
-			}
-		}
-
-		[ConfigurationProperty("pan_accel")]
-		public float PanAccel
-		{
-			get
-			{
-				return (float)this["pan_accel"];
-			}
-			set
-			{
-				this["pan_accel"] = value;
 			}
 		}
 
@@ -109,29 +57,81 @@ namespace CameraSlider.UI.Config
 			}
 		}
 
-		[ConfigurationProperty("tilt_speed")]
-		public float TiltSpeed
+		[ConfigurationProperty("speed")]
+		public float Speed
 		{
 			get
 			{
-				return (float)this["tilt_speed"];
+				return (float)this["speed"];
 			}
 			set
 			{
-				this["tilt_speed"] = value;
+				this["speed"] = value;
 			}
 		}
 
-		[ConfigurationProperty("tilt_accel")]
-		public float TiltAccel
+		[ConfigurationProperty("accel")]
+		public float Accel
 		{
 			get
 			{
-				return (float)this["tilt_accel"];
+				return (float)this["accel"];
 			}
 			set
 			{
-				this["tilt_accel"] = value;
+				this["accel"] = value;
+			}
+		}
+
+		[ConfigurationProperty("manual_slide_step_size")]
+		public int ManualSlideStepSize
+		{
+			get
+			{
+				return (int)this["manual_slide_step_size"];
+			}
+			set
+			{
+				this["manual_slide_step_size"] = value;
+			}
+		}
+
+		[ConfigurationProperty("auto_slide_calibration")]
+		public bool AutoSlideCalibration
+		{
+			get
+			{
+				return (bool)this["auto_slide_calibration"];
+			}
+			set
+			{
+				this["auto_slide_calibration"] = value;
+			}
+		}
+
+		[ConfigurationProperty("auto_pan_calibration")]
+		public bool AutoPanCalibration
+		{
+			get
+			{
+				return (bool)this["auto_pan_calibration"];
+			}
+			set
+			{
+				this["auto_pan_calibration"] = value;
+			}
+		}
+
+		[ConfigurationProperty("auto_tilt_calibration")]
+		public bool AutoTiltCalibration
+		{
+			get
+			{
+				return (bool)this["auto_tilt_calibration"];
+			}
+			set
+			{
+				this["auto_tilt_calibration"] = value;
 			}
 		}
 

@@ -5,6 +5,8 @@
 #include "BLEManager.h"
 #include "SliderManager.h"
 
+#include <sstream>
+
 //-- statics ----
 const char* AppStage_Monitor::APP_STAGE_NAME = "Monitor";
 AppStage_Monitor* AppStage_Monitor::s_instance= nullptr;
@@ -28,21 +30,69 @@ void AppStage_Monitor::enter()
   m_app->pushInputListener(this);
 }
 
-void AppStage_Monitor::onCommand(const std::string& command)
+void AppStage_Monitor::onCommand(const std::vector<std::string>& args)
 {
-  if (command == "calibrate")
+  SliderState* sliderState= SliderState::getInstance();
+
+  if (args[0] == "calibrate")
   {    
     Serial.println("MainMenu: Received calibrate command");
+    
+    bool pan= false;
+    bool tilt= false;
+    bool slide= false;
+    for (int arg_idx= 1; arg_idx < (int)args.size(); ++arg_idx)
+    {
+      const std::string& arg= args[arg_idx];
+
+      if (arg == "pan")
+      {
+        pan= true;
+      }
+      else if (arg == "tilt")
+      {
+        tilt= true;
+      }
+      else if (arg == "slide")
+      {
+        slide= true;
+      }       
+    }
+
     AppStage_SliderCalibration* sliderCalibration= AppStage_SliderCalibration::getInstance();
+    sliderCalibration->setDesiredCalibrations(pan, tilt, slide);
     sliderCalibration->setAutoCalibration(true);
     m_app->pushAppStage(sliderCalibration);
   }
-  else if (command == "stop")
+  else if (args[0] == "goto_slide_pos" && args.size() >= 2)
+  {
+    int pos = std::stoi(args[1]);
+
+    Serial.println("MainMenu: Received goto_slide_pos command");
+    sliderState->setSlideStepperPosition(pos);
+  }
+  else if (args[0] == "set_slide_min_pos" && args.size() >= 2)
+  {
+    int minPos = std::stoi(args[1]);
+
+    Serial.println("MainMenu: Received set_slide_min_pos command");
+    sliderState->setSlideStepperMin(minPos);
+    sliderState->writeCalibrationToConfig();
+  }
+  else if (args[0] == "set_slide_max_pos" && args.size() >= 2)
+  {
+    int maxPos = std::stoi(args[1]);
+
+    Serial.println("MainMenu: Received set_slide_max_pos command");
+    sliderState->setSlideStepperMax(maxPos);
+    sliderState->writeCalibrationToConfig();
+  }  
+  else if (args[0] == "stop")
   {
     Serial.println("MainMenu: Received stop command");
-    SliderState::getInstance()->stopAll();
+    sliderState->stopAll();
   }
-  else if (command == "save")
+  else if (args[0] == "save")
   {
     Serial.println("MainMenu: Received save command");
     m_app->save();
@@ -92,26 +142,21 @@ void AppStage_Monitor::render()
 
   SliderState* sliderState= SliderState::getInstance();
   float slidePos= sliderState->getSliderPosFraction();
-  float slideSpeed= sliderState->getSliderSpeedFraction();
-  float slideAccel= sliderState->getSliderAccelFraction();
-
   float panPos= sliderState->getPanPosFraction();
-  float panSpeed= sliderState->getPanSpeedFraction();
-  float panAccel= sliderState->getPanAccelFraction();
-
   float tiltPos= sliderState->getTiltPosFraction();
-  float tiltSpeed= sliderState->getTiltSpeedFraction();
-  float tiltAccel= sliderState->getTiltAccelFraction();
+
+  float speed= sliderState->getSpeedFraction();
+  float accel= sliderState->getAccelFraction();
 
   display->clearDisplay();
   display->setTextSize(1);
   display->setCursor(2, 2);
   display->print ("    Pos   Vel   Acc");  
   display->setCursor(2, 12);
-  display->printf("S: %+.2f %+.2f %+.2f", slidePos, slideSpeed, slideAccel);
+  display->printf("S: %+.2f %+.2f %+.2f", slidePos, speed, accel);
   display->setCursor(2, 22);
-  display->printf("P: %+.2f %+.2f %+.2f", panPos, panSpeed, panAccel);
+  display->printf("P: %+.2f %+.2f %+.2f", panPos, speed, accel);
   display->setCursor(2, 32);
-  display->printf("T: %+.2f %+.2f %+.2f", tiltPos, tiltSpeed, tiltAccel);  
+  display->printf("T: %+.2f %+.2f %+.2f", tiltPos, speed, accel);  
   display->display();    
 }

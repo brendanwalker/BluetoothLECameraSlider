@@ -7,10 +7,13 @@
 #include "ConfigManager.h"
 #include "SliderManager.h"
 
+#include <vector>
+#include <string>
+
 class BLECommandHandler
 {
 public:
-  virtual void onCommand(const std::string& command) {}
+  virtual void onCommand(const std::vector<std::string>& args) {}
 };
 
 class BLEManager : public BLECharacteristicCallbacks, public BLEServerCallbacks, public SliderStateEventListener
@@ -54,14 +57,10 @@ private:
   BLECharacteristic *m_pCommandCharacteristic= nullptr;
   BLECharacteristic *m_pEventCharacteristic= nullptr;
   BLECharacteristic *m_pSliderPosCharacteristic= nullptr;
-  BLECharacteristic *m_pSliderSpeedCharacteristic= nullptr;
-  BLECharacteristic *m_pSliderAccelCharacteristic= nullptr;
   BLECharacteristic *m_pPanPosCharacteristic= nullptr;
-  BLECharacteristic *m_pPanSpeedCharacteristic= nullptr;
-  BLECharacteristic *m_pPanAccelCharacteristic= nullptr;
   BLECharacteristic *m_pTiltPosCharacteristic= nullptr;
-  BLECharacteristic *m_pTiltSpeedCharacteristic= nullptr;
-  BLECharacteristic *m_pTiltAccelCharacteristic= nullptr;    
+  BLECharacteristic *m_pSpeedCharacteristic= nullptr;
+  BLECharacteristic *m_pAccelCharacteristic= nullptr;    
   BLEAdvertising *m_pAdvertising= nullptr;
 
   bool m_bleControlEnabled= true;

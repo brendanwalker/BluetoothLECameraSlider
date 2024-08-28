@@ -8,19 +8,16 @@
 #include "SliderManager.h"
 
 #include <sstream>
+#include <vector>
 
 #define SERVICE_UUID        "6b42e290-28cb-11ee-be56-0242ac120002"
 #define COMMAND_CHARACTERISTIC_UUID "62c6b5d1-d304-4b9c-b12b-decd1e5b3614"
 #define EVENT_CHARACTERISTIC_UUID "5c88bae1-db64-4483-a0f3-6b6786c6c145"
 #define SLIDER_POS_CHARACTERISTIC_UUID "87b8f554-28cb-11ee-be56-0242ac120002"
-#define SLIDER_SPEED_CHARACTERISTIC_UUID "781ef5a1-e5df-411d-9276-7a229e469719"
-#define SLIDER_ACCEL_CHARACTERISTIC_UUID "5cf074e3-2014-4776-8734-b0d0eb49229a"
 #define PAN_POS_CHARACTERISTIC_UUID "a86268cb-73bb-497c-bb9b-cf7af318919f"
-#define PAN_SPEED_CHARACTERISTIC_UUID "838a79d5-c5f2-40ea-8f3d-c9d6fde08f56"
-#define PAN_ACCEL_CHARACTERISTIC_UUID "4049db30-2096-460a-821f-05380dc37212"
 #define TILT_POS_CHARACTERISTIC_UUID "9881b453-6636-4a73-a335-11bc737f6812"
-#define TILT_SPEED_CHARACTERISTIC_UUID "d40730f2-7be2-425a-a70c-58d56f8d2295"
-#define TILT_ACCEL_CHARACTERISTIC_UUID "885bee55-f069-4077-b18f-5cdb8b4a7003"
+#define SPEED_CHARACTERISTIC_UUID "781ef5a1-e5df-411d-9276-7a229e469719"
+#define ACCEL_CHARACTERISTIC_UUID "5cf074e3-2014-4776-8734-b0d0eb49229a"
 
 BLEManager* BLEManager::s_instance= nullptr;
 
@@ -51,16 +48,10 @@ void BLEManager::setup()
   m_pEventCharacteristic= makeUTF8OutputCharacteristic(EVENT_CHARACTERISTIC_UUID);
   
   m_pSliderPosCharacteristic= makeFloatCharacteristic(SLIDER_POS_CHARACTERISTIC_UUID, true, silderManager->getSliderPosFraction());
-  m_pSliderSpeedCharacteristic= makeFloatCharacteristic(SLIDER_SPEED_CHARACTERISTIC_UUID, true, silderManager->getSliderSpeedFraction());
-  m_pSliderAccelCharacteristic= makeFloatCharacteristic(SLIDER_ACCEL_CHARACTERISTIC_UUID, true, silderManager->getSliderAccelFraction());
-
   m_pPanPosCharacteristic= makeFloatCharacteristic(PAN_POS_CHARACTERISTIC_UUID, true, silderManager->getPanPosFraction());
-  m_pPanSpeedCharacteristic= makeFloatCharacteristic(PAN_SPEED_CHARACTERISTIC_UUID, true, silderManager->getPanSpeedFraction());
-  m_pPanAccelCharacteristic= makeFloatCharacteristic(PAN_ACCEL_CHARACTERISTIC_UUID, true, silderManager->getPanAccelFraction());
-
   m_pTiltPosCharacteristic= makeFloatCharacteristic(TILT_POS_CHARACTERISTIC_UUID, true, silderManager->getTiltPosFraction());
-  m_pTiltSpeedCharacteristic= makeFloatCharacteristic(TILT_SPEED_CHARACTERISTIC_UUID, true, silderManager->getTiltSpeedFraction());
-  m_pTiltAccelCharacteristic= makeFloatCharacteristic(TILT_ACCEL_CHARACTERISTIC_UUID, true, silderManager->getTiltAccelFraction());    
+  m_pSpeedCharacteristic= makeFloatCharacteristic(SPEED_CHARACTERISTIC_UUID, true, silderManager->getSpeedFraction());
+  m_pAccelCharacteristic= makeFloatCharacteristic(ACCEL_CHARACTERISTIC_UUID, true, silderManager->getAccelFraction());    
 
   // Start the service
   m_pService->start();
@@ -184,45 +175,27 @@ void BLEManager::onRead(BLECharacteristic* pCharacteristic, esp_ble_gatts_cb_par
 {
   float value= 0.f;
 
-  // Slider Controls
+  // Position Controls
   if (pCharacteristic == m_pSliderPosCharacteristic)
   {
     value= SliderState::getInstance()->getSliderPosFraction();
-    Serial.printf("BLEManager - read slider pos = %f\n", value);
   }
-  else if (pCharacteristic == m_pSliderSpeedCharacteristic)
-  {
-    value= SliderState::getInstance()->getSliderSpeedFraction();
-  }
-  else if (pCharacteristic == m_pSliderAccelCharacteristic)
-  {
-    value= SliderState::getInstance()->getSliderAccelFraction();
-  }
-  // Pan Controls
   else if (pCharacteristic == m_pPanPosCharacteristic)
   {
     value= SliderState::getInstance()->getPanPosFraction();
   }
-  else if (pCharacteristic == m_pPanSpeedCharacteristic)
-  {
-    value= SliderState::getInstance()->getPanSpeedFraction();
-  }
-  else if (pCharacteristic == m_pPanAccelCharacteristic)
-  {
-    value= SliderState::getInstance()->getPanAccelFraction();
-  }  
-  // Tilt Controls
   else if (pCharacteristic == m_pTiltPosCharacteristic)
   {
     value= SliderState::getInstance()->getTiltPosFraction();
   }
-  else if (pCharacteristic == m_pTiltSpeedCharacteristic)
+  // Speed Controls
+  else if (pCharacteristic == m_pSpeedCharacteristic)
   {
-    value= SliderState::getInstance()->getTiltSpeedFraction();
+    value= SliderState::getInstance()->getSpeedFraction();
   }
-  else if (pCharacteristic == m_pTiltAccelCharacteristic)
+  else if (pCharacteristic == m_pAccelCharacteristic)
   {
-    value= SliderState::getInstance()->getTiltAccelFraction();
+    value= SliderState::getInstance()->getAccelFraction();
   }
   else
   {
@@ -275,14 +248,25 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
     else if (m_commandHandler != nullptr)
     {
       Serial.printf("BLEManager - Handling command: %s\n", value.c_str());
-      m_commandHandler->onCommand(value);
+
+      std::vector<std::string> args;
+      std::istringstream command_stream(value);
+      for (std::string arg; getline(command_stream, arg, ' '); )
+      {
+        args.push_back(arg);
+      }
+
+      if (args.size() > 0)
+      {
+        m_commandHandler->onCommand(args);
+      }
     }
     else
     {
       Serial.printf("BLEManager - Ignoring command: %s\n", value.c_str());
     }
   }
-  // Slider Controls
+  // Position Controls
   else if (pCharacteristic == m_pSliderPosCharacteristic)
   {
     float value = getFloatCharacteristicValue(pCharacteristic);
@@ -297,35 +281,6 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
       Serial.printf("BLEManager - Ignoring Slider Pos control\n");
     }
   }
-  else if (pCharacteristic == m_pSliderSpeedCharacteristic)
-  {
-    float value = getFloatCharacteristicValue(pCharacteristic);
-
-    if (m_bleControlEnabled)
-    {
-      SliderState::getInstance()->setSliderSpeedFraction(value);
-      Serial.printf("BLEManager - Setting Slider Speed fraction to: %f\n", value);
-    }
-    else
-    {
-      Serial.printf("BLEManager - Ignoring Slider Speed control\n");
-    }
-  }
-  else if (pCharacteristic == m_pSliderAccelCharacteristic)
-  {
-    float value = getFloatCharacteristicValue(pCharacteristic);
-
-    if (m_bleControlEnabled)
-    {
-      SliderState::getInstance()->setSliderAccelFraction(value);
-      Serial.printf("BLEManager - Setting Slider Accel fraction to: %f\n", value);
-    }
-    else
-    {
-      Serial.printf("BLEManager - Ignoring Slider Accel control\n");
-    }
-  }
-  // Pan Controls
   else if (pCharacteristic == m_pPanPosCharacteristic)
   {
     float value = getFloatCharacteristicValue(pCharacteristic);
@@ -340,35 +295,6 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
       Serial.printf("BLEManager - Ignoring Pan Pos control\n");
     }
   }
-  else if (pCharacteristic == m_pPanSpeedCharacteristic)
-  {
-    float value = getFloatCharacteristicValue(pCharacteristic);
-
-    if (m_bleControlEnabled)
-    {
-      SliderState::getInstance()->setPanSpeedFraction(value);
-      Serial.printf("BLEManager - Setting Pan Speed fraction to: %f\n", value);
-    }
-    else
-    {
-      Serial.printf("BLEManager - Ignoring Pan Speed control\n");
-    }
-  }
-  else if (pCharacteristic == m_pPanAccelCharacteristic)
-  {
-    float value = getFloatCharacteristicValue(pCharacteristic);
-
-    if (m_bleControlEnabled)
-    {
-      SliderState::getInstance()->setPanAccelFraction(value);
-      Serial.printf("BLEManager - Setting Pan Accel fraction to: %f\n", value);
-    }
-    else
-    {
-      Serial.printf("BLEManager - Ignoring Pan Accel control\n");
-    }
-  }  
-  // Tilt Controls
   else if (pCharacteristic == m_pTiltPosCharacteristic)
   {
     float value = getFloatCharacteristicValue(pCharacteristic);
@@ -383,32 +309,33 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
       Serial.printf("BLEManager - Ignoring Tilt Pos control\n");
     }
   }
-  else if (pCharacteristic == m_pTiltSpeedCharacteristic)
+  // Speed Controls
+  else if (pCharacteristic == m_pSpeedCharacteristic)
   {
     float value = getFloatCharacteristicValue(pCharacteristic);
 
     if (m_bleControlEnabled)
     {
-      SliderState::getInstance()->setTiltSpeedFraction(value);
-      Serial.printf("BLEManager - Setting Tilt Speed fraction to: %f\n", value);
+      SliderState::getInstance()->setSpeedFraction(value);
+      Serial.printf("BLEManager - Setting Speed fraction to: %f\n", value);
     }
     else
     {
-      Serial.printf("BLEManager - Ignoring Tilt Speed control\n");
+      Serial.printf("BLEManager - Ignoring Speed control\n");
     }
   }
-  else if (pCharacteristic == m_pTiltAccelCharacteristic)
+  else if (pCharacteristic == m_pAccelCharacteristic)
   {
     float value = getFloatCharacteristicValue(pCharacteristic);
 
     if (m_bleControlEnabled)
     {
-      SliderState::getInstance()->setTiltAccelFraction(value);
-      Serial.printf("BLEManager - Setting Tilt Accel fraction to: %f\n", value);
+      SliderState::getInstance()->setAccelFraction(value);
+      Serial.printf("BLEManager - Setting Accel fraction to: %f\n", value);
     }
     else
     {
-      Serial.printf("BLEManager - Ignoring Tilt Accel control");
+      Serial.printf("BLEManager - Ignoring Accel control");
     }
   }      
 }

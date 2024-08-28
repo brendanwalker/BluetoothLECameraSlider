@@ -8,6 +8,7 @@ using Windows.Security.Cryptography;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Devices.Enumeration;
+using System.Collections.Generic;
 
 namespace CameraSlider.Bluetooth
 {
@@ -19,14 +20,10 @@ namespace CameraSlider.Bluetooth
 		public readonly string COMMAND_CHARACTERISTIC_UUID = "62c6b5d1-d304-4b9c-b12b-decd1e5b3614";
 		public readonly string EVENT_CHARACTERISTIC_UUID = "5c88bae1-db64-4483-a0f3-6b6786c6c145";
 		public readonly string SLIDER_POS_CHARACTERISTIC_UUID = "87b8f554-28cb-11ee-be56-0242ac120002";
-		public readonly string SLIDER_SPEED_CHARACTERISTIC_UUID = "781ef5a1-e5df-411d-9276-7a229e469719";
-		public readonly string SLIDER_ACCEL_CHARACTERISTIC_UUID = "5cf074e3-2014-4776-8734-b0d0eb49229a";
 		public readonly string PAN_POS_CHARACTERISTIC_UUID = "a86268cb-73bb-497c-bb9b-cf7af318919f";
-		public readonly string PAN_SPEED_CHARACTERISTIC_UUID = "838a79d5-c5f2-40ea-8f3d-c9d6fde08f56";
-		public readonly string PAN_ACCEL_CHARACTERISTIC_UUID = "4049db30-2096-460a-821f-05380dc37212";
 		public readonly string TILT_POS_CHARACTERISTIC_UUID = "9881b453-6636-4a73-a335-11bc737f6812";
-		public readonly string TILT_SPEED_CHARACTERISTIC_UUID = "d40730f2-7be2-425a-a70c-58d56f8d2295";
-		public readonly string TILT_ACCEL_CHARACTERISTIC_UUID = "885bee55-f069-4077-b18f-5cdb8b4a7003";
+		public readonly string SPEED_CHARACTERISTIC_UUID = "781ef5a1-e5df-411d-9276-7a229e469719";
+		public readonly string ACCEL_CHARACTERISTIC_UUID = "5cf074e3-2014-4776-8734-b0d0eb49229a";
 
 		private BluetoothLEDevice _cameraSliderDevice = null;
 
@@ -36,16 +33,11 @@ namespace CameraSlider.Bluetooth
 		private GattCharacteristic _eventCharacteristic = null;
 
 		private GattCharacteristic _slidePosCharacteristic = null;
-		private GattCharacteristic _slideSpeedCharacteristic = null;
-		private GattCharacteristic _slideAccelCharacteristic = null;
-
 		private GattCharacteristic _panPosCharacteristic = null;
-		private GattCharacteristic _panSpeedCharacteristic = null;
-		private GattCharacteristic _panAccelCharacteristic = null;
-
 		private GattCharacteristic _tiltPosCharacteristic = null;
-		private GattCharacteristic _tiltSpeedCharacteristic = null;
-		private GattCharacteristic _tiltAccelCharacteristic = null;
+
+		private GattCharacteristic _speedCharacteristic = null;
+		private GattCharacteristic _accelCharacteristic = null;
 
 		public event EventHandler<Events.ConnectionStatusChangedEventArgs> ConnectionStatusChanged;
 		protected virtual void OnConnectionStatusChanged(Events.ConnectionStatusChangedEventArgs e)
@@ -130,36 +122,20 @@ namespace CameraSlider.Bluetooth
 			if (_slidePosCharacteristic == null)
 				return false;
 
-			_slideSpeedCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, SLIDER_SPEED_CHARACTERISTIC_UUID);
-			if (_slideSpeedCharacteristic == null)
-				return false;
-
-			_slideAccelCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, SLIDER_ACCEL_CHARACTERISTIC_UUID);
-			if (_slideAccelCharacteristic == null)
-				return false;
-
 			_panPosCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, PAN_POS_CHARACTERISTIC_UUID);
 			if (_panPosCharacteristic == null)
-				return false;
-
-			_panSpeedCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, PAN_SPEED_CHARACTERISTIC_UUID);
-			if (_panSpeedCharacteristic == null)
-				return false;
-
-			_panAccelCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, PAN_ACCEL_CHARACTERISTIC_UUID);
-			if (_panAccelCharacteristic == null)
 				return false;
 
 			_tiltPosCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, TILT_POS_CHARACTERISTIC_UUID);
 			if (_tiltPosCharacteristic == null)
 				return false;
 
-			_tiltSpeedCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, TILT_SPEED_CHARACTERISTIC_UUID);
-			if (_tiltSpeedCharacteristic == null)
+			_speedCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, SPEED_CHARACTERISTIC_UUID);
+			if (_speedCharacteristic == null)
 				return false;
 
-			_tiltAccelCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, TILT_ACCEL_CHARACTERISTIC_UUID);
-			if (_tiltAccelCharacteristic == null)
+			_accelCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, ACCEL_CHARACTERISTIC_UUID);
+			if (_accelCharacteristic == null)
 				return false;
 
 			return true;
@@ -256,16 +232,11 @@ namespace CameraSlider.Bluetooth
 				_eventCharacteristic = null;
 
 				_slidePosCharacteristic = null;
-				_slideSpeedCharacteristic = null;
-				_slideAccelCharacteristic = null;
-
 				_panPosCharacteristic = null;
-				_panSpeedCharacteristic = null;
-				_panAccelCharacteristic = null;
-
 				_tiltPosCharacteristic = null;
-				_tiltSpeedCharacteristic = null;
-				_tiltAccelCharacteristic = null;
+
+				_speedCharacteristic = null;
+				_accelCharacteristic = null;
 			}
 		}
 
@@ -274,7 +245,9 @@ namespace CameraSlider.Bluetooth
 			try
 			{
 				if (_commandCharacteristic == null)
-          return false;
+				{
+					return false;
+				}
 
 				GattWriteResult result =
 					await _commandCharacteristic.WriteValueWithResultAsync(
@@ -292,10 +265,12 @@ namespace CameraSlider.Bluetooth
 		{
 			try
 			{
-        if (characteristic == null)
-          return false;
+				if (characteristic == null)
+				{
+					return false;
+				}
 
-        byte[] Message = BitConverter.GetBytes(value);
+				byte[] Message = BitConverter.GetBytes(value);
 				GattWriteResult result = await characteristic.WriteValueWithResultAsync(Message.AsBuffer());
 
 				return result.Status == GattCommunicationStatus.Success;
@@ -321,44 +296,26 @@ namespace CameraSlider.Bluetooth
 			return await SendFloat(_tiltPosCharacteristic, position);
 		}
 
-		public async Task<bool> SetSlideSpeed(float speed)
+		public async Task<bool> SetSpeed(float speed)
 		{
-			return await SendFloat(_slideSpeedCharacteristic, speed);
+			return await SendFloat(_speedCharacteristic, speed);
 		}
 
-		public async Task<bool> SetPanSpeed(float speed)
+		public async Task<bool> SetAcceleration(float acceleration)
 		{
-			return await SendFloat(_panSpeedCharacteristic, speed);
-		}
-
-		public async Task<bool> SetTiltSpeed(float speed)
-		{
-			return await SendFloat(_tiltSpeedCharacteristic, speed);
-		}
-
-		public async Task<bool> SetSlideAcceleration(float acceleration)
-		{
-			return await SendFloat(_slideAccelCharacteristic, acceleration);
-		}
-
-		public async Task<bool> SetPanAcceleration(float acceleration)
-		{
-			return await SendFloat(_panAccelCharacteristic, acceleration);
-		}
-
-		public async Task<bool> SetTiltAcceleration(float acceleration)
-		{
-			return await SendFloat(_tiltAccelCharacteristic, acceleration);
+			return await SendFloat(_accelCharacteristic, acceleration);
 		}
 
 		private async Task<float> GetFloat(GattCharacteristic characteristic)
 		{
 			try
 			{
-        if (characteristic == null)
-          return 0f;
+				if (characteristic == null)
+				{
+					return 0f;
+				}
 
-        GattReadResult result = await characteristic.ReadValueAsync();
+				GattReadResult result = await characteristic.ReadValueAsync();
 
 				return BitConverter.ToSingle(result.Value.ToArray(), 0);
 			}
@@ -383,34 +340,14 @@ namespace CameraSlider.Bluetooth
 			return await GetFloat(_tiltPosCharacteristic);
 		}
 
-		public async Task<float> GetSlideSpeed()
+		public async Task<float> GetSpeed()
 		{
-			return await GetFloat(_slideSpeedCharacteristic);
+			return await GetFloat(_speedCharacteristic);
 		}
 
-		public async Task<float> GetPanSpeed()
+		public async Task<float> GetAcceleration()
 		{
-			return await GetFloat(_panSpeedCharacteristic);
-		}
-
-		public async Task<float> GetTiltSpeed()
-		{
-			return await GetFloat(_tiltSpeedCharacteristic);
-		}
-
-		public async Task<float> GetSlideAcceleration()
-		{
-			return await GetFloat(_slideAccelCharacteristic);
-		}
-
-		public async Task<float> GetPanAcceleration()
-		{
-			return await GetFloat(_panAccelCharacteristic);
-		}
-
-		public async Task<float> GetTiltAcceleration()
-		{
-			return await GetFloat(_tiltAccelCharacteristic);
+			return await GetFloat(_accelCharacteristic);
 		}
 
 		public async Task<bool> WakeUp()
@@ -418,14 +355,46 @@ namespace CameraSlider.Bluetooth
 			return await SendCommand("ping");
 		}
 
-		public async Task<bool> StartCalibration()
+		public async Task<bool> StartCalibration(bool slide, bool pan, bool tilt)
 		{
-			return await SendCommand("calibrate");
+			List<string> calibrateArgs = new List<string>();
+
+			if (slide)
+				calibrateArgs.Add("slide");
+			if (pan)
+				calibrateArgs.Add("pan");
+			if (tilt)
+				calibrateArgs.Add("tilt");
+
+			string command = "calibrate " + string.Join(";", calibrateArgs);
+
+			return await SendCommand(command);
 		}
 
 		public async Task<bool> StopAllMotors()
 		{
 			return await SendCommand("stop");
+		}
+
+		public async Task<bool> SetAbsSlidePosition(int pos)
+		{
+			string command = $"goto_slide_pos {pos}";
+
+			return await SendCommand(command);
+		}
+
+		public async Task<bool> SetSlideMin(int min_pos)
+		{
+			string command = $"set_slide_min_pos {min_pos}";
+
+			return await SendCommand(command);
+		}
+
+		public async Task<bool> SetSlideMax(int max_pos)
+		{
+			string command = $"set_slide_max_pos {max_pos}";
+
+			return await SendCommand(command);
 		}
 
 		private void DeviceConnectionStatusChanged(BluetoothLEDevice sender, object args)

@@ -55,12 +55,8 @@ namespace CameraSlider.UI
 		private bool _isSliderPosDragging = false;
 		private bool _isPanPosDragging = false;
 		private bool _isTiltPosDragging = false;
-		private bool _isSliderSpeedDragging = false;
-		private bool _isPanSpeedDragging = false;
-		private bool _isTiltSpeedDragging = false;
-		private bool _isSliderAccelDragging = false;
-		private bool _isPanAccelDragging = false;
-		private bool _isTiltAccelDragging = false;
+		private bool _isSpeedDragging = false;
+		private bool _isAccelDragging = false;
 
 		public MainWindow()
 		{
@@ -242,14 +238,8 @@ namespace CameraSlider.UI
 				await _cameraSliderDevice.SetSlidePosition(_configState._cameraSettingsConfig.SlidePos);
 				await _cameraSliderDevice.SetPanPosition(_configState._cameraSettingsConfig.PanPos);
 				await _cameraSliderDevice.SetTiltPosition(_configState._cameraSettingsConfig.TiltPos);
-
-				await _cameraSliderDevice.SetSlideSpeed(_configState._cameraSettingsConfig.SlideSpeed);
-				await _cameraSliderDevice.SetPanSpeed(_configState._cameraSettingsConfig.PanSpeed);
-				await _cameraSliderDevice.SetTiltSpeed(_configState._cameraSettingsConfig.TiltSpeed);
-
-				await _cameraSliderDevice.SetSlideAcceleration(_configState._cameraSettingsConfig.SlideAccel);
-				await _cameraSliderDevice.SetPanAcceleration(_configState._cameraSettingsConfig.PanAccel);
-				await _cameraSliderDevice.SetTiltAcceleration(_configState._cameraSettingsConfig.TiltAccel);
+				await _cameraSliderDevice.SetSpeed(_configState._cameraSettingsConfig.Speed);
+				await _cameraSliderDevice.SetAcceleration(_configState._cameraSettingsConfig.Accel);
 
 				_suppressUIUpdatesToDevice = true;
 
@@ -258,14 +248,8 @@ namespace CameraSlider.UI
 					SlidePosSlider.Value = _configState._cameraSettingsConfig.SlidePos;
 					PanPosSlider.Value = _configState._cameraSettingsConfig.PanPos;
 					TiltPosSlider.Value = _configState._cameraSettingsConfig.TiltPos;
-
-					SlideSpeedSlider.Value = _configState._cameraSettingsConfig.SlideSpeed;
-					PanSpeedSlider.Value = _configState._cameraSettingsConfig.PanSpeed;
-					TiltSpeedSlider.Value = _configState._cameraSettingsConfig.TiltSpeed;
-
-					SlideAccelSlider.Value = _configState._cameraSettingsConfig.SlideAccel;
-					PanAccelSlider.Value = _configState._cameraSettingsConfig.PanAccel;
-					TiltAccelSlider.Value = _configState._cameraSettingsConfig.TiltAccel;
+					SpeedSlider.Value = _configState._cameraSettingsConfig.Speed;
+					AccelSlider.Value = _configState._cameraSettingsConfig.Accel;
 				});
 
 				_suppressUIUpdatesToDevice = false;
@@ -404,24 +388,16 @@ namespace CameraSlider.UI
 		protected void ApplyConfigToUI()
 		{
 			SlidePosSlider.Value = _configState._cameraSettingsConfig.SlidePos;
-			SlideSpeedSlider.Value = _configState._cameraSettingsConfig.SlideSpeed;
-			SlideAccelSlider.Value = _configState._cameraSettingsConfig.SlideAccel;
 			PanPosSlider.Value = _configState._cameraSettingsConfig.PanPos;
-			PanSpeedSlider.Value = _configState._cameraSettingsConfig.PanSpeed;
-			PanAccelSlider.Value = _configState._cameraSettingsConfig.PanAccel;
 			TiltPosSlider.Value = _configState._cameraSettingsConfig.TiltPos;
-			TiltSpeedSlider.Value = _configState._cameraSettingsConfig.TiltSpeed;
-			TiltAccelSlider.Value = _configState._cameraSettingsConfig.TiltAccel;
+			SpeedSlider.Value = _configState._cameraSettingsConfig.Speed;
+			AccelSlider.Value = _configState._cameraSettingsConfig.Accel;
 
 			SlidePosStatus.Content = _configState._cameraSettingsConfig.SlidePos.ToString("0.00");
-			SlideSpeedStatus.Content = _configState._cameraSettingsConfig.SlideSpeed.ToString("0.00");
-			SlideAccelStatus.Content = _configState._cameraSettingsConfig.SlideAccel.ToString("0.00");
 			PanPosStatus.Content = _configState._cameraSettingsConfig.PanPos.ToString("0.00");
-			PanSpeedStatus.Content = _configState._cameraSettingsConfig.PanSpeed.ToString("0.00");
-			PanAccelStatus.Content = _configState._cameraSettingsConfig.PanAccel.ToString("0.00");
 			TiltPosStatus.Content = _configState._cameraSettingsConfig.TiltPos.ToString("0.00");
-			TiltSpeedStatus.Content = _configState._cameraSettingsConfig.TiltSpeed.ToString("0.00");
-			TiltAccelStatus.Content = _configState._cameraSettingsConfig.TiltAccel.ToString("0.00");
+			SpeedStatus.Content = _configState._cameraSettingsConfig.Speed.ToString("0.00");
+			AccelStatus.Content = _configState._cameraSettingsConfig.Accel.ToString("0.00");
 
 			RebuildPresetComboBox();
 		}
@@ -447,12 +423,10 @@ namespace CameraSlider.UI
 				await RunOnUiThread(() =>
 				{
 					SlidePosSlider.IsEnabled = bEnabled;
-					SlideSpeedSlider.IsEnabled = bEnabled;
-					SlideAccelSlider.IsEnabled = bEnabled;
-
+					TiltPosSlider.IsEnabled = bEnabled;
 					PanPosSlider.IsEnabled = bEnabled;
-					PanSpeedSlider.IsEnabled = bEnabled;
-					PanAccelSlider.IsEnabled = bEnabled;
+					SpeedSlider.IsEnabled = bEnabled;
+					AccelSlider.IsEnabled = bEnabled;
 
 					BtnCalibrate.IsEnabled = bEnabled;
 					BtnHalt.IsEnabled = bEnabled;
@@ -508,58 +482,22 @@ namespace CameraSlider.UI
 			TiltPosStatus.Content = _configState._cameraSettingsConfig.TiltPos.ToString("0.00");
 		}
 
-		private async void SlideSpeed_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+		private async void Speed_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
 		{
-			_configState._cameraSettingsConfig.SlideSpeed = (float)SlideSpeedSlider.Value;
+			_configState._cameraSettingsConfig.Speed = (float)SpeedSlider.Value;
 			_configState._areConfigSettingsDirty = true;
-			if (!_suppressUIUpdatesToDevice && !_isSliderSpeedDragging)
-				await _cameraSliderDevice.SetSlideSpeed(_configState._cameraSettingsConfig.SlideSpeed);
-			SlideSpeedStatus.Content = _configState._cameraSettingsConfig.SlideSpeed.ToString("0.00");
+			if (!_suppressUIUpdatesToDevice && !_isSpeedDragging)
+				await _cameraSliderDevice.SetSpeed(_configState._cameraSettingsConfig.Speed);
+			SpeedStatus.Content = _configState._cameraSettingsConfig.Speed.ToString("0.00");
 		}
 
-		private async void PanSpeed_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+		private async void Accel_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
 		{
-			_configState._cameraSettingsConfig.PanSpeed = (float)PanSpeedSlider.Value;
+			_configState._cameraSettingsConfig.Accel = (float)AccelSlider.Value;
 			_configState._areConfigSettingsDirty = true;
-			if (!_suppressUIUpdatesToDevice && !_isPanSpeedDragging)
-				await _cameraSliderDevice.SetPanSpeed(_configState._cameraSettingsConfig.PanSpeed);
-			PanSpeedStatus.Content = _configState._cameraSettingsConfig.PanSpeed.ToString("0.00");
-		}
-
-		private async void TiltSpeed_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-		{
-			_configState._cameraSettingsConfig.TiltSpeed = (float)TiltSpeedSlider.Value;
-			_configState._areConfigSettingsDirty = true;
-			if (!_suppressUIUpdatesToDevice && !_isTiltSpeedDragging)
-				await _cameraSliderDevice.SetTiltSpeed(_configState._cameraSettingsConfig.TiltSpeed);
-			TiltSpeedStatus.Content = _configState._cameraSettingsConfig.TiltSpeed.ToString("0.00");
-		}
-
-		private async void SlideAccel_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-		{
-			_configState._cameraSettingsConfig.SlideAccel = (float)SlideAccelSlider.Value;
-			_configState._areConfigSettingsDirty = true;
-			if (!_suppressUIUpdatesToDevice && !_isSliderAccelDragging)
-				await _cameraSliderDevice.SetSlideAcceleration(_configState._cameraSettingsConfig.SlideAccel);
-			SlideAccelStatus.Content = _configState._cameraSettingsConfig.SlideAccel.ToString("0.00");
-		}
-
-		private async void PanAccel_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-		{
-			_configState._cameraSettingsConfig.PanAccel = (float)PanAccelSlider.Value;
-			_configState._areConfigSettingsDirty = true;
-			if (!_suppressUIUpdatesToDevice && !_isPanAccelDragging)
-				await _cameraSliderDevice.SetPanAcceleration(_configState._cameraSettingsConfig.PanAccel);
-			PanAccelStatus.Content = _configState._cameraSettingsConfig.PanAccel.ToString("0.00");
-		}
-
-		private async void TiltAccel_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-		{
-			_configState._cameraSettingsConfig.TiltAccel = (float)TiltAccelSlider.Value;
-			_configState._areConfigSettingsDirty = true;
-			if (!_suppressUIUpdatesToDevice && !_isTiltAccelDragging)
-				await _cameraSliderDevice.SetTiltAcceleration(_configState._cameraSettingsConfig.TiltAccel);
-			TiltAccelStatus.Content = _configState._cameraSettingsConfig.TiltAccel.ToString("0.00");
+			if (!_suppressUIUpdatesToDevice && !_isAccelDragging)
+				await _cameraSliderDevice.SetAcceleration(_configState._cameraSettingsConfig.Accel);
+			AccelStatus.Content = _configState._cameraSettingsConfig.Accel.ToString("0.00");
 		}
 
 		private void BtnGotoPreset_Click(object sender, RoutedEventArgs e)
@@ -641,8 +579,13 @@ namespace CameraSlider.UI
 		{
 			if (!_deviceCalibrationRunning)
 			{
+				CameraSettingsSection cameraSettings= _configState._cameraSettingsConfig;
+				
 				// Wait to hear if calibration started in the device event handler
-				await _cameraSliderDevice.StartCalibration();
+				await _cameraSliderDevice.StartCalibration(
+					cameraSettings.AutoSlideCalibration, 
+					cameraSettings.AutoPanCalibration, 
+					cameraSettings.AutoTiltCalibration);
 			}
 		}
 
@@ -694,70 +637,46 @@ namespace CameraSlider.UI
 			_isTiltPosDragging = false;
 		}
 
-		private void SlideSpeedSlider_DragStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
+		private void SpeedSlider_DragStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
 		{
-			_isSliderSpeedDragging = true;
+			_isSpeedDragging = true;
 		}
 
-		private async void SlideSpeedSlider_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+		private async void SpeedSlider_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
 		{
-			await _cameraSliderDevice.SetSlideSpeed((float)((Slider)sender).Value);
-			_isSliderSpeedDragging = false;
+			await _cameraSliderDevice.SetSpeed((float)((Slider)sender).Value);
+			_isSpeedDragging = false;
 		}
 
-		private void PanSpeedSlider_DragStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
+		private void AccelSlider_DragStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
 		{
-			_isPanSpeedDragging = true;
+			_isAccelDragging = true;
 		}
 
-		private async void PanSpeedSlider_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+		private async void AccelSlider_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
 		{
-			await _cameraSliderDevice.SetPanSpeed((float)((Slider)sender).Value);
-			_isPanSpeedDragging = false;
+			await _cameraSliderDevice.SetAcceleration((float)((Slider)sender).Value);
+			_isAccelDragging = false;
 		}
 
-		private void TiltSpeedSlider_DragStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
+		private void BtnSetSlideMin_Click(object sender, RoutedEventArgs e)
 		{
-			_isTiltSpeedDragging = true;
+
 		}
 
-		private async void TiltSpeedSlider_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+		private void BtnSetSlideMax_Click(object sender, RoutedEventArgs e)
 		{
-			await _cameraSliderDevice.SetTiltSpeed((float)((Slider)sender).Value);
-			_isTiltSpeedDragging = false;
+
 		}
 
-		private void SlideAccelSlider_DragStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
+		private void BtnManualMoveLeft_Click(object sender, RoutedEventArgs e)
 		{
-			_isSliderAccelDragging = true;
+
 		}
 
-		private async void SlideAccelSlider_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+		private void BtnManualMoveRight_Click(object sender, RoutedEventArgs e)
 		{
-			await _cameraSliderDevice.SetSlideAcceleration((float)((Slider)sender).Value);
-			_isSliderAccelDragging = false;
-		}
 
-		private void PanAccelSlider_DragStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
-		{
-			_isPanAccelDragging = true;
-		}
-
-		private async void PanAccelSlider_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
-		{
-			await _cameraSliderDevice.SetPanAcceleration((float)((Slider)sender).Value);
-			_isPanAccelDragging = false;
-		}
-
-		private void TiltAccelSlider_DragStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
-		{
-			_isTiltAccelDragging = true;
-		}
-
-		private async void TiltAccelSlider_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
-		{
-			await _cameraSliderDevice.SetTiltAcceleration((float)((Slider)sender).Value);
-			_isTiltAccelDragging = false;
 		}
 	}
 }
