@@ -350,6 +350,11 @@ namespace CameraSlider.Bluetooth
 			return await GetFloat(_accelCharacteristic);
 		}
 
+		public async Task<bool> GetSliderState()
+		{
+			return await SendCommand("get_slider_state");
+		}
+
 		public async Task<bool> WakeUp()
 		{
 			return await SendCommand("ping");
@@ -376,25 +381,21 @@ namespace CameraSlider.Bluetooth
 			return await SendCommand("stop");
 		}
 
-		public async Task<bool> SetAbsSlidePosition(int pos)
+		public async Task<bool> MoveSlider(int delta)
 		{
-			string command = $"goto_slide_pos {pos}";
+			string command = $"move_slider {delta}";
 
 			return await SendCommand(command);
 		}
 
-		public async Task<bool> SetSlideMin(int min_pos)
+		public async Task<bool> SetSlideMin()
 		{
-			string command = $"set_slide_min_pos {min_pos}";
-
-			return await SendCommand(command);
+			return await SendCommand("set_slide_min_pos");
 		}
 
 		public async Task<bool> SetSlideMax(int max_pos)
 		{
-			string command = $"set_slide_max_pos {max_pos}";
-
-			return await SendCommand(command);
+			return await SendCommand("set_slide_max_pos");
 		}
 
 		private void DeviceConnectionStatusChanged(BluetoothLEDevice sender, object args)

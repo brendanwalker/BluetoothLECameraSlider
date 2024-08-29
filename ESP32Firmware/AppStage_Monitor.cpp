@@ -64,28 +64,35 @@ void AppStage_Monitor::onCommand(const std::vector<std::string>& args)
     sliderCalibration->setAutoCalibration(true);
     m_app->pushAppStage(sliderCalibration);
   }
-  else if (args[0] == "goto_slide_pos" && args.size() >= 2)
+  else if (args[0] == "get_slider_state")
   {
-    int pos = std::stoi(args[1]);
+    int32_t pos= sliderState->getSlideStepperPosition();
+    int32_t min_pos= sliderState->getSlideStepperMin();
+    int32_t max_pos= sliderState->getSlideStepperMax();
 
-    Serial.println("MainMenu: Received goto_slide_pos command");
-    sliderState->setSlideStepperPosition(pos);
+    std::stringstream ss;
+    ss << "slider_state " << pos << " " << min_pos << " " << max_pos;
+
+    Serial.println("MainMenu: Received get_slider_state command");
+    BLEManager::getInstance()->sendEvent(ss.str());
   }
-  else if (args[0] == "set_slide_min_pos" && args.size() >= 2)
+  else if (args[0] == "move_slider" && args.size() >= 2)
   {
-    int minPos = std::stoi(args[1]);
+    int delta = std::stoi(args[1]);
 
+    Serial.println("MainMenu: Received move_slider command");
+    int32_t pos= sliderState->getSlideStepperPosition();
+    sliderState->setSlideStepperPosition(pos + delta);
+  }
+  else if (args[0] == "set_slide_min_pos")
+  {
     Serial.println("MainMenu: Received set_slide_min_pos command");
-    sliderState->setSlideStepperMin(minPos);
-    sliderState->writeCalibrationToConfig();
+    sliderState->saveSlideStepperPosAsMin();
   }
-  else if (args[0] == "set_slide_max_pos" && args.size() >= 2)
+  else if (args[0] == "set_slide_max_pos")
   {
-    int maxPos = std::stoi(args[1]);
-
     Serial.println("MainMenu: Received set_slide_max_pos command");
-    sliderState->setSlideStepperMax(maxPos);
-    sliderState->writeCalibrationToConfig();
+    sliderState->saveSlideStepperPosAsMax();
   }  
   else if (args[0] == "stop")
   {

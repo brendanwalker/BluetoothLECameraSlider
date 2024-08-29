@@ -52,6 +52,11 @@ namespace CameraSlider.UI
 		private bool _hasPendingPresetTarget = false;
 
 		// Slider state
+		private int _sliderMinPos = 0;
+		private int _sliderMaxPos = 0;
+		private int _targetSlidePos = 0;
+		private int _targetPanPos = 0;
+		private int _targetTiltPos = 0;
 		private bool _isSliderPosDragging = false;
 		private bool _isPanPosDragging = false;
 		private bool _isTiltPosDragging = false;
@@ -190,38 +195,108 @@ namespace CameraSlider.UI
 			});
 		}
 
-		private void CameraSliderEventReceived(object sender, CameraSliderEventArgs arg)
+		private async void SetCameraSliderPosition(int slidePos)
 		{
-			EmitLog("Received slider event received: " + arg.Message);
+			await RunOnUiThread(() =>
+			{
+				LblSliderRawPos.Content = slidePos.ToString();
+			});
+		}
 
-			switch (arg.Message)
+		private async void SetCameraSliderMinPosition(int slidePos)
+		{
+			await RunOnUiThread(() =>
 			{
-			case "move_complete":
+				LblSlideMin.Content = slidePos.ToString();
+			});
+		}
+
+		private async void SetCameraSliderMaxPosition(int slidePos)
+		{
+			await RunOnUiThread(() =>
 			{
-				_hasPendingPresetTarget = false;
-			}
-			break;
-			case "calibration_started":
+				LblSlideMax.Content = slidePos.ToString();
+			});
+		}
+
+		private void CameraSliderEventReceived(object sender, CameraSliderEventArgs evt)
+		{
+			EmitLog("Received slider event received: " + evt.Message);
+			string[] args= evt.Message.Split(' ');
+
+			if (args.Length > 0)
 			{
-				_deviceCalibrationRunning = true;
-				SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, true);
-				SetCameraStatusLabel("Calibrating...");
-			}
-			break;
-			case "calibration_completed":
-			{
-				_deviceCalibrationRunning = false;
-				SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, false);
-				SetCameraStatusLabel("Connected");
-			}
-			break;
-			case "calibration_failed":
-			{
-				_deviceCalibrationRunning = false;
-				SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, false);
-				SetCameraStatusLabel("Calibration Failed!");
-			}
-			break;
+				switch (args[0])
+				{
+				case "slider_state":
+				{
+					if (args.Length >= 4)
+					{
+						_targetSlidePos= int.Parse(args[1]);
+						_sliderMinPos= int.Parse(args[2]);
+						_sliderMaxPos= int.Parse(args[3]);
+
+						SetCameraSliderPosition(_targetSlidePos);
+						SetCameraSliderMinPosition(_sliderMinPos);
+						SetCameraSliderMaxPosition(_sliderMaxPos);
+					}
+				}
+				break;
+				case "slide_min_set":
+				{
+					_sliderMinPos= args.Length >= 2 ? int.Parse(args[1]) : 0;
+					SetCameraSliderMinPosition(_sliderMinPos);
+				}
+				break;
+				case "slide_max_set":
+				{
+					_sliderMaxPos = args.Length >= 2 ? int.Parse(args[1]) : 0;
+					SetCameraSliderMaxPosition(_sliderMaxPos);
+				}
+				break;
+				case "slide_target_set":
+				{
+					_targetSlidePos= args.Length >= 2 ? int.Parse(args[1]) : 0;
+					SetCameraSliderPosition(_targetSlidePos);
+				}
+				break;
+				case "slide_pan_set":
+				{
+					_targetPanPos= args.Length >= 2 ? int.Parse(args[1]) : 0;
+				}
+				break;
+				case "tilt_target_set":
+				{
+					_targetTiltPos= args.Length >= 2 ? int.Parse(args[1]) : 0;
+				}
+				break;
+				case "move_complete":
+				{
+					_hasPendingPresetTarget = false;
+				}
+				break;
+				case "calibration_started":
+				{
+					_deviceCalibrationRunning = true;
+					SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, true);
+					SetCameraStatusLabel("Calibrating...");
+				}
+				break;
+				case "calibration_completed":
+				{
+					_deviceCalibrationRunning = false;
+					SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, false);
+					SetCameraStatusLabel("Connected");
+				}
+				break;
+				case "calibration_failed":
+				{
+					_deviceCalibrationRunning = false;
+					SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, false);
+					SetCameraStatusLabel("Calibration Failed!");
+				}
+				break;
+				}
 			}
 		}
 
@@ -235,6 +310,7 @@ namespace CameraSlider.UI
 				SetCameraStatusLabel("Connected");
 				SetUIControlsDisableFlag(UIControlDisableFlags.DeviceDisconnected, false);
 
+				await _cameraSliderDevice.GetSliderState();
 				await _cameraSliderDevice.SetSlidePosition(_configState._cameraSettingsConfig.SlidePos);
 				await _cameraSliderDevice.SetPanPosition(_configState._cameraSettingsConfig.PanPos);
 				await _cameraSliderDevice.SetTiltPosition(_configState._cameraSettingsConfig.TiltPos);
@@ -659,24 +735,30 @@ namespace CameraSlider.UI
 			_isAccelDragging = false;
 		}
 
-		private void BtnSetSlideMin_Click(object sender, RoutedEventArgs e)
+		private async void BtnSetSlideMin_Click(object sender, RoutedEventArgs e)
 		{
-
+			await _cameraSliderDevice.SetSlideMin(_targetSlidePos);
 		}
 
-		private void BtnSetSlideMax_Click(object sender, RoutedEventArgs e)
+		private async void BtnSetSlideMax_Click(object sender, RoutedEventArgs e)
 		{
-
+			await _cameraSliderDevice.SetSlideMin(_targetSlidePos);
 		}
 
-		private void BtnManualMoveLeft_Click(object sender, RoutedEventArgs e)
+		private async void BtnManualMoveLeft_Click(object sender, RoutedEventArgs e)
 		{
-
+			if (int.TryParse(ManualMoveAmountTextBox.Text, out int moveAmount))
+			{
+				await _cameraSliderDevice.MoveSlider(-moveAmount);
+			}
 		}
 
-		private void BtnManualMoveRight_Click(object sender, RoutedEventArgs e)
+		private async void BtnManualMoveRight_Click(object sender, RoutedEventArgs e)
 		{
-
+			if (int.TryParse(ManualMoveAmountTextBox.Text, out int moveAmount))
+			{
+				await _cameraSliderDevice.MoveSlider(moveAmount);
+			}
 		}
 	}
 }

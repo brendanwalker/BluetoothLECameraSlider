@@ -7,7 +7,12 @@
 class SliderStateEventListener
 {
 public:
-  virtual void onMoveToTargetComplete() {}
+  virtual void onSliderMinSet(int32_t pos) {}
+  virtual void onSliderMaxSet(int32_t pos) {}
+  virtual void onSliderTargetSet(int32_t pos) {}
+  virtual void onPanTargetSet(int32_t pos) {}
+  virtual void onTiltTargetSet(int32_t pos) {}
+  virtual void onMoveToTargetComplete() {}  
 };
 
 class SliderState
@@ -88,13 +93,16 @@ public:
   inline int32_t getTiltStepperCenter() const { return m_tiltStepperCenter; }
   inline int32_t getSlideStepperMin() const { return m_sliderStepperMin; }
   inline int32_t getSlideStepperMax() const { return m_sliderStepperMax; }
-  void writeCalibrationToConfig();
+  void saveSlideStepperPosAsMin();
+  void saveSlideStepperPosAsMax();
   void finalizeCalibration();
 
   void writePositionsToConfig();
 
 private:
   static SliderState* s_instance;
+
+  void writeCalibrationToConfig();
 
   // Listener
   SliderStateEventListener* m_listener= nullptr;  

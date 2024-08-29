@@ -38,6 +38,11 @@ private:
   ConfigManager* m_config= nullptr;
 
   // SliderManager Events
+  virtual void onSliderMinSet(int32_t pos) override;
+  virtual void onSliderMaxSet(int32_t pos) override; 
+  virtual void onSliderTargetSet(int32_t pos) override;
+  virtual void onPanTargetSet(int32_t pos) override;
+  virtual void onTiltTargetSet(int32_t pos) override;
   virtual void onMoveToTargetComplete() override;
 
   // BLEServerCallbacks

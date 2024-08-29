@@ -79,6 +79,51 @@ void BLEManager::loop()
   m_wasDeviceConnected= m_isDeviceConnected;
 }
 
+void BLEManager::onSliderMinSet(int32_t pos)
+{
+  if (m_isDeviceConnected)
+  {
+    Serial.println("Send slide_min_set");
+    sendEvent("slide_min_set " + std::to_string(pos));
+  }
+}
+
+void BLEManager::onSliderMaxSet(int32_t pos)
+{
+  if (m_isDeviceConnected)
+  {
+    Serial.println("Send slide_max_set");
+    sendEvent("slide_max_set " + std::to_string(pos));
+  }
+}
+
+void BLEManager::onSliderTargetSet(int32_t pos)
+{
+  if (m_isDeviceConnected)
+  {
+    Serial.println("Send slide_target_set");
+    sendEvent("slide_target_set " + std::to_string(pos));
+  }
+}
+
+void BLEManager::onPanTargetSet(int32_t pos)
+{
+  if (m_isDeviceConnected)
+  {
+    Serial.println("Send pan_target_set");
+    sendEvent("slide_pan_set " + std::to_string(pos));
+  }
+}
+
+void BLEManager::onTiltTargetSet(int32_t pos)
+{
+  if (m_isDeviceConnected)
+  {
+    Serial.println("Send tilt_target_set");
+    sendEvent("tilt_target_set " + std::to_string(pos));
+  }
+}
+
 void BLEManager::onMoveToTargetComplete()
 {
   if (m_isDeviceConnected)

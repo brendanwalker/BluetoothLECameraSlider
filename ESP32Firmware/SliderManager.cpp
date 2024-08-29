@@ -207,6 +207,34 @@ void SliderState::writePositionsToConfig()
     configManager->saveMotorPositionConfig();  
 }
 
+void SliderState::saveSlideStepperPosAsMin()
+{
+  int32_t pos= m_slideStepper->getCurrentPosition();
+
+  if (pos != m_sliderStepperMin)
+  {
+    setSlideStepperMin(pos);
+    writeCalibrationToConfig();
+
+    // Tell any clients that the slider min pos changed
+    m_listener->onSliderMinSet(pos);
+  }
+}
+
+void SliderState::saveSlideStepperPosAsMax()
+{
+  int32_t pos= m_slideStepper->getCurrentPosition();
+
+  if (pos != m_sliderStepperMax)
+  {
+    setSlideStepperMax(pos);
+    writeCalibrationToConfig();
+
+    // Tell any clients that the slider max pos changed
+    m_listener->onSliderMaxSet(pos);    
+  }
+}
+
 void SliderState::finalizeCalibration()
 {  
   writeCalibrationToConfig();
@@ -398,7 +426,10 @@ void SliderState::setPanStepperTargetDegrees(float cameraDegrees)
     // Remember new target pan position
     Serial.printf("New Pan Position Target: %d -> %d\n", m_lastTargetPanPosition, newTargetPanPosition);
     m_lastTargetPanPosition= newTargetPanPosition;
-    m_isMovingToTarget= true;    
+    m_isMovingToTarget= true;
+
+    // Tell any clients what the final target pan position is
+    m_listener->onPanTargetSet(newTargetPanPosition);
   }
 }
 
@@ -428,6 +459,9 @@ void SliderState::setTiltStepperTargetDegrees(float cameraDegrees)
     Serial.printf("New Tilt Position Target: %d -> %d\n", m_lastTargetTiltPosition, newTargetTiltPosition);
     m_lastTargetTiltPosition= newTargetTiltPosition;
     m_isMovingToTarget= true;    
+
+    // Tell any clients what the final target tilt position is
+    m_listener->onPanTargetSet(newTargetTiltPosition);
   }
 }
 
@@ -500,6 +534,9 @@ void SliderState::setSlideStepperPosition(int32_t newTargetSliderPosition)
     Serial.printf("New Slide Position Target: %d -> %d\n", m_lastTargetSlidePosition, newTargetSliderPosition);
     m_lastTargetSlidePosition= newTargetSliderPosition;
     m_isMovingToTarget= true;
+
+    // Tell any clients what the final target slider position is
+    m_listener->onSliderTargetSet(newTargetSliderPosition);    
   }
 }
 

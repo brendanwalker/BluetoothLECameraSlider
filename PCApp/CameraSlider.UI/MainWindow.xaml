@@ -131,7 +131,7 @@
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
                                 <Label Content="Manual Slide" HorizontalAlignment="Left" Width="90"/>
                                 <Button x:Name="BtnManualMoveLeft" Content="Move Left" IsEnabled="False"  Width="100" Margin="0,5,5,5" Click="BtnManualMoveLeft_Click" VerticalAlignment="Center"/>
-                                <Label Content="00000" Width="50" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+                                <Label x:Name="LblSliderRawPos" Content="00000" Width="50" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
                                 <Button x:Name="BtnManualMoveRight" Content="Move Right" IsEnabled="False"  Width="100" Margin="5,5,5,5" Click="BtnManualMoveRight_Click" VerticalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
