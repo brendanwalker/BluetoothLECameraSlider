@@ -371,7 +371,7 @@ namespace CameraSlider.Bluetooth
 			if (tilt)
 				calibrateArgs.Add("tilt");
 
-			string command = "calibrate " + string.Join(";", calibrateArgs);
+			string command = "calibrate " + string.Join(" ", calibrateArgs);
 
 			return await SendCommand(command);
 		}
@@ -393,7 +393,7 @@ namespace CameraSlider.Bluetooth
 			return await SendCommand("set_slide_min_pos");
 		}
 
-		public async Task<bool> SetSlideMax(int max_pos)
+		public async Task<bool> SetSlideMax()
 		{
 			return await SendCommand("set_slide_max_pos");
 		}

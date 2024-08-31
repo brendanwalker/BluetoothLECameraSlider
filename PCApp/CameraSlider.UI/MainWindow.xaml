@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:CameraSlider.UI"
         mc:Ignorable="EmitLog"
-        Title="CameraSlider" Width="400" Height="426" HorizontalAlignment="Center" VerticalAlignment="Top" >
+        Title="CameraSlider" Width="400" Height="450" HorizontalAlignment="Center" VerticalAlignment="Top" >
     <Grid >
         <TabControl>
             <TabItem Header="Controls">
@@ -104,15 +104,15 @@
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <Label Content="Pitch Calibration" Width="140" HorizontalAlignment="Left"/>
-                                <CheckBox x:Name="PitchEnabledCheckBox" Width="200" HorizontalAlignment="Left" Margin="0,5,0,0"/>
+                                <CheckBox x:Name="PitchEnabledCheckBox" Width="200" HorizontalAlignment="Left" Margin="0,5,0,0" Checked="PitchEnabledCheckBox_Checked" Unchecked="PitchEnabledCheckBox_Checked"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <Label Content="Yaw Calibration" Width="140" HorizontalAlignment="Left"/>
-                                <CheckBox x:Name="YawEnabledCheckBox" Width="200" HorizontalAlignment="Left" Margin="0,5,0,0"/>
+                                <Label Content="Pan Calibration" Width="140" HorizontalAlignment="Left"/>
+                                <CheckBox x:Name="PanEnabledCheckBox" Width="200" HorizontalAlignment="Left" Margin="0,5,0,0" Checked="PanEnabledCheckBox_Checked" Unchecked="PanEnabledCheckBox_Checked" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <Label Content="Slide Calibration" Width="140" HorizontalAlignment="Left"/>
-                                <CheckBox x:Name="SlideEnabledCheckBox" Width="200" HorizontalAlignment="Left" Margin="0,5,0,0"/>
+                                <CheckBox x:Name="SlideEnabledCheckBox" Width="200" HorizontalAlignment="Left" Margin="0,5,0,0" Checked="SlideEnabledCheckBox_Checked" Unchecked="SlideEnabledCheckBox_Checked" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
                                 <Button x:Name="BtnCalibrate" Content="Calibrate" IsEnabled="False"  Width="100" Margin="10,10,10,10" Click="BtnCalibrate_Click" VerticalAlignment="Center"/>
@@ -126,7 +126,7 @@
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
                                 <Label Content="Move Amount" Width="90" HorizontalAlignment="Left"/>
-                                <TextBox x:Name="ManualMoveAmountTextBox" Width="100" HorizontalAlignment="Left" Margin="0,5,0,0"/>
+                                <TextBox x:Name="ManualMoveAmountTextBox" Width="100" HorizontalAlignment="Left" Margin="0,5,0,0" TextChanged="ManualMoveAmountTextBox_TextChanged"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
                                 <Label Content="Manual Slide" HorizontalAlignment="Left" Width="90"/>

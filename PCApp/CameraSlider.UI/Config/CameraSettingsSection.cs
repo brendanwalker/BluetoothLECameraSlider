@@ -9,8 +9,8 @@ namespace CameraSlider.UI.Config
 			SlidePos = 0.0f;
 			PanPos = 0.0f;
 			TiltPos = 0.0f;
-			Speed = 0.0f;
-			Accel = 0.0f;
+			Speed = 0.05f;
+			Accel = 0.05f;
 			ManualSlideStepSize = 100;
 			AutoSlideCalibration = true;
 			AutoPanCalibration = true;

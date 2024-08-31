@@ -25,7 +25,15 @@ namespace CameraSlider.UI.Config
 
 			_presets = new List<PresetSettings>();
 			_arePresetsDirty = false;
-			_cameraSettingsConfig = (CameraSettingsSection)_configFile.GetSection("camera_settings");
+			try
+			{
+				_cameraSettingsConfig = (CameraSettingsSection)_configFile.GetSection("camera_settings");
+			}
+			catch (Exception ex)
+			{
+				_cameraSettingsConfig = null;
+			}
+
 			if (_cameraSettingsConfig != null)
 			{
 				if (_cameraSettingsConfig.PresetJson != "")
@@ -36,6 +44,7 @@ namespace CameraSlider.UI.Config
 			else
 			{
 				_cameraSettingsConfig = new CameraSettingsSection();
+				_configFile.Sections.Remove("camera_settings");
 				_configFile.Sections.Add("camera_settings", _cameraSettingsConfig);
 			}
 

@@ -475,6 +475,12 @@ namespace CameraSlider.UI
 			SpeedStatus.Content = _configState._cameraSettingsConfig.Speed.ToString("0.00");
 			AccelStatus.Content = _configState._cameraSettingsConfig.Accel.ToString("0.00");
 
+			PitchEnabledCheckBox.IsChecked= _configState._cameraSettingsConfig.AutoTiltCalibration;
+			PanEnabledCheckBox.IsChecked= _configState._cameraSettingsConfig.AutoPanCalibration;
+			SlideEnabledCheckBox.IsChecked= _configState._cameraSettingsConfig.AutoSlideCalibration;
+
+			ManualMoveAmountTextBox.Text = _configState._cameraSettingsConfig.ManualSlideStepSize.ToString();
+
 			RebuildPresetComboBox();
 		}
 
@@ -511,6 +517,11 @@ namespace CameraSlider.UI
 					BtnEditPreset.IsEnabled = bEnabled;
 					BtnDeletePreset.IsEnabled = bEnabled;
 					BtnGotoPreset.IsEnabled = bEnabled;
+
+					BtnManualMoveLeft.IsEnabled = bEnabled;
+					BtnManualMoveRight.IsEnabled = bEnabled;
+					BtnSetSlideMax.IsEnabled = bEnabled;
+					BtnSetSlideMin.IsEnabled = bEnabled;
 				});
 
 				_uiDisableBitmask = newFlags;
@@ -737,19 +748,19 @@ namespace CameraSlider.UI
 
 		private async void BtnSetSlideMin_Click(object sender, RoutedEventArgs e)
 		{
-			await _cameraSliderDevice.SetSlideMin(_targetSlidePos);
+			await _cameraSliderDevice.SetSlideMin();
 		}
 
 		private async void BtnSetSlideMax_Click(object sender, RoutedEventArgs e)
 		{
-			await _cameraSliderDevice.SetSlideMin(_targetSlidePos);
+			await _cameraSliderDevice.SetSlideMax();
 		}
 
 		private async void BtnManualMoveLeft_Click(object sender, RoutedEventArgs e)
 		{
 			if (int.TryParse(ManualMoveAmountTextBox.Text, out int moveAmount))
 			{
-				await _cameraSliderDevice.MoveSlider(-moveAmount);
+				await _cameraSliderDevice.MoveSlider(moveAmount);
 			}
 		}
 
@@ -757,8 +768,35 @@ namespace CameraSlider.UI
 		{
 			if (int.TryParse(ManualMoveAmountTextBox.Text, out int moveAmount))
 			{
-				await _cameraSliderDevice.MoveSlider(moveAmount);
+				await _cameraSliderDevice.MoveSlider(-moveAmount);
 			}
+		}
+
+		private void ManualMoveAmountTextBox_TextChanged(object sender, TextChangedEventArgs e)
+		{
+			if (int.TryParse(ManualMoveAmountTextBox.Text, out int moveAmount))
+			{
+				_configState._cameraSettingsConfig.ManualSlideStepSize = moveAmount;
+				_configState._areConfigSettingsDirty= true;
+			}
+		}
+
+		private void PitchEnabledCheckBox_Checked(object sender, RoutedEventArgs e)
+		{
+			_configState._cameraSettingsConfig.AutoTiltCalibration= (bool)PitchEnabledCheckBox.IsChecked;
+			_configState._areConfigSettingsDirty= true;
+		}
+
+		private void PanEnabledCheckBox_Checked(object sender, RoutedEventArgs e)
+		{
+			_configState._cameraSettingsConfig.AutoPanCalibration = (bool)PanEnabledCheckBox.IsChecked;
+			_configState._areConfigSettingsDirty = true;
+		}
+
+		private void SlideEnabledCheckBox_Checked(object sender, RoutedEventArgs e)
+		{
+			_configState._cameraSettingsConfig.AutoSlideCalibration = (bool)SlideEnabledCheckBox.IsChecked;
+			_configState._areConfigSettingsDirty = true;
 		}
 	}
 }
