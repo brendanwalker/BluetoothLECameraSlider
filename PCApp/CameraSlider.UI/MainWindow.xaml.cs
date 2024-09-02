@@ -219,7 +219,7 @@ namespace CameraSlider.UI
 			});
 		}
 
-		private void CameraSliderEventReceived(object sender, CameraSliderEventArgs evt)
+		private async void CameraSliderEventReceived(object sender, CameraSliderEventArgs evt)
 		{
 			EmitLog("Received slider event received: " + evt.Message);
 			string[] args= evt.Message.Split(' ');
@@ -287,6 +287,9 @@ namespace CameraSlider.UI
 					_deviceCalibrationRunning = false;
 					SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, false);
 					SetCameraStatusLabel("Connected");
+
+					// Refetch the slider state to update the UI
+					await _cameraSliderDevice.GetSliderState();
 				}
 				break;
 				case "calibration_failed":
@@ -511,6 +514,7 @@ namespace CameraSlider.UI
 					AccelSlider.IsEnabled = bEnabled;
 
 					BtnCalibrate.IsEnabled = bEnabled;
+					BtnResetCalibration.IsEnabled = bEnabled;
 					BtnHalt.IsEnabled = bEnabled;
 
 					BtnAddPreset.IsEnabled = bEnabled;
@@ -673,6 +677,31 @@ namespace CameraSlider.UI
 					cameraSettings.AutoSlideCalibration, 
 					cameraSettings.AutoPanCalibration, 
 					cameraSettings.AutoTiltCalibration);
+			}
+		}
+
+		private async void BtnResetCalibration_Click(object sender, RoutedEventArgs e)
+		{
+			if (!_deviceCalibrationRunning)
+			{
+				await _cameraSliderDevice.ResetCalibration();
+
+				// Zero out the saved slider positions in the config
+				_configState._cameraSettingsConfig.SlidePos= 0.0f;
+				_configState._cameraSettingsConfig.PanPos= 0.0f;
+				_configState._cameraSettingsConfig.TiltPos= 0.0f;
+				_configState._areConfigSettingsDirty= true;
+
+				// Update the UI
+				await RunOnUiThread(() =>
+				{
+					SlidePosSlider.Value = _configState._cameraSettingsConfig.SlidePos;
+					PanPosSlider.Value = _configState._cameraSettingsConfig.PanPos;
+					TiltPosSlider.Value = _configState._cameraSettingsConfig.TiltPos;
+				});
+
+				// Refetch the slider state to update the UI
+				await _cameraSliderDevice.GetSliderState();
 			}
 		}
 

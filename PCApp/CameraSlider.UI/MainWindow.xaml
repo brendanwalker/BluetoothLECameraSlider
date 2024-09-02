@@ -87,7 +87,7 @@
                     </Border>
                 </StackPanel>
             </TabItem>
-            <TabItem Header="Calibration" Height="20" VerticalAlignment="Bottom">
+            <TabItem Header="Calibration">
                 <StackPanel x:Name="CalibrationStackPanel" Margin="0,0,0,0" RenderTransformOrigin="0.5,0.5" Grid.ColumnSpan="5">
                     <StackPanel.RenderTransform>
                         <TransformGroup>
@@ -115,7 +115,10 @@
                                 <CheckBox x:Name="SlideEnabledCheckBox" Width="200" HorizontalAlignment="Left" Margin="0,5,0,0" Checked="SlideEnabledCheckBox_Checked" Unchecked="SlideEnabledCheckBox_Checked" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-                                <Button x:Name="BtnCalibrate" Content="Calibrate" IsEnabled="False"  Width="100" Margin="10,10,10,10" Click="BtnCalibrate_Click" VerticalAlignment="Center"/>
+                                <Button x:Name="BtnCalibrate" Content="Calibrate" IsEnabled="False"  Width="100" Margin="10,10,10,5" Click="BtnCalibrate_Click" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                <Button x:Name="BtnResetCalibration" Content="Reset Calibration" IsEnabled="False"  Width="100" Margin="10,5,10,10" Click="BtnResetCalibration_Click" VerticalAlignment="Center"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -125,23 +128,23 @@
                                 <Label Content="Manual Calibration" HorizontalAlignment="Left" Width="150"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-                                <Label Content="Move Amount" Width="90" HorizontalAlignment="Left"/>
+                                <Label Content="Move Amount" Width="100" HorizontalAlignment="Left"/>
                                 <TextBox x:Name="ManualMoveAmountTextBox" Width="100" HorizontalAlignment="Left" Margin="0,5,0,0" TextChanged="ManualMoveAmountTextBox_TextChanged"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-                                <Label Content="Manual Slide" HorizontalAlignment="Left" Width="90"/>
+                                <Label Content="Manual Slide" HorizontalAlignment="Left" Width="100"/>
                                 <Button x:Name="BtnManualMoveLeft" Content="Move Left" IsEnabled="False"  Width="100" Margin="0,5,5,5" Click="BtnManualMoveLeft_Click" VerticalAlignment="Center"/>
                                 <Label x:Name="LblSliderRawPos" Content="00000" Width="50" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
                                 <Button x:Name="BtnManualMoveRight" Content="Move Right" IsEnabled="False"  Width="100" Margin="5,5,5,5" Click="BtnManualMoveRight_Click" VerticalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-                                <Label Content="Slide Min" Width="90" HorizontalAlignment="Left"/>
-                                <Button x:Name="BtnSetSlideMin" Content="Set Slide Min" IsEnabled="False" Width="100" Margin="0,5,5,5" Click="BtnSetSlideMin_Click" VerticalAlignment="Center"/>
+                                <Label Content="Slide Left Limit" Width="100" HorizontalAlignment="Left"/>
+                                <Button x:Name="BtnSetSlideMin" Content="Set Left Limit" IsEnabled="False" Width="100" Margin="0,5,5,5" Click="BtnSetSlideMin_Click" VerticalAlignment="Center"/>
                                 <Label x:Name="LblSlideMin" Content="00000" Width="100" HorizontalAlignment="Left" Margin="3,0,0,0"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-                                <Label Content="Slide Max" Width="90" HorizontalAlignment="Left"/>
-                                <Button x:Name="BtnSetSlideMax" Content="Set Slide Max" IsEnabled="False" Width="100" Margin="0,5,5,5" Click="BtnSetSlideMax_Click" VerticalAlignment="Center"/>
+                                <Label Content="Slide Right Limit" Width="100" HorizontalAlignment="Left"/>
+                                <Button x:Name="BtnSetSlideMax" Content="Set Right Limit" IsEnabled="False" Width="100" Margin="0,5,5,5" Click="BtnSetSlideMax_Click" VerticalAlignment="Center"/>
                                 <Label x:Name="LblSlideMax" Content="00000" Width="100" HorizontalAlignment="Left" Margin="3,0,0,0"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">

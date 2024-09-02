@@ -360,6 +360,11 @@ namespace CameraSlider.Bluetooth
 			return await SendCommand("ping");
 		}
 
+		public async Task<bool> ResetCalibration()
+		{
+			return await SendCommand("reset_calibration");
+		}
+
 		public async Task<bool> StartCalibration(bool slide, bool pan, bool tilt)
 		{
 			List<string> calibrateArgs = new List<string>();

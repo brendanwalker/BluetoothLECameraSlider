@@ -235,6 +235,21 @@ void SliderState::saveSlideStepperPosAsMax()
   }
 }
 
+void SliderState::resetCalibration()
+{  
+  m_panStepperCenter= DEFAULT_INITIAL_PAN_POSITION;
+  m_tiltStepperCenter= DEFAULT_INITIAL_TILT_POSITION;
+  m_sliderStepperMin= DEFAULT_INITIAL_SLIDE_POSITION - MAX_SLIDER_SEARCH_STEPS;
+  m_sliderStepperMax= DEFAULT_INITIAL_SLIDE_POSITION + MAX_SLIDER_SEARCH_STEPS;
+
+  m_panStepper->setCurrentPosition(DEFAULT_INITIAL_PAN_POSITION);
+  m_tiltStepper->setCurrentPosition(DEFAULT_INITIAL_TILT_POSITION);
+  m_slideStepper->setCurrentPosition(DEFAULT_INITIAL_SLIDE_POSITION);
+    
+  writeCalibrationToConfig();
+  writePositionsToConfig();
+}
+
 void SliderState::finalizeCalibration()
 {  
   writeCalibrationToConfig();

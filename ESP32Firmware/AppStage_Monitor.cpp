@@ -34,7 +34,13 @@ void AppStage_Monitor::onCommand(const std::vector<std::string>& args)
 {
   SliderState* sliderState= SliderState::getInstance();
 
-  if (args[0] == "calibrate")
+  if (args[0] == "reset_calibration")
+  {
+    Serial.println("MainMenu: Received reset_calibration command");
+
+    sliderState->resetCalibration();
+  }
+  else if (args[0] == "calibrate")
   {    
     Serial.println("MainMenu: Received calibrate command");
     

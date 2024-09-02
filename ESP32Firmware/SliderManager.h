@@ -4,6 +4,15 @@
 #include "Arduino.h"
 #include "FastAccelStepper.h"
 
+#define PAN_CALIBRATION_SPEED   10.f // degrees / second
+#define TILT_CALIBRATION_SPEED  10.f // degrees / second
+#define SLIDE_CALIBRATION_SPEED 50.f // mm / second
+
+#define DEFAULT_INITIAL_PAN_POSITION        10000
+#define DEFAULT_INITIAL_TILT_POSITION       10000
+#define DEFAULT_INITIAL_SLIDE_POSITION      32767
+#define MAX_SLIDER_SEARCH_STEPS             32767
+
 class SliderStateEventListener
 {
 public:
@@ -95,6 +104,7 @@ public:
   inline int32_t getSlideStepperMax() const { return m_sliderStepperMax; }
   void saveSlideStepperPosAsMin();
   void saveSlideStepperPosAsMax();
+  void resetCalibration();
   void finalizeCalibration();
 
   void writePositionsToConfig();
