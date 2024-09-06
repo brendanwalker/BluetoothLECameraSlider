@@ -10,4 +10,12 @@ namespace CameraSlider.Bluetooth.Events
     {
         public string Message { get; set; }
     }
+
+	public class CameraIntValueChangedEventArgs : EventArgs
+	{
+		public int Value
+		{
+			get; set;
+		}
+	}
 }

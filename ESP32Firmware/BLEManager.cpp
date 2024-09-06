@@ -47,11 +47,11 @@ void BLEManager::setup()
   m_pCommandCharacteristic= makeUTF8InputCharacteristic(COMMAND_CHARACTERISTIC_UUID);
   m_pEventCharacteristic= makeUTF8OutputCharacteristic(EVENT_CHARACTERISTIC_UUID);
   
-  m_pSliderPosCharacteristic= makeFloatCharacteristic(SLIDER_POS_CHARACTERISTIC_UUID, true, silderManager->getSliderPosFraction());
-  m_pPanPosCharacteristic= makeFloatCharacteristic(PAN_POS_CHARACTERISTIC_UUID, true, silderManager->getPanPosFraction());
-  m_pTiltPosCharacteristic= makeFloatCharacteristic(TILT_POS_CHARACTERISTIC_UUID, true, silderManager->getTiltPosFraction());
-  m_pSpeedCharacteristic= makeFloatCharacteristic(SPEED_CHARACTERISTIC_UUID, true, silderManager->getSpeedFraction());
-  m_pAccelCharacteristic= makeFloatCharacteristic(ACCEL_CHARACTERISTIC_UUID, true, silderManager->getAccelFraction());    
+  m_pSliderPosCharacteristic= makeInt32OutputCharacteristic(SLIDER_POS_CHARACTERISTIC_UUID, silderManager->getSlideStepperPosition());
+  m_pPanPosCharacteristic= makeInt32OutputCharacteristic(PAN_POS_CHARACTERISTIC_UUID, silderManager->getPanStepperPosition());
+  m_pTiltPosCharacteristic= makeInt32OutputCharacteristic(TILT_POS_CHARACTERISTIC_UUID, silderManager->getTiltStepperPosition());
+  m_pSpeedCharacteristic= makeFloatInputCharacteristic(SPEED_CHARACTERISTIC_UUID, silderManager->getSpeedFraction());
+  m_pAccelCharacteristic= makeFloatInputCharacteristic(ACCEL_CHARACTERISTIC_UUID, silderManager->getAccelFraction());    
 
   // Start the service
   m_pService->start();
@@ -101,8 +101,9 @@ void BLEManager::onSliderTargetSet(int32_t pos)
 {
   if (m_isDeviceConnected)
   {
-    Serial.println("Send slide_target_set");
-    sendEvent("slide_target_set " + std::to_string(pos));
+    Serial.println("Update Slider Pos");
+    m_pSliderPosCharacteristic->setValue(pos);
+    m_pSliderPosCharacteristic->notify();
   }
 }
 
@@ -110,8 +111,9 @@ void BLEManager::onPanTargetSet(int32_t pos)
 {
   if (m_isDeviceConnected)
   {
-    Serial.println("Send pan_target_set");
-    sendEvent("slide_pan_set " + std::to_string(pos));
+    Serial.println("Update Pan Pos");
+    m_pPanPosCharacteristic->setValue(pos);
+    m_pPanPosCharacteristic->notify();
   }
 }
 
@@ -119,8 +121,9 @@ void BLEManager::onTiltTargetSet(int32_t pos)
 {
   if (m_isDeviceConnected)
   {
-    Serial.println("Send tilt_target_set");
-    sendEvent("tilt_target_set " + std::to_string(pos));
+    Serial.println("Update Tilt Pos");
+    m_pTiltPosCharacteristic->setValue(pos);
+    m_pTiltPosCharacteristic->notify();
   }
 }
 
@@ -167,14 +170,12 @@ void BLEManager::sendEvent(const std::string& event)
   m_pEventCharacteristic->notify();
 }
 
-BLECharacteristic *BLEManager::makeFloatCharacteristic(const char* UUID, bool bWritable, float initialValue)
+BLECharacteristic *BLEManager::makeFloatInputCharacteristic(const char* UUID, float initialValue)
 {
-  uint32_t properties= BLECharacteristic::PROPERTY_READ;
-  
-  if (bWritable)
-    properties|= BLECharacteristic::PROPERTY_WRITE;
-
-  BLECharacteristic* pCharacteristic = m_pService->createCharacteristic(UUID, properties);
+  BLECharacteristic* pCharacteristic = m_pService->createCharacteristic(
+      UUID,       
+      BLECharacteristic::PROPERTY_READ |
+      BLECharacteristic::PROPERTY_WRITE);
 
   // https://btprodspecificationrefs.blob.core.windows.net/assigned-numbers/Assigned%20Number%20Types/Assigned_Numbers.pdf
   // 0x2904 - Characteristic Presentation Format
@@ -183,9 +184,28 @@ BLECharacteristic *BLEManager::makeFloatCharacteristic(const char* UUID, bool bW
 
   pCharacteristic->addDescriptor(pDescriptor);
   pCharacteristic->setCallbacks(this);
-  
-  if (bWritable)
-    pCharacteristic->setValue(initialValue);
+  pCharacteristic->setValue(initialValue);
+
+  return pCharacteristic;
+}
+
+BLECharacteristic *BLEManager::makeInt32OutputCharacteristic(const char* UUID, int32_t initialValue)
+{
+  BLECharacteristic* pCharacteristic = m_pService->createCharacteristic(
+      UUID,       
+      BLECharacteristic::PROPERTY_READ   |
+      BLECharacteristic::PROPERTY_WRITE  |
+      BLECharacteristic::PROPERTY_NOTIFY |
+      BLECharacteristic::PROPERTY_INDICATE);
+
+  // https://btprodspecificationrefs.blob.core.windows.net/assigned-numbers/Assigned%20Number%20Types/Assigned_Numbers.pdf
+  // 0x2904 - Characteristic Presentation Format
+  BLE2904 *pDescriptor= new BLE2904();
+  pDescriptor->setDescription(BLE2904::FORMAT_SINT32);
+
+  pCharacteristic->addDescriptor(pDescriptor);
+  pCharacteristic->setCallbacks(this); 
+  pCharacteristic->setValue(initialValue);
 
   return pCharacteristic;
 }
@@ -309,49 +329,6 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
     else
     {
       Serial.printf("BLEManager - Ignoring command: %s\n", value.c_str());
-    }
-  }
-  // Position Controls
-  else if (pCharacteristic == m_pSliderPosCharacteristic)
-  {
-    float value = getFloatCharacteristicValue(pCharacteristic);
-
-    if (m_bleControlEnabled)
-    {
-      SliderState::getInstance()->setSliderPosFraction(value);
-      Serial.printf("BLEManager - Setting Slider Pos fraction to: %f\n", value);
-    }
-    else
-    {
-      Serial.printf("BLEManager - Ignoring Slider Pos control\n");
-    }
-  }
-  else if (pCharacteristic == m_pPanPosCharacteristic)
-  {
-    float value = getFloatCharacteristicValue(pCharacteristic);
-
-    if (m_bleControlEnabled)
-    {
-      SliderState::getInstance()->setPanPosFraction(value);
-      Serial.printf("BLEManager - Setting Pan Pos fraction to: %f\n", value);
-    }
-    else
-    {
-      Serial.printf("BLEManager - Ignoring Pan Pos control\n");
-    }
-  }
-  else if (pCharacteristic == m_pTiltPosCharacteristic)
-  {
-    float value = getFloatCharacteristicValue(pCharacteristic);
-
-    if (m_bleControlEnabled)
-    {
-      SliderState::getInstance()->setTiltPosFraction(value);
-      Serial.printf("BLEManager - Setting Tilt Pos fraction to: %f\n", value);
-    }
-    else
-    {
-      Serial.printf("BLEManager - Ignoring Tilt Pos control\n");
     }
   }
   // Speed Controls

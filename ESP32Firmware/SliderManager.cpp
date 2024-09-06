@@ -555,6 +555,62 @@ void SliderState::setSlideStepperPosition(int32_t newTargetSliderPosition)
   }
 }
 
+void SliderState::setSlidePanTiltPosFraction(float slide, float pan, float tilt)
+{
+  int32_t oldSlidePosition= m_lastTargetSlidePosition;
+  int32_t oldPanPosition= m_lastTargetPanPosition;
+  int32_t oldTiltPosition= m_lastTargetTiltPosition;
+
+  setSliderPosFraction(slide);
+  setPanPosFraction(pan);
+  setTiltPosFraction(tilt);
+
+  if (m_isMovingToTarget)
+  {
+    float maxTimeToComplete= 0;
+    const int32_t absSlideSteps= abs(m_lastTargetSlidePosition - oldSlidePosition);
+    const int32_t absPanSteps= abs(m_lastTargetPanPosition - oldPanPosition);
+    const int32_t absTiltSteps= abs(m_lastTargetTiltPosition - oldTiltPosition);
+
+    // Find the stepper that will take the longest to complete
+    if (absSlideSteps > 0)
+    {
+      const float stepsPerSecond= (float)m_slideStepper->getSpeedInMilliHz() / 1000.f;
+      
+      maxTimeToComplete= max((float)absSlideSteps * stepsPerSecond, maxTimeToComplete);
+    }
+    if (absPanSteps > 0)
+    {
+      const float stepsPerSecond= (float)m_panStepper->getSpeedInMilliHz() / 1000.f;
+      
+      maxTimeToComplete= max((float)absPanSteps * stepsPerSecond, maxTimeToComplete);
+    }
+    if (absTiltSteps > 0)
+    {
+      const float stepsPerSecond= (float)m_tiltStepper->getSpeedInMilliHz() / 1000.f;
+      
+      maxTimeToComplete= max((float)absTiltSteps * stepsPerSecond, maxTimeToComplete);
+    }
+
+    // Recompute the speeds so that each stepper completes at the same time
+    if (maxTimeToComplete > 0.f)
+    {
+      if (absSlideSteps > 0)
+      {
+        m_slideStepper->setSpeedInHz((uint32_t)((float)absSlideSteps / maxTimeToComplete));
+      }
+      if (absPanSteps > 0)
+      {
+        m_panStepper->setSpeedInHz((uint32_t)((float)absPanSteps / maxTimeToComplete));
+      }
+      if (absTiltSteps > 0)
+      {
+        m_tiltStepper->setSpeedInHz((uint32_t)((float)absTiltSteps / maxTimeToComplete));
+      }
+    }
+  }
+}
+
 void SliderState::setSliderPosFraction(float fraction)
 {
   // Remap [-1, 1] unit position to calibrated slider min and max step position  

@@ -29,7 +29,7 @@ namespace CameraSlider.UI.Config
 			{
 				_cameraSettingsConfig = (CameraSettingsSection)_configFile.GetSection("camera_settings");
 			}
-			catch (Exception ex)
+			catch (Exception)
 			{
 				_cameraSettingsConfig = null;
 			}

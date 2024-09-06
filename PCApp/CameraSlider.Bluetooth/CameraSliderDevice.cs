@@ -14,8 +14,6 @@ namespace CameraSlider.Bluetooth
 {
 	public class CameraSliderDevice
 	{
-		public readonly short MAX_SMOKE_DURATION_MILLIS = 10 * 1000; // Max 10 milliseconds
-
 		public readonly string SERVICE_UUID = "6b42e290-28cb-11ee-be56-0242ac120002";
 		public readonly string COMMAND_CHARACTERISTIC_UUID = "62c6b5d1-d304-4b9c-b12b-decd1e5b3614";
 		public readonly string EVENT_CHARACTERISTIC_UUID = "5c88bae1-db64-4483-a0f3-6b6786c6c145";
@@ -40,16 +38,10 @@ namespace CameraSlider.Bluetooth
 		private GattCharacteristic _accelCharacteristic = null;
 
 		public event EventHandler<Events.ConnectionStatusChangedEventArgs> ConnectionStatusChanged;
-		protected virtual void OnConnectionStatusChanged(Events.ConnectionStatusChangedEventArgs e)
-		{
-			ConnectionStatusChanged?.Invoke(this, e);
-		}
-
 		public event EventHandler<Events.CameraSliderEventArgs> CameraSliderEventHandler;
-		protected virtual void OnCameraSliderEvent(Events.CameraSliderEventArgs e)
-		{
-			CameraSliderEventHandler?.Invoke(this, e);
-		}
+		public event EventHandler<Events.CameraIntValueChangedEventArgs> SliderPosChanged;
+		public event EventHandler<Events.CameraIntValueChangedEventArgs> PanPosChanged;
+		public event EventHandler<Events.CameraIntValueChangedEventArgs> TiltPosChanged;
 
 		public async Task<bool> ConnectAsync(string deviceName)
 		{
@@ -113,21 +105,27 @@ namespace CameraSlider.Bluetooth
 				return false;
 
 			_eventCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, EVENT_CHARACTERISTIC_UUID);
-			if (_eventCharacteristic == null)
+			if (_eventCharacteristic != null)
+				await RegisterCharacteristicValueChangeCallback(_eventCharacteristic, NotifyCameraSliderEvent);
+			else
 				return false;
 
-			await RegisterCharacteristicValueChangeCallback(_eventCharacteristic, NotifyCameraSliderEvent);
-
 			_slidePosCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, SLIDER_POS_CHARACTERISTIC_UUID);
-			if (_slidePosCharacteristic == null)
+			if (_slidePosCharacteristic != null)
+				await RegisterCharacteristicValueChangeCallback(_slidePosCharacteristic, NotifySliderPosChangedEvent);
+			else
 				return false;
 
 			_panPosCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, PAN_POS_CHARACTERISTIC_UUID);
-			if (_panPosCharacteristic == null)
+			if (_panPosCharacteristic != null)
+				await RegisterCharacteristicValueChangeCallback(_panPosCharacteristic, NotifyPanPosChangedEvent);
+			else
 				return false;
 
 			_tiltPosCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, TILT_POS_CHARACTERISTIC_UUID);
-			if (_tiltPosCharacteristic == null)
+			if (_tiltPosCharacteristic != null)
+				await RegisterCharacteristicValueChangeCallback(_tiltPosCharacteristic, NotifyTiltPosChangedEvent);
+			else
 				return false;
 
 			_speedCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, SPEED_CHARACTERISTIC_UUID);
@@ -261,6 +259,13 @@ namespace CameraSlider.Bluetooth
 			}
 		}
 
+		public async Task<bool> SetPosition(float slide, float pan, float tilt)
+		{
+			string command = $"set_pos {slide} {pan} {tilt}";
+
+			return await SendCommand(command);
+		}
+
 		private async Task<bool> SendFloat(GattCharacteristic characteristic, float value)
 		{
 			try
@@ -279,21 +284,6 @@ namespace CameraSlider.Bluetooth
 			{
 				return false;
 			}
-		}
-
-		public async Task<bool> SetSlidePosition(float position)
-		{
-			return await SendFloat(_slidePosCharacteristic, position);
-		}
-
-		public async Task<bool> SetPanPosition(float position)
-		{
-			return await SendFloat(_panPosCharacteristic, position);
-		}
-
-		public async Task<bool> SetTiltPosition(float position)
-		{
-			return await SendFloat(_tiltPosCharacteristic, position);
 		}
 
 		public async Task<bool> SetSpeed(float speed)
@@ -325,19 +315,38 @@ namespace CameraSlider.Bluetooth
 			}
 		}
 
-		public async Task<float> GetSlidePosition()
+		private async Task<int> GetInt(GattCharacteristic characteristic)
 		{
-			return await GetFloat(_slidePosCharacteristic);
+			try
+			{
+				if (characteristic == null)
+				{
+					return 0;
+				}
+
+				GattReadResult result = await characteristic.ReadValueAsync();
+
+				return BitConverter.ToInt32(result.Value.ToArray(), 0);
+			}
+			catch (Exception)
+			{
+				return 0;
+			}
 		}
 
-		public async Task<float> GetPanPosition()
+		public async Task<int> GetSlidePosition()
 		{
-			return await GetFloat(_panPosCharacteristic);
+			return await GetInt(_slidePosCharacteristic);
 		}
 
-		public async Task<float> GetTiltPosition()
+		public async Task<int> GetPanPosition()
 		{
-			return await GetFloat(_tiltPosCharacteristic);
+			return await GetInt(_panPosCharacteristic);
+		}
+
+		public async Task<int> GetTiltPosition()
+		{
+			return await GetInt(_tiltPosCharacteristic);
 		}
 
 		public async Task<float> GetSpeed()
@@ -350,9 +359,9 @@ namespace CameraSlider.Bluetooth
 			return await GetFloat(_accelCharacteristic);
 		}
 
-		public async Task<bool> GetSliderState()
+		public async Task<bool> GetSliderCalibration()
 		{
-			return await SendCommand("get_slider_state");
+			return await SendCommand("get_slider_calibration");
 		}
 
 		public async Task<bool> WakeUp()
@@ -415,18 +424,58 @@ namespace CameraSlider.Bluetooth
 				CleanUpGattState();
 			}
 
-			OnConnectionStatusChanged(result);
+			ConnectionStatusChanged?.Invoke(this, result);
 		}
 
 		private void NotifyCameraSliderEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
 		{
 			string Result = CryptographicBuffer.ConvertBinaryToString(BinaryStringEncoding.Utf8, e.CharacteristicValue);
 
-			var args = new Events.CameraSliderEventArgs()
+			var SliderEvent = new Events.CameraSliderEventArgs()
 			{
 				Message = Result
 			};
-			OnCameraSliderEvent(args);
+			CameraSliderEventHandler?.Invoke(this, SliderEvent);
+		}
+
+		private Events.CameraIntValueChangedEventArgs CreateIntChangedEvent(GattValueChangedEventArgs e)
+		{
+			try
+			{
+				int Result = BitConverter.ToInt32(e.CharacteristicValue.ToArray(), 0);
+
+				var IntEvent = new Events.CameraIntValueChangedEventArgs()
+				{
+					Value = Result
+				};
+
+				return IntEvent;
+			}
+			catch (Exception)
+			{
+				return null;
+			}
+		}
+
+		private void NotifySliderPosChangedEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
+		{
+			var IntEvent = CreateIntChangedEvent(e);
+			if (IntEvent != null)
+				SliderPosChanged?.Invoke(this, IntEvent);
+		}
+
+		private void NotifyPanPosChangedEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
+		{
+			var IntEvent = CreateIntChangedEvent(e);
+			if (IntEvent != null)
+				PanPosChanged?.Invoke(this, IntEvent);
+		}
+
+		private void NotifyTiltPosChangedEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
+		{
+			var IntEvent = CreateIntChangedEvent(e);
+			if (IntEvent != null)
+				TiltPosChanged?.Invoke(this, IntEvent);
 		}
 
 		public bool IsConnected

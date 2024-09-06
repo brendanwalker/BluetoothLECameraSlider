@@ -81,6 +81,7 @@ public:
 
   void setSlideStepperPosition(int32_t position);
 
+  void setSlidePanTiltPosFraction(float slide, float pan, float tilt);
   void setSliderPosFraction(float fraction);
   float getSliderPosFraction(); // [-1.f, 1.f]
   void setPanPosFraction(float fraction);

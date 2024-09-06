@@ -50,7 +50,8 @@ private:
   virtual void onDisconnect(BLEServer *pServer) override;
 
   // BLECharacteristicCallbacks
-  BLECharacteristic *makeFloatCharacteristic(const char* UUID, bool bWritable, float initialValue);
+  BLECharacteristic *makeFloatInputCharacteristic(const char* UUID, float initialValue);
+  BLECharacteristic *makeInt32OutputCharacteristic(const char* UUID, int32_t initialValue);
   BLECharacteristic *makeUTF8OutputCharacteristic(const char* UUID);
   BLECharacteristic *makeUTF8InputCharacteristic(const char* UUID);
   float getFloatCharacteristicValue(BLECharacteristic *pCharacteristic);

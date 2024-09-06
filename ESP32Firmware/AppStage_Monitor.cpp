@@ -70,17 +70,24 @@ void AppStage_Monitor::onCommand(const std::vector<std::string>& args)
     sliderCalibration->setAutoCalibration(true);
     m_app->pushAppStage(sliderCalibration);
   }
-  else if (args[0] == "get_slider_state")
+  else if (args[0] == "get_slider_calibration")
   {
-    int32_t pos= sliderState->getSlideStepperPosition();
     int32_t min_pos= sliderState->getSlideStepperMin();
     int32_t max_pos= sliderState->getSlideStepperMax();
 
     std::stringstream ss;
-    ss << "slider_state " << pos << " " << min_pos << " " << max_pos;
+    ss << "slider_calibration " << min_pos << " " << max_pos;
 
     Serial.println("MainMenu: Received get_slider_state command");
     BLEManager::getInstance()->sendEvent(ss.str());
+  }
+  else if (args[0] == "set_pos")
+  {
+    float slide= (float)std::atof(args[1].c_str());
+    float pan= (float)std::atof(args[2].c_str());
+    float tilt= (float)std::atof(args[3].c_str());
+
+    sliderState->setSlidePanTiltPosFraction(slide, pan, tilt);
   }
   else if (args[0] == "move_slider" && args.size() >= 2)
   {
