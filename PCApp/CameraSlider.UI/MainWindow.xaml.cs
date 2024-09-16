@@ -231,6 +231,11 @@ namespace CameraSlider.UI
 			{
 				switch (args[0])
 				{
+				case "pong":
+				{
+					// Nothing to do here
+				}
+				break;
 				case "slider_calibration":
 				{
 					if (args.Length >= 3)

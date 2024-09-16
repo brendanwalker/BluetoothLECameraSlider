@@ -43,6 +43,10 @@ namespace CameraSlider.Bluetooth
 		public event EventHandler<Events.CameraIntValueChangedEventArgs> PanPosChanged;
 		public event EventHandler<Events.CameraIntValueChangedEventArgs> TiltPosChanged;
 
+		private int _pendingCommandId = 0;
+		private int _nextCommandId = 1;
+		private TaskCompletionSource<int> _commandCompletionSource = new TaskCompletionSource<int>(-1);
+
 		public async Task<bool> ConnectAsync(string deviceName)
 		{
 			// Get Bluetooth devices
@@ -247,11 +251,48 @@ namespace CameraSlider.Bluetooth
 					return false;
 				}
 
+				_pendingCommandId = _nextCommandId++;
+				_commandCompletionSource.SetResult(-1);
+
+				string commandWithId = $"{_pendingCommandId} {command}";
+
 				GattWriteResult result =
 					await _commandCharacteristic.WriteValueWithResultAsync(
-						CryptographicBuffer.ConvertStringToBinary(command, BinaryStringEncoding.Utf8));
+						CryptographicBuffer.ConvertStringToBinary(commandWithId, BinaryStringEncoding.Utf8));
 
-				return result.Status == GattCommunicationStatus.Success;
+				if (result.Status == GattCommunicationStatus.Success)
+				{
+					for (int i = 0; i < 10; i++)
+					{
+						var task = _commandCompletionSource.Task;
+						if (await Task.WhenAny(task, Task.Delay(1000)) == task)
+						{
+							if (task.Result == _pendingCommandId)
+							{
+								_pendingCommandId = 0;
+								return true;
+							}
+							else
+							{
+								continue;
+							}
+						}
+						else
+						{
+							_pendingCommandId = 0;
+							return false;
+						}
+					}
+
+					// Exceeded wait-for-response attempts counts
+					_pendingCommandId = 0;
+					return false;
+				}
+				else
+				{
+					// Command write failed
+					return false;
+				}
 			}
 			catch (Exception)
 			{
@@ -421,6 +462,13 @@ namespace CameraSlider.Bluetooth
 
 			if (!result.IsConnected)
 			{
+				if (_pendingCommandId != 0)
+				{
+					// If we are disconnected while waiting for a command response,
+					// we should just mark the command as complete
+					_commandCompletionSource.SetResult(_pendingCommandId);
+				}
+
 				CleanUpGattState();
 			}
 
@@ -429,7 +477,17 @@ namespace CameraSlider.Bluetooth
 
 		private void NotifyCameraSliderEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
 		{
-			string Result = CryptographicBuffer.ConvertBinaryToString(BinaryStringEncoding.Utf8, e.CharacteristicValue);
+			string ResultWithCommandId = CryptographicBuffer.ConvertBinaryToString(BinaryStringEncoding.Utf8, e.CharacteristicValue);
+			string[] Args = ResultWithCommandId.Split(' ');
+			string Result = Args.Length > 1 ? string.Join(" ", Args.Skip(1)) : ResultWithCommandId;
+
+			if (Args.Length > 0 && int.TryParse(Args[0], out int CommandId))
+			{
+				if (CommandId == _pendingCommandId)
+				{
+					_commandCompletionSource.SetResult(CommandId);
+				}
+			}
 
 			var SliderEvent = new Events.CameraSliderEventArgs()
 			{

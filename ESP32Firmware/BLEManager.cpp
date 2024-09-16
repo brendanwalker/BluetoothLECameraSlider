@@ -305,30 +305,59 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
   if (pCharacteristic == m_pCommandCharacteristic)
   {
     std::string value = pCharacteristic->getValue();
+    
+    // Extract command args
+    std::vector<std::string> args;
+    std::istringstream command_stream(value);
+    for (std::string arg; getline(command_stream, arg, ' '); )
+    {
+      args.push_back(arg);
+    }
 
+    // Extract the command Id (if any) from the first arg
+    int commandId= args.size() > 0 ? std::atoi(args[0].c_str()) : 0;
+
+    // Prepend the command id (if any) to the start of the results
+    std::vector<std::string> results;
+    if (commandId > 0)
+    {
+      results.push_back(args[0]);
+    }
+
+    // Process the command
     if (value == "ping")
     {
       Serial.printf("BLEManager - Received Ping\n");
+      results.push_back("pong");
     }
     else if (m_commandHandler != nullptr)
     {
       Serial.printf("BLEManager - Handling command: %s\n", value.c_str());
 
-      std::vector<std::string> args;
-      std::istringstream command_stream(value);
-      for (std::string arg; getline(command_stream, arg, ' '); )
-      {
-        args.push_back(arg);
-      }
-
       if (args.size() > 0)
       {
-        m_commandHandler->onCommand(args);
+        m_commandHandler->onCommand(args, results);
       }
     }
     else
     {
       Serial.printf("BLEManager - Ignoring command: %s\n", value.c_str());
+    }
+
+    // always send a response back if we had a request id
+    // so that the clinet knows it's safe to post another command
+    // without it getting missed
+    if (results.size() > 0)
+    {
+      // Join the results into a single string with " " seperated elements
+      std::stringstream ss;      
+      ss << results[0];
+      for (size_t i = 1; i < results.size(); i++)
+      {
+        ss << " " << results[i];
+      }
+
+      sendEvent(ss.str());
     }
   }
   // Speed Controls

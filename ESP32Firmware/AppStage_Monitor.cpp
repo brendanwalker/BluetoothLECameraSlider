@@ -30,7 +30,7 @@ void AppStage_Monitor::enter()
   m_app->pushInputListener(this);
 }
 
-void AppStage_Monitor::onCommand(const std::vector<std::string>& args)
+void AppStage_Monitor::onCommand(const std::vector<std::string>& args, std::vector<std::string>& results)
 {
   SliderState* sliderState= SliderState::getInstance();
 
@@ -75,11 +75,11 @@ void AppStage_Monitor::onCommand(const std::vector<std::string>& args)
     int32_t min_pos= sliderState->getSlideStepperMin();
     int32_t max_pos= sliderState->getSlideStepperMax();
 
-    std::stringstream ss;
-    ss << "slider_calibration " << min_pos << " " << max_pos;
-
     Serial.println("MainMenu: Received get_slider_state command");
-    BLEManager::getInstance()->sendEvent(ss.str());
+    
+    results.push_back("slider_calibration");
+    results.push_back(std::to_string(min_pos));
+    results.push_back(std::to_string(max_pos));
   }
   else if (args[0] == "set_pos")
   {

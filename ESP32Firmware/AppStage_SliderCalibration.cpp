@@ -59,7 +59,7 @@ void AppStage_SliderCalibration::exit()
 }
 
 // BLEManager Events
-void AppStage_SliderCalibration::onCommand(const std::vector<std::string>& args)
+void AppStage_SliderCalibration::onCommand(const std::vector<std::string>& args, std::vector<std::string>& results)
 {
     if (args[0] == "stop")
     {

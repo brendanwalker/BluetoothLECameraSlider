@@ -13,7 +13,7 @@
 class BLECommandHandler
 {
 public:
-  virtual void onCommand(const std::vector<std::string>& args) {}
+  virtual void onCommand(const std::vector<std::string>& args, std::vector<std::string>& results) {}
 };
 
 class BLEManager : public BLECharacteristicCallbacks, public BLEServerCallbacks, public SliderStateEventListener
