@@ -555,57 +555,69 @@ void SliderState::setSlideStepperPosition(int32_t newTargetSliderPosition)
   }
 }
 
+float computeSecondsToCompleteMove(FastAccelStepper* stepper, const int32_t absSteps)
+{
+  const float stepsPerSecond= (float)stepper->getSpeedInMilliHz() / 1000.f;
+
+  return (float)absSteps * stepsPerSecond;  
+}
+
+void setSliderSpeedByStepsAndTime(FastAccelStepper* stepper, int32_t absSlideSteps, float timeToComplete)
+{
+  stepper->setSpeedInHz((uint32_t)((float)absSlideSteps / timeToComplete));  
+}
+
 void SliderState::setSlidePanTiltPosFraction(float slide, float pan, float tilt)
 {
   int32_t oldSlidePosition= m_lastTargetSlidePosition;
   int32_t oldPanPosition= m_lastTargetPanPosition;
   int32_t oldTiltPosition= m_lastTargetTiltPosition;
 
+  // Re-apply global speed fraction to each slider
+  applyLastSpeedFraction();
+
+  // Apply target slider fraction to each slider
   setSliderPosFraction(slide);
   setPanPosFraction(pan);
   setTiltPosFraction(tilt);
 
+  // See if any slider actually wants to move
   if (m_isMovingToTarget)
   {
-    float maxTimeToComplete= 0;
+    // Compute the absolute number of steps each slider has to move
     const int32_t absSlideSteps= abs(m_lastTargetSlidePosition - oldSlidePosition);
     const int32_t absPanSteps= abs(m_lastTargetPanPosition - oldPanPosition);
     const int32_t absTiltSteps= abs(m_lastTargetTiltPosition - oldTiltPosition);
 
-    // Find the stepper that will take the longest to complete
+    // Find the max time amongst all moving steppers that it will take to reach their target step position
+    float maxTimeToComplete= 0;
     if (absSlideSteps > 0)
     {
-      const float stepsPerSecond= (float)m_slideStepper->getSpeedInMilliHz() / 1000.f;
-      
-      maxTimeToComplete= max((float)absSlideSteps * stepsPerSecond, maxTimeToComplete);
+      maxTimeToComplete= max(computeSecondsToCompleteMove(m_slideStepper, absSlideSteps), maxTimeToComplete);
     }
     if (absPanSteps > 0)
     {
-      const float stepsPerSecond= (float)m_panStepper->getSpeedInMilliHz() / 1000.f;
-      
-      maxTimeToComplete= max((float)absPanSteps * stepsPerSecond, maxTimeToComplete);
+      maxTimeToComplete= max(computeSecondsToCompleteMove(m_panStepper, absPanSteps), maxTimeToComplete);
     }
     if (absTiltSteps > 0)
     {
-      const float stepsPerSecond= (float)m_tiltStepper->getSpeedInMilliHz() / 1000.f;
-      
-      maxTimeToComplete= max((float)absTiltSteps * stepsPerSecond, maxTimeToComplete);
+      maxTimeToComplete= max(computeSecondsToCompleteMove(m_tiltStepper, absTiltSteps), maxTimeToComplete);
     }
 
-    // Recompute the speeds so that each stepper completes at the same time
+    // Given a desired time to complete, recompute each slider speed so that they all complete at the same time
     if (maxTimeToComplete > 0.f)
     {
       if (absSlideSteps > 0)
       {
-        m_slideStepper->setSpeedInHz((uint32_t)((float)absSlideSteps / maxTimeToComplete));
+        setSliderSpeedByStepsAndTime(m_slideStepper, absSlideSteps, maxTimeToComplete);
       }
       if (absPanSteps > 0)
       {
-        m_panStepper->setSpeedInHz((uint32_t)((float)absPanSteps / maxTimeToComplete));
+        setSliderSpeedByStepsAndTime(m_panStepper, absSlideSteps, maxTimeToComplete);
       }
       if (absTiltSteps > 0)
       {
-        m_tiltStepper->setSpeedInHz((uint32_t)((float)absTiltSteps / maxTimeToComplete));
+        setSliderSpeedByStepsAndTime(m_tiltStepper, absSlideSteps, maxTimeToComplete);
       }
     }
   }
@@ -650,20 +662,24 @@ void SliderState::setSpeedFraction(float newFraction)
 {
   if (newFraction != m_lastSpeedFraction)
   {
-    // (special case for 0: use 0 speed to stop the stepper rather than ..._MIN_SPEED)
-    // Remap [0, 1] unit speed to mm/s
-    float newTargetSliderSpeed= newFraction > 0.f ? remapFloatToFloat(0.f, 1.f, SLIDE_MIN_SPEED, SLIDE_MAX_SPEED, newFraction) : 0.f;
-    // Remap [0, 1] unit speed to deg/s
-    float newTargetPanSpeed= newFraction > 0.f ? remapFloatToFloat(0.f, 1.f, PAN_MIN_SPEED, PAN_MAX_SPEED, newFraction) : 0.f;
-    float newTargetTiltSpeed= newFraction > 0.f ? remapFloatToFloat(0.f, 1.f, TILT_MIN_SPEED, TILT_MAX_SPEED, newFraction) : 0.f;
-
-    setSlideStepperLinearSpeed(newTargetSliderSpeed);
-    setPanStepperAngularSpeed(newTargetPanSpeed);
-    setTiltStepperAngularSpeed(newTargetTiltSpeed);
-
     Serial.printf("New Speed Target: %f -> %f\n", m_lastSpeedFraction, newFraction);
     m_lastSpeedFraction= newFraction;
+    applyLastSpeedFraction();
   }
+}
+
+void SliderState::applyLastSpeedFraction()
+{
+  // (special case for 0: use 0 speed to stop the stepper rather than ..._MIN_SPEED)
+  // Remap [0, 1] unit speed to mm/s
+  float newTargetSliderSpeed= m_lastSpeedFraction > 0.f ? remapFloatToFloat(0.f, 1.f, SLIDE_MIN_SPEED, SLIDE_MAX_SPEED, m_lastSpeedFraction) : 0.f;
+  // Remap [0, 1] unit speed to deg/s
+  float newTargetPanSpeed= m_lastSpeedFraction > 0.f ? remapFloatToFloat(0.f, 1.f, PAN_MIN_SPEED, PAN_MAX_SPEED, m_lastSpeedFraction) : 0.f;
+  float newTargetTiltSpeed= m_lastSpeedFraction > 0.f ? remapFloatToFloat(0.f, 1.f, TILT_MIN_SPEED, TILT_MAX_SPEED, m_lastSpeedFraction) : 0.f;
+
+  setSlideStepperLinearSpeed(newTargetSliderSpeed);
+  setPanStepperAngularSpeed(newTargetPanSpeed);
+  setTiltStepperAngularSpeed(newTargetTiltSpeed);
 }
 
 float SliderState::getSpeedFraction()
