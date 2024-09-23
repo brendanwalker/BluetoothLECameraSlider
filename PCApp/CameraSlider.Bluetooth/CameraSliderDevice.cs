@@ -15,8 +15,9 @@ namespace CameraSlider.Bluetooth
 	public class CameraSliderDevice
 	{
 		public readonly string SERVICE_UUID = "6b42e290-28cb-11ee-be56-0242ac120002";
-		public readonly string COMMAND_CHARACTERISTIC_UUID = "62c6b5d1-d304-4b9c-b12b-decd1e5b3614";
-		public readonly string EVENT_CHARACTERISTIC_UUID = "5c88bae1-db64-4483-a0f3-6b6786c6c145";
+		public readonly string STATUS_CHARACTERISTIC_UUID = "6b390b6c-b306-4ccb-a126-d759c5113177";
+		public readonly string REQUEST_CHARACTERISTIC_UUID = "62c6b5d1-d304-4b9c-b12b-decd1e5b3614";
+		public readonly string RESPONSE_CHARACTERISTIC_UUID = "5c88bae1-db64-4483-a0f3-6b6786c6c145";
 		public readonly string SLIDER_POS_CHARACTERISTIC_UUID = "87b8f554-28cb-11ee-be56-0242ac120002";
 		public readonly string PAN_POS_CHARACTERISTIC_UUID = "a86268cb-73bb-497c-bb9b-cf7af318919f";
 		public readonly string TILT_POS_CHARACTERISTIC_UUID = "9881b453-6636-4a73-a335-11bc737f6812";
@@ -27,8 +28,10 @@ namespace CameraSlider.Bluetooth
 
 		private GattDeviceService _cameraSliderService = null;
 
-		private GattCharacteristic _commandCharacteristic = null;
-		private GattCharacteristic _eventCharacteristic = null;
+		private GattCharacteristic _statusCharacteristic = null;
+
+		private GattCharacteristic _requestCharacteristic = null;
+		private GattCharacteristic _responseCharacteristic = null;
 
 		private GattCharacteristic _slidePosCharacteristic = null;
 		private GattCharacteristic _panPosCharacteristic = null;
@@ -38,7 +41,8 @@ namespace CameraSlider.Bluetooth
 		private GattCharacteristic _accelCharacteristic = null;
 
 		public event EventHandler<Events.ConnectionStatusChangedEventArgs> ConnectionStatusChanged;
-		public event EventHandler<Events.CameraSliderEventArgs> CameraSliderEventHandler;
+		public event EventHandler<Events.CameraStatusChangedEventArgs> CameraStatusChanged;
+		public event EventHandler<Events.CameraResponseArgs> CameraResponseHandler;
 		public event EventHandler<Events.CameraIntValueChangedEventArgs> SliderPosChanged;
 		public event EventHandler<Events.CameraIntValueChangedEventArgs> PanPosChanged;
 		public event EventHandler<Events.CameraIntValueChangedEventArgs> TiltPosChanged;
@@ -104,13 +108,19 @@ namespace CameraSlider.Bluetooth
 			if (_cameraSliderService == null)
 				return false;
 
-			_commandCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, COMMAND_CHARACTERISTIC_UUID);
-			if (_commandCharacteristic == null)
+			_statusCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, STATUS_CHARACTERISTIC_UUID);
+			if (_requestCharacteristic != null)
+				await RegisterCharacteristicValueChangeCallback(_statusCharacteristic, NotifyCameraStatusEvent);
+			else
 				return false;
 
-			_eventCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, EVENT_CHARACTERISTIC_UUID);
-			if (_eventCharacteristic != null)
-				await RegisterCharacteristicValueChangeCallback(_eventCharacteristic, NotifyCameraSliderEvent);
+			_requestCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, REQUEST_CHARACTERISTIC_UUID);
+			if (_requestCharacteristic == null)
+				return false;
+
+			_responseCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, RESPONSE_CHARACTERISTIC_UUID);
+			if (_responseCharacteristic != null)
+				await RegisterCharacteristicValueChangeCallback(_responseCharacteristic, NotifyCameraResponseEvent);
 			else
 				return false;
 
@@ -199,12 +209,12 @@ namespace CameraSlider.Bluetooth
 
 			if (_cameraSliderDevice != null)
 			{
-				if (_eventCharacteristic != null)
+				if (_responseCharacteristic != null)
 				{
 					try
 					{
 						GattCommunicationStatus status =
-							await _eventCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
+							await _responseCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
 								GattClientCharacteristicConfigurationDescriptorValue.None);
 						success = status == GattCommunicationStatus.Success;
 					}
@@ -230,8 +240,10 @@ namespace CameraSlider.Bluetooth
 					_cameraSliderService = null;
 				}
 
-				_commandCharacteristic = null;
-				_eventCharacteristic = null;
+				_statusCharacteristic = null;
+
+				_requestCharacteristic = null;
+				_responseCharacteristic = null;
 
 				_slidePosCharacteristic = null;
 				_panPosCharacteristic = null;
@@ -246,7 +258,7 @@ namespace CameraSlider.Bluetooth
 		{
 			try
 			{
-				if (_commandCharacteristic == null)
+				if (_requestCharacteristic == null)
 				{
 					return false;
 				}
@@ -257,7 +269,7 @@ namespace CameraSlider.Bluetooth
 				string commandWithId = $"{_pendingCommandId} {command}";
 
 				GattWriteResult result =
-					await _commandCharacteristic.WriteValueWithResultAsync(
+					await _requestCharacteristic.WriteValueWithResultAsync(
 						CryptographicBuffer.ConvertStringToBinary(commandWithId, BinaryStringEncoding.Utf8));
 
 				if (result.Status == GattCommunicationStatus.Success)
@@ -475,11 +487,21 @@ namespace CameraSlider.Bluetooth
 			ConnectionStatusChanged?.Invoke(this, result);
 		}
 
-		private void NotifyCameraSliderEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
+		private void NotifyCameraStatusEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
+		{
+			string StatusString = CryptographicBuffer.ConvertBinaryToString(BinaryStringEncoding.Utf8, e.CharacteristicValue);
+
+			var StatusArgs = new Events.CameraStatusChangedEventArgs()
+			{
+				Status = StatusString
+			};
+			CameraStatusChanged?.Invoke(this, StatusArgs);
+		}
+
+		private void NotifyCameraResponseEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
 		{
 			string ResultWithCommandId = CryptographicBuffer.ConvertBinaryToString(BinaryStringEncoding.Utf8, e.CharacteristicValue);
 			string[] Args = ResultWithCommandId.Split(' ');
-			string Result = Args.Length > 1 ? string.Join(" ", Args.Skip(1)) : ResultWithCommandId;
 
 			if (Args.Length > 0 && int.TryParse(Args[0], out int CommandId))
 			{
@@ -487,13 +509,13 @@ namespace CameraSlider.Bluetooth
 				{
 					_commandCompletionSource.SetResult(CommandId);
 				}
-			}
 
-			var SliderEvent = new Events.CameraSliderEventArgs()
-			{
-				Message = Result
-			};
-			CameraSliderEventHandler?.Invoke(this, SliderEvent);
+				var ResponseArgs = new Events.CameraResponseArgs()
+				{
+					Args = Args.Skip(1).ToArray() // Strip the command ID
+				};
+				CameraResponseHandler?.Invoke(this, ResponseArgs);
+			}
 		}
 
 		private Events.CameraIntValueChangedEventArgs CreateIntChangedEvent(GattValueChangedEventArgs e)

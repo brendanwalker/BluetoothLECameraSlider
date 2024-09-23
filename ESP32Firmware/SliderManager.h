@@ -21,6 +21,7 @@ public:
   virtual void onSliderTargetSet(int32_t pos) {}
   virtual void onPanTargetSet(int32_t pos) {}
   virtual void onTiltTargetSet(int32_t pos) {}
+  virtual void onMoveToTargetStart() {}
   virtual void onMoveToTargetComplete() {}  
 };
 
@@ -125,6 +126,7 @@ private:
   int32_t motorAngleToSteps(float degrees) const;
   float stepsToMotorAngle(int32_t steps) const;
   void applyLastSpeedFraction();
+  void setIsMovingToTargetFlag(bool flag);
 
   uint8_t m_enPin;
   uint8_t m_panStepPin;

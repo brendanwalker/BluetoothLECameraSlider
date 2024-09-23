@@ -160,13 +160,8 @@ void SliderState::loop()
         abs(motorPanPos - m_lastTargetPanPosition) <= 10 && 
         abs(motorTiltPos - m_lastTargetTiltPosition) <= 10)
       {
-        m_isMovingToTarget= false;
         Serial.printf("Finished move to: Slide=%d, Pad=%d, Tilt=%d\n", motorSlidePos, motorPanPos, motorTiltPos);
-        
-        if (m_listener != nullptr)
-        {
-          m_listener->onMoveToTargetComplete();
-        }
+        setIsMovingToTargetFlag(false);        
       }
   }
 }
@@ -441,7 +436,7 @@ void SliderState::setPanStepperTargetDegrees(float cameraDegrees)
     // Remember new target pan position
     Serial.printf("New Pan Position Target: %d -> %d\n", m_lastTargetPanPosition, newTargetPanPosition);
     m_lastTargetPanPosition= newTargetPanPosition;
-    m_isMovingToTarget= true;
+    setIsMovingToTargetFlag(true);
 
     // Tell any clients what the final target pan position is
     m_listener->onPanTargetSet(newTargetPanPosition);
@@ -456,6 +451,24 @@ float SliderState::getPanStepperDegrees() const
   float clampedCameraDegrees = max(min(cameraDegrees, PAN_MAX_ANGLE), PAN_MIN_ANGLE);  
 
   return clampedCameraDegrees;
+}
+
+void SliderState::setIsMovingToTargetFlag(bool flag)
+{
+  if (!m_isMovingToTarget && flag)
+  {
+    m_isMovingToTarget= true;
+
+    if (m_listener != nullptr)
+      m_listener->onMoveToTargetStart();
+  }
+  else if (m_isMovingToTarget && !flag)
+  {
+    m_isMovingToTarget= false;
+
+    if (m_listener != nullptr)
+      m_listener->onMoveToTargetComplete();
+  }
 }
 
 void SliderState::setTiltStepperTargetDegrees(float cameraDegrees)
@@ -473,7 +486,7 @@ void SliderState::setTiltStepperTargetDegrees(float cameraDegrees)
     // Remember new target tilt position
     Serial.printf("New Tilt Position Target: %d -> %d\n", m_lastTargetTiltPosition, newTargetTiltPosition);
     m_lastTargetTiltPosition= newTargetTiltPosition;
-    m_isMovingToTarget= true;    
+    setIsMovingToTargetFlag(true);
 
     // Tell any clients what the final target tilt position is
     m_listener->onPanTargetSet(newTargetTiltPosition);
@@ -548,7 +561,7 @@ void SliderState::setSlideStepperPosition(int32_t newTargetSliderPosition)
     // Remember new target slide position
     Serial.printf("New Slide Position Target: %d -> %d\n", m_lastTargetSlidePosition, newTargetSliderPosition);
     m_lastTargetSlidePosition= newTargetSliderPosition;
-    m_isMovingToTarget= true;
+    setIsMovingToTargetFlag(true);
 
     // Tell any clients what the final target slider position is
     m_listener->onSliderTargetSet(newTargetSliderPosition);    

@@ -25,7 +25,7 @@ public:
   void setBLEControlEnabled(bool bEnabled) { m_bleControlEnabled= bEnabled; }
   void setCommandHandler(BLECommandHandler *handler);
   void clearCommandHandler(BLECommandHandler *handler);
-  void sendEvent(const std::string& event);
+  void setStatus(const std::string& event);
 
   void setup();
   void loop();
@@ -43,6 +43,7 @@ private:
   virtual void onSliderTargetSet(int32_t pos) override;
   virtual void onPanTargetSet(int32_t pos) override;
   virtual void onTiltTargetSet(int32_t pos) override;
+  virtual void onMoveToTargetStart() override;
   virtual void onMoveToTargetComplete() override;
 
   // BLEServerCallbacks
@@ -60,8 +61,9 @@ private:
 
   BLEServer *m_pServer= nullptr;
   BLEService *m_pService= nullptr;
-  BLECharacteristic *m_pCommandCharacteristic= nullptr;
-  BLECharacteristic *m_pEventCharacteristic= nullptr;
+  BLECharacteristic *m_pStatusCharacteristic= nullptr;
+  BLECharacteristic *m_pRequestCharacteristic= nullptr;
+  BLECharacteristic *m_pResponseCharacteristic= nullptr;
   BLECharacteristic *m_pSliderPosCharacteristic= nullptr;
   BLECharacteristic *m_pPanPosCharacteristic= nullptr;
   BLECharacteristic *m_pTiltPosCharacteristic= nullptr;

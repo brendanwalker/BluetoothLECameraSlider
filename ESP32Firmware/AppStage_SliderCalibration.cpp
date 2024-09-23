@@ -415,7 +415,7 @@ void AppStage_SliderCalibration::onEnterState(eSliderCalibrationState newState)
     {
     case eSliderCalibrationState::Setup:
         {
-            bleManager->sendEvent("calibration_started");
+            bleManager->setStatus("calibration_started");
 
             m_activeMenu = &m_setupMenu;
 
@@ -456,11 +456,11 @@ void AppStage_SliderCalibration::onEnterState(eSliderCalibrationState newState)
         }    
         break;
     case eSliderCalibrationState::Complete:
-        bleManager->sendEvent("calibration_completed");
+        bleManager->setStatus("calibration_completed");
         m_activeMenu = &m_completeMenu;
         break;
     case eSliderCalibrationState::Failed:
-        bleManager->sendEvent("calibration_failed");
+        bleManager->setStatus("calibration_failed");
         m_activeMenu = &m_failedMenu;
         break;
     default:

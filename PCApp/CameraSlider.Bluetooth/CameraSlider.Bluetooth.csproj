@@ -53,7 +53,7 @@
     <Compile Include="Events\DeviceRemovedEventArgs.cs" />
     <Compile Include="Events\DeviceUpdatedEventArgs.cs" />
     <Compile Include="Events\DeviceAddedEventArgs.cs" />
-    <Compile Include="Events\CameraSliderEventArgs.cs" />
+    <Compile Include="Events\CameraResponseArgs.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="CameraSliderDevice.cs" />
     <Compile Include="PairingHelper.cs" />

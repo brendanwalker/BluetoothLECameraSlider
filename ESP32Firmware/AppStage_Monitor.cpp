@@ -95,17 +95,25 @@ void AppStage_Monitor::onCommand(const std::vector<std::string>& args, std::vect
 
     Serial.println("MainMenu: Received move_slider command");
     int32_t pos= sliderState->getSlideStepperPosition();
-    sliderState->setSlideStepperPosition(pos + delta);
+    sliderState->setSlideStepperPosition(pos + delta);    
   }
   else if (args[0] == "set_slide_min_pos")
   {
     Serial.println("MainMenu: Received set_slide_min_pos command");
     sliderState->saveSlideStepperPosAsMin();
+    int32_t min_pos= sliderState->getSlideStepperMin();
+
+    results.push_back("slide_min_set");
+    results.push_back(std::to_string(min_pos));
   }
   else if (args[0] == "set_slide_max_pos")
   {
     Serial.println("MainMenu: Received set_slide_max_pos command");
     sliderState->saveSlideStepperPosAsMax();
+    int32_t max_pos= sliderState->getSlideStepperMax();
+
+    results.push_back("slide_max_set");
+    results.push_back(std::to_string(max_pos));    
   }  
   else if (args[0] == "stop")
   {

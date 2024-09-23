@@ -79,7 +79,8 @@ namespace CameraSlider.UI
 			// Register to Bluetooth LE Camera Slider Device Manager
 			_cameraSliderDevice = new CameraSliderDevice();
 			_cameraSliderDevice.ConnectionStatusChanged += OnDeviceConnectionStatusChanged;
-			_cameraSliderDevice.CameraSliderEventHandler += CameraSliderEventReceived;
+			_cameraSliderDevice.CameraResponseHandler += CameraSliderResponseReceived;
+			_cameraSliderDevice.CameraStatusChanged += OnCameraStatusChanged;
 			_cameraSliderDevice.SliderPosChanged += SliderPosChanged;
 			_cameraSliderDevice.PanPosChanged += PanPosChanged;
 			_cameraSliderDevice.TiltPosChanged += TiltPosChanged;
@@ -222,10 +223,10 @@ namespace CameraSlider.UI
 			});
 		}
 
-		private async void CameraSliderEventReceived(object sender, CameraSliderEventArgs evt)
+		private void CameraSliderResponseReceived(object sender, CameraResponseArgs evt)
 		{
-			EmitLog("Received slider event received: " + evt.Message);
-			string[] args= evt.Message.Split(' ');
+			EmitLog("Received slider response received: " + evt.Args.ToString());
+			string[] args= evt.Args;
 
 			if (args.Length > 0)
 			{
@@ -260,36 +261,51 @@ namespace CameraSlider.UI
 					SetCameraSliderMaxPosition(_sliderMaxPos);
 				}
 				break;
-				case "move_complete":
-				{
-					_hasPendingPresetTarget = false;
 				}
-				break;
-				case "calibration_started":
-				{
-					_deviceCalibrationRunning = true;
-					SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, true);
-					SetCameraStatusLabel("Calibrating...");
-				}
-				break;
-				case "calibration_completed":
-				{
-					_deviceCalibrationRunning = false;
-					SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, false);
-					SetCameraStatusLabel("Connected");
+			}
+		}
 
-					// Refetch the slider calibration to update the UI
-					await _cameraSliderDevice.GetSliderCalibration();
-				}
-				break;
-				case "calibration_failed":
-				{
-					_deviceCalibrationRunning = false;
-					SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, false);
-					SetCameraStatusLabel("Calibration Failed!");
-				}
-				break;
-				}
+		private async void OnCameraStatusChanged(object sender, CameraStatusChangedEventArgs e)
+		{
+			EmitLog("Received slider event received: " + e.Status);
+
+			switch (e.Status)
+			{
+			case "move_start":
+			{
+				SetCameraStatusLabel("Moving...");
+			}
+			break;
+			case "move_complete":
+			{
+				SetCameraStatusLabel("Idle");
+				_hasPendingPresetTarget = false;
+			}
+			break;
+			case "calibration_started":
+			{
+				_deviceCalibrationRunning = true;
+				SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, true);
+				SetCameraStatusLabel("Calibrating...");
+			}
+			break;
+			case "calibration_completed":
+			{
+				_deviceCalibrationRunning = false;
+				SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, false);
+				SetCameraStatusLabel("Idle");
+
+				// Refetch the slider calibration to update the UI
+				await _cameraSliderDevice.GetSliderCalibration();
+			}
+			break;
+			case "calibration_failed":
+			{
+				_deviceCalibrationRunning = false;
+				SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, false);
+				SetCameraStatusLabel("Calibration Failed!");
+			}
+			break;
 			}
 		}
 
@@ -316,7 +332,7 @@ namespace CameraSlider.UI
 
 			if (connected)
 			{
-				SetCameraStatusLabel("Connected");
+				SetCameraStatusLabel("Idle");
 				SetUIControlsDisableFlag(UIControlDisableFlags.DeviceDisconnected, false);
 
 				// Get the slider calibration from the device (response updates the	UI)	

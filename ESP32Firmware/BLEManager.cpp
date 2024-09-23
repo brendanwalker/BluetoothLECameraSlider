@@ -11,8 +11,9 @@
 #include <vector>
 
 #define SERVICE_UUID        "6b42e290-28cb-11ee-be56-0242ac120002"
-#define COMMAND_CHARACTERISTIC_UUID "62c6b5d1-d304-4b9c-b12b-decd1e5b3614"
-#define EVENT_CHARACTERISTIC_UUID "5c88bae1-db64-4483-a0f3-6b6786c6c145"
+#define STATUS_CHARACTERISTIC_UUID "6b390b6c-b306-4ccb-a126-d759c5113177"
+#define REQUEST_CHARACTERISTIC_UUID "62c6b5d1-d304-4b9c-b12b-decd1e5b3614"
+#define RESPONSE_CHARACTERISTIC_UUID "5c88bae1-db64-4483-a0f3-6b6786c6c145"
 #define SLIDER_POS_CHARACTERISTIC_UUID "87b8f554-28cb-11ee-be56-0242ac120002"
 #define PAN_POS_CHARACTERISTIC_UUID "a86268cb-73bb-497c-bb9b-cf7af318919f"
 #define TILT_POS_CHARACTERISTIC_UUID "9881b453-6636-4a73-a335-11bc737f6812"
@@ -44,8 +45,9 @@ void BLEManager::setup()
   // Create slider BLE Characteristics
   SliderState* silderManager= SliderState::getInstance();
 
-  m_pCommandCharacteristic= makeUTF8InputCharacteristic(COMMAND_CHARACTERISTIC_UUID);
-  m_pEventCharacteristic= makeUTF8OutputCharacteristic(EVENT_CHARACTERISTIC_UUID);
+  m_pStatusCharacteristic= makeUTF8OutputCharacteristic(STATUS_CHARACTERISTIC_UUID);
+  m_pRequestCharacteristic= makeUTF8InputCharacteristic(REQUEST_CHARACTERISTIC_UUID);
+  m_pResponseCharacteristic= makeUTF8OutputCharacteristic(RESPONSE_CHARACTERISTIC_UUID);
   
   m_pSliderPosCharacteristic= makeInt32OutputCharacteristic(SLIDER_POS_CHARACTERISTIC_UUID, silderManager->getSlideStepperPosition());
   m_pPanPosCharacteristic= makeInt32OutputCharacteristic(PAN_POS_CHARACTERISTIC_UUID, silderManager->getPanStepperPosition());
@@ -83,8 +85,7 @@ void BLEManager::onSliderMinSet(int32_t pos)
 {
   if (m_isDeviceConnected)
   {
-    Serial.println("Send slide_min_set");
-    sendEvent("slide_min_set " + std::to_string(pos));
+    Serial.printf("Send slide_min_set %d\n", pos);
   }
 }
 
@@ -92,8 +93,7 @@ void BLEManager::onSliderMaxSet(int32_t pos)
 {
   if (m_isDeviceConnected)
   {
-    Serial.println("Send slide_max_set");
-    sendEvent("slide_max_set " + std::to_string(pos));
+    Serial.printf("Send slide_max_set %d", pos);
   }
 }
 
@@ -127,12 +127,21 @@ void BLEManager::onTiltTargetSet(int32_t pos)
   }
 }
 
+void BLEManager::onMoveToTargetStart()
+{
+  if (m_isDeviceConnected)
+  {
+    Serial.println("Send move_start");
+    setStatus("move_start");
+  }
+}
+
 void BLEManager::onMoveToTargetComplete()
 {
   if (m_isDeviceConnected)
   {
     Serial.println("Send move_complete");
-    sendEvent("move_complete");
+    setStatus("move_complete");
   }
 }
 
@@ -166,8 +175,8 @@ void BLEManager::clearCommandHandler(BLECommandHandler *handler)
 
 void BLEManager::sendEvent(const std::string& event)
 {
-  m_pEventCharacteristic->setValue(event.c_str());
-  m_pEventCharacteristic->notify();
+  m_pStatusCharacteristic->setValue(event.c_str());
+  m_pStatusCharacteristic->notify();
 }
 
 BLECharacteristic *BLEManager::makeFloatInputCharacteristic(const char* UUID, float initialValue)
@@ -302,7 +311,7 @@ float BLEManager::getFloatCharacteristicValue(BLECharacteristic *pCharacteristic
 
 void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_param_t* param) 
 {
-  if (pCharacteristic == m_pCommandCharacteristic)
+  if (pCharacteristic == m_pRequestCharacteristic)
   {
     std::string value = pCharacteristic->getValue();
     
@@ -357,7 +366,9 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
         ss << " " << results[i];
       }
 
-      sendEvent(ss.str());
+      std::string response= ss.str();
+      m_pResponseCharacteristic->setValue(response.c_str());
+      m_pResponseCharacteristic->notify();      
     }
   }
   // Speed Controls
