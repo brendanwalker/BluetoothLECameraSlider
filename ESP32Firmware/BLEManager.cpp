@@ -102,7 +102,7 @@ void BLEManager::onSliderTargetSet(int32_t pos)
   if (m_isDeviceConnected)
   {
     Serial.println("Update Slider Pos");
-    m_pSliderPosCharacteristic->setValue(pos);
+    m_pSliderPosCharacteristic->setValue((uint8_t*)&pos, 4);
     m_pSliderPosCharacteristic->notify();
   }
 }
@@ -112,7 +112,7 @@ void BLEManager::onPanTargetSet(int32_t pos)
   if (m_isDeviceConnected)
   {
     Serial.println("Update Pan Pos");
-    m_pPanPosCharacteristic->setValue(pos);
+    m_pPanPosCharacteristic->setValue((uint8_t*)&pos, 4);
     m_pPanPosCharacteristic->notify();
   }
 }
@@ -122,7 +122,7 @@ void BLEManager::onTiltTargetSet(int32_t pos)
   if (m_isDeviceConnected)
   {
     Serial.println("Update Tilt Pos");
-    m_pTiltPosCharacteristic->setValue(pos);
+    m_pTiltPosCharacteristic->setValue((uint8_t*)&pos, 4);
     m_pTiltPosCharacteristic->notify();
   }
 }
@@ -173,7 +173,7 @@ void BLEManager::clearCommandHandler(BLECommandHandler *handler)
   }
 }
 
-void BLEManager::sendEvent(const std::string& event)
+void BLEManager::setStatus(const std::string& event)
 {
   m_pStatusCharacteristic->setValue(event.c_str());
   m_pStatusCharacteristic->notify();
@@ -207,14 +207,10 @@ BLECharacteristic *BLEManager::makeInt32OutputCharacteristic(const char* UUID, i
       BLECharacteristic::PROPERTY_NOTIFY |
       BLECharacteristic::PROPERTY_INDICATE);
 
-  // https://btprodspecificationrefs.blob.core.windows.net/assigned-numbers/Assigned%20Number%20Types/Assigned_Numbers.pdf
-  // 0x2904 - Characteristic Presentation Format
-  BLE2904 *pDescriptor= new BLE2904();
-  pDescriptor->setDescription(BLE2904::FORMAT_SINT32);
-
-  pCharacteristic->addDescriptor(pDescriptor);
+  pCharacteristic->addDescriptor(new BLE2902());
   pCharacteristic->setCallbacks(this); 
-  pCharacteristic->setValue(initialValue);
+
+  pCharacteristic->setValue((uint8_t*)&initialValue, 4);
 
   return pCharacteristic;
 }
@@ -247,36 +243,37 @@ BLECharacteristic *BLEManager::makeUTF8InputCharacteristic(const char* UUID)
 
 void BLEManager::onRead(BLECharacteristic* pCharacteristic, esp_ble_gatts_cb_param_t* param)
 {
-  float value= 0.f;
-
   // Position Controls
   if (pCharacteristic == m_pSliderPosCharacteristic)
   {
-    value= SliderState::getInstance()->getSliderPosFraction();
+    int32_t value= SliderState::getInstance()->getSlideStepperPosition();
+    m_pSliderPosCharacteristic->setValue((uint8_t*)&value, 4);
   }
   else if (pCharacteristic == m_pPanPosCharacteristic)
   {
-    value= SliderState::getInstance()->getPanPosFraction();
+    int32_t value= SliderState::getInstance()->getPanStepperPosition();
+    m_pPanPosCharacteristic->setValue((uint8_t*)&value, 4);
   }
   else if (pCharacteristic == m_pTiltPosCharacteristic)
   {
-    value= SliderState::getInstance()->getTiltPosFraction();
+    int32_t value= SliderState::getInstance()->getTiltStepperPosition();
+    m_pTiltPosCharacteristic->setValue((uint8_t*)&value, 4);
   }
   // Speed Controls
   else if (pCharacteristic == m_pSpeedCharacteristic)
   {
-    value= SliderState::getInstance()->getSpeedFraction();
+    float value= SliderState::getInstance()->getSpeedFraction();
+    m_pSpeedCharacteristic->setValue((uint8_t*)&value, 4);
   }
   else if (pCharacteristic == m_pAccelCharacteristic)
   {
-    value= SliderState::getInstance()->getAccelFraction();
+    float value= SliderState::getInstance()->getAccelFraction();
+    m_pAccelCharacteristic->setValue((uint8_t*)&value, 4);
   }
   else
   {
     return;
   }
-
-  pCharacteristic->setValue(value);
 }
 
 float BLEManager::getFloatCharacteristicValue(BLECharacteristic *pCharacteristic) 
@@ -324,17 +321,27 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
     }
 
     // Extract the command Id (if any) from the first arg
-    int commandId= args.size() > 0 ? std::atoi(args[0].c_str()) : 0;
+    std::string commandIdStr;
+    int commandId= 0;    
+    if (args.size() > 0)
+    {
+      // Extract command id from the front of the args
+      commandIdStr= args[0];
+      commandId= std::atoi(commandIdStr.c_str());
+
+      // Remove the command Id from the args list
+      args.erase(args.begin());
+    }
 
     // Prepend the command id (if any) to the start of the results
     std::vector<std::string> results;
     if (commandId > 0)
     {
-      results.push_back(args[0]);
+      results.push_back(commandIdStr);
     }
 
     // Process the command
-    if (value == "ping")
+    if (args.size() > 0 && args[0] == "ping")
     {
       Serial.printf("BLEManager - Received Ping\n");
       results.push_back("pong");
