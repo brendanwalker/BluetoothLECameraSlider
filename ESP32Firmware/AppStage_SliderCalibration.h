@@ -61,7 +61,7 @@ public:
     virtual void render() override;
 
     // BLEManager Events
-    virtual void onCommand(const std::vector<std::string>& args) override;
+    virtual void onCommand(const std::vector<std::string>& args, std::vector<std::string>& results) override;
 
     // HallSensorEventListener Events
     virtual void onPanSensorChanged(bool bActive) override;
