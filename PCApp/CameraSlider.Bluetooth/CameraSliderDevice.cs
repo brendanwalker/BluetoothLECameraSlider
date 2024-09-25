@@ -49,7 +49,7 @@ namespace CameraSlider.Bluetooth
 
 		private int _pendingCommandId = 0;
 		private int _nextCommandId = 1;
-		private TaskCompletionSource<int> _commandCompletionSource = new TaskCompletionSource<int>(-1);
+		private TaskCompletionSource<string> _commandCompletionSource = null;
 
 		public async Task<bool> ConnectAsync(string deviceName)
 		{
@@ -109,7 +109,7 @@ namespace CameraSlider.Bluetooth
 				return false;
 
 			_statusCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, STATUS_CHARACTERISTIC_UUID);
-			if (_requestCharacteristic != null)
+			if (_statusCharacteristic != null)
 				await RegisterCharacteristicValueChangeCallback(_statusCharacteristic, NotifyCameraStatusEvent);
 			else
 				return false;
@@ -263,8 +263,9 @@ namespace CameraSlider.Bluetooth
 					return false;
 				}
 
-				_pendingCommandId = _nextCommandId++;
-				_commandCompletionSource.SetResult(-1);
+				_pendingCommandId = _nextCommandId;
+				_commandCompletionSource= new TaskCompletionSource<string>("");
+				_nextCommandId++;
 
 				string commandWithId = $"{_pendingCommandId} {command}";
 
@@ -279,9 +280,16 @@ namespace CameraSlider.Bluetooth
 						var task = _commandCompletionSource.Task;
 						if (await Task.WhenAny(task, Task.Delay(1000)) == task)
 						{
-							if (task.Result == _pendingCommandId)
+							if (task.IsCompleted)
 							{
+								string response = task.Result;
+
+								// Clear the pending command state BEFORE handling the response
+								// Since the response handler may issue another command
+								_commandCompletionSource= null;
 								_pendingCommandId = 0;
+
+								ProcessResponse(task.Result);
 								return true;
 							}
 							else
@@ -308,7 +316,25 @@ namespace CameraSlider.Bluetooth
 			}
 			catch (Exception)
 			{
+				_pendingCommandId = 0;
 				return false;
+			}
+		}
+
+		private void ProcessResponse(string response)
+		{
+			string[] Args = response.Split(' ');
+
+			if (Args.Length > 0 && int.TryParse(Args[0], out int CommandId))
+			{
+				if (CommandId == _pendingCommandId)
+				{
+					var ResponseArgs = new Events.CameraResponseArgs()
+					{
+						Args = Args.Skip(1).ToArray() // Strip the command ID
+					};
+					CameraResponseHandler?.Invoke(this, ResponseArgs);
+				}
 			}
 		}
 
@@ -478,7 +504,10 @@ namespace CameraSlider.Bluetooth
 				{
 					// If we are disconnected while waiting for a command response,
 					// we should just mark the command as complete
-					_commandCompletionSource.SetResult(_pendingCommandId);
+					if (_commandCompletionSource != null && !_commandCompletionSource.Task.IsCompleted)
+					{
+						_commandCompletionSource.SetResult("");
+					}
 				}
 
 				CleanUpGattState();
@@ -500,22 +529,9 @@ namespace CameraSlider.Bluetooth
 
 		private void NotifyCameraResponseEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
 		{
-			string ResultWithCommandId = CryptographicBuffer.ConvertBinaryToString(BinaryStringEncoding.Utf8, e.CharacteristicValue);
-			string[] Args = ResultWithCommandId.Split(' ');
+			string Response = CryptographicBuffer.ConvertBinaryToString(BinaryStringEncoding.Utf8, e.CharacteristicValue);
 
-			if (Args.Length > 0 && int.TryParse(Args[0], out int CommandId))
-			{
-				if (CommandId == _pendingCommandId)
-				{
-					_commandCompletionSource.SetResult(CommandId);
-				}
-
-				var ResponseArgs = new Events.CameraResponseArgs()
-				{
-					Args = Args.Skip(1).ToArray() // Strip the command ID
-				};
-				CameraResponseHandler?.Invoke(this, ResponseArgs);
-			}
+			_commandCompletionSource.SetResult(Response);
 		}
 
 		private Events.CameraIntValueChangedEventArgs CreateIntChangedEvent(GattValueChangedEventArgs e)
