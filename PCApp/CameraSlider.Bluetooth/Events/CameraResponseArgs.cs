@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CameraSlider.Bluetooth.Events
 {
@@ -19,8 +15,20 @@ namespace CameraSlider.Bluetooth.Events
         public string[] Args { get; set; }
     }
 
-	public class CameraIntValueChangedEventArgs : EventArgs
+	public class CameraPositionValueChangedEventArgs : EventArgs
 	{
+		public enum PositionType
+		{
+			Slider,
+			Pan,
+			Tilt
+		}
+
+		public PositionType Type
+		{
+			get; set;
+		}
+
 		public int Value
 		{
 			get; set;

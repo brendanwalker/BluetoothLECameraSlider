@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Linq;
 
 namespace CameraSlider.UI.Config
 {
@@ -14,6 +15,22 @@ namespace CameraSlider.UI.Config
 		public bool _areConfigSettingsDirty = false;
 		public bool _arePresetsDirty = false;
 
+		// Read-only config state from web socket server
+		private string[] _presetNames = new string[] { };
+		public string PresetNameListString
+		{
+			get {
+				string result;
+
+				lock (_presets)
+				{
+					result = string.Join(" ", _presetNames);
+				}
+
+				return result;
+			}
+		}
+		
 		public void LoadConfig()
 		{
 			// Open App.Config of executable
@@ -39,6 +56,7 @@ namespace CameraSlider.UI.Config
 				if (_cameraSettingsConfig.PresetJson != "")
 				{
 					_presets = JsonConvert.DeserializeObject<List<PresetSettings>>(_cameraSettingsConfig.PresetJson);
+					RebuildPresetNameList();
 				}
 			}
 			else
@@ -62,11 +80,20 @@ namespace CameraSlider.UI.Config
 		{
 			if (_arePresetsDirty)
 			{
+				RebuildPresetNameList();
 				_cameraSettingsConfig.PresetJson = JsonConvert.SerializeObject(_presets, Formatting.None);
 				_arePresetsDirty = false;
 			}
 			_areConfigSettingsDirty = false;
 			_configFile.Save();
+		}
+
+		private void RebuildPresetNameList()
+		{
+			lock(_presets)
+			{
+				_presetNames = _presets.Select(p => p.PresetName).ToArray();
+			}
 		}
 	}
 }

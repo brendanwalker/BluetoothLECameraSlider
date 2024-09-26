@@ -43,9 +43,9 @@ namespace CameraSlider.Bluetooth
 		public event EventHandler<Events.ConnectionStatusChangedEventArgs> ConnectionStatusChanged;
 		public event EventHandler<Events.CameraStatusChangedEventArgs> CameraStatusChanged;
 		public event EventHandler<Events.CameraResponseArgs> CameraResponseHandler;
-		public event EventHandler<Events.CameraIntValueChangedEventArgs> SliderPosChanged;
-		public event EventHandler<Events.CameraIntValueChangedEventArgs> PanPosChanged;
-		public event EventHandler<Events.CameraIntValueChangedEventArgs> TiltPosChanged;
+		public event EventHandler<Events.CameraPositionValueChangedEventArgs> SliderPosChanged;
+		public event EventHandler<Events.CameraPositionValueChangedEventArgs> PanPosChanged;
+		public event EventHandler<Events.CameraPositionValueChangedEventArgs> TiltPosChanged;
 
 		private int _pendingCommandId = 0;
 		private int _nextCommandId = 1;
@@ -534,18 +534,21 @@ namespace CameraSlider.Bluetooth
 			_commandCompletionSource.SetResult(Response);
 		}
 
-		private Events.CameraIntValueChangedEventArgs CreateIntChangedEvent(GattValueChangedEventArgs e)
+		private Events.CameraPositionValueChangedEventArgs CreatePositionChangedEvent(
+			CameraPositionValueChangedEventArgs.PositionType type,
+			GattValueChangedEventArgs e)
 		{
 			try
 			{
-				int Result = BitConverter.ToInt32(e.CharacteristicValue.ToArray(), 0);
+				int result = BitConverter.ToInt32(e.CharacteristicValue.ToArray(), 0);
 
-				var IntEvent = new Events.CameraIntValueChangedEventArgs()
+				var PositionChangeEvent = new Events.CameraPositionValueChangedEventArgs()
 				{
-					Value = Result
+					Type = type,
+					Value = result
 				};
 
-				return IntEvent;
+				return PositionChangeEvent;
 			}
 			catch (Exception)
 			{
@@ -555,23 +558,26 @@ namespace CameraSlider.Bluetooth
 
 		private void NotifySliderPosChangedEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
 		{
-			var IntEvent = CreateIntChangedEvent(e);
-			if (IntEvent != null)
-				SliderPosChanged?.Invoke(this, IntEvent);
+			var Event = CreatePositionChangedEvent(
+				CameraPositionValueChangedEventArgs.PositionType.Slider, e);
+			if (Event != null)
+				SliderPosChanged?.Invoke(this, Event);
 		}
 
 		private void NotifyPanPosChangedEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
 		{
-			var IntEvent = CreateIntChangedEvent(e);
-			if (IntEvent != null)
-				PanPosChanged?.Invoke(this, IntEvent);
+			var Event = CreatePositionChangedEvent(
+				CameraPositionValueChangedEventArgs.PositionType.Pan, e);
+			if (Event != null)
+				PanPosChanged?.Invoke(this, Event);
 		}
 
 		private void NotifyTiltPosChangedEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
 		{
-			var IntEvent = CreateIntChangedEvent(e);
-			if (IntEvent != null)
-				TiltPosChanged?.Invoke(this, IntEvent);
+			var Event = CreatePositionChangedEvent(
+				CameraPositionValueChangedEventArgs.PositionType.Tilt, e);
+			if (Event != null)
+				TiltPosChanged?.Invoke(this, Event);
 		}
 
 		public bool IsConnected

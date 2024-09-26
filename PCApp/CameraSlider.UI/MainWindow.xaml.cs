@@ -12,12 +12,12 @@ using System.Text.RegularExpressions;
 using CameraSlider.UI.Config;
 using CameraSlider.UI.WebSocketServer;
 using System.Net;
-using System.Linq;
 using vtortola.WebSockets;
+using System.Collections.Concurrent;
 
 namespace CameraSlider.UI
 {
-	public partial class MainWindow : Window
+    public partial class MainWindow : Window
 	{
 		[Flags]
 		public enum UIControlDisableFlags
@@ -36,11 +36,11 @@ namespace CameraSlider.UI
 		private WebSocketEventListener _webSocketServer;
 
 		// Camera Slider
-		CancellationTokenSource _deviceWatchdogCancelSignaler = new CancellationTokenSource();
+		CancellationTokenSource _messagePumpCancelSignaler = new CancellationTokenSource();
 		private string _deviceName = "Camera Slider";
 		private CameraSliderDevice _cameraSliderDevice;
 		private bool _deviceCalibrationRunning = false;
-		private static int _deviceKeepAliveDelay = 10;
+		private static int _deviceKeepAliveDelay = 100;
 		private int _deviceKeepAliveCountdown = _deviceKeepAliveDelay;
 		private bool _suppressUIUpdatesToDevice = false;
 
@@ -63,6 +63,8 @@ namespace CameraSlider.UI
 		private bool _isSpeedDragging = false;
 		private bool _isAccelDragging = false;
 
+		private ConcurrentQueue<EventArgs> _messageQueue = new ConcurrentQueue<EventArgs>();
+
 		public MainWindow()
 		{
 			InitializeComponent();
@@ -78,19 +80,19 @@ namespace CameraSlider.UI
 
 			// Register to Bluetooth LE Camera Slider Device Manager
 			_cameraSliderDevice = new CameraSliderDevice();
-			_cameraSliderDevice.ConnectionStatusChanged += OnDeviceConnectionStatusChanged;
-			_cameraSliderDevice.CameraResponseHandler += CameraSliderResponseReceived;
-			_cameraSliderDevice.CameraStatusChanged += OnCameraStatusChanged;
-			_cameraSliderDevice.SliderPosChanged += SliderPosChanged;
-			_cameraSliderDevice.PanPosChanged += PanPosChanged;
-			_cameraSliderDevice.TiltPosChanged += TiltPosChanged;
+			_cameraSliderDevice.ConnectionStatusChanged += (sender, args) => { _messageQueue.Enqueue(args); };
+			_cameraSliderDevice.CameraResponseHandler += (sender, args) => { _messageQueue.Enqueue(args); };
+			_cameraSliderDevice.CameraStatusChanged += (sender, args) => { _messageQueue.Enqueue(args); };
+			_cameraSliderDevice.SliderPosChanged += (sender, args) => { _messageQueue.Enqueue(args); };
+			_cameraSliderDevice.PanPosChanged += (sender, args) => { _messageQueue.Enqueue(args); };
+			_cameraSliderDevice.TiltPosChanged += (sender, args) => { _messageQueue.Enqueue(args); };
 
 			// Setup the UI
 			SetUIControlsDisableFlag(UIControlDisableFlags.DeviceDisconnected, true);
 			ApplyConfigToUI();
 
 			// Kick off the watchdog workers
-			_ = StartDeviceWatchdogWorker(_deviceWatchdogCancelSignaler.Token);
+			_ = StartMessagePump(_messagePumpCancelSignaler.Token);
 		}
 
 		protected async override void OnClosing(CancelEventArgs e)
@@ -98,7 +100,7 @@ namespace CameraSlider.UI
 			base.OnClosing(e);
 
 			// Stop any running async tasks
-			_deviceWatchdogCancelSignaler.Cancel();
+			_messagePumpCancelSignaler.Cancel();
 			if (_presetCancelSignaler != null)
 			{
 				_presetCancelSignaler.Cancel();
@@ -151,6 +153,14 @@ namespace CameraSlider.UI
 			EmitLog($"Client {ws.RemoteEndpoint.ToString()} Error: {ex.Message}");
 		}
 
+		internal class ActivatePresetArgs : EventArgs
+		{
+			public string PresetName
+			{
+				get; set;
+			}
+		}
+
 		private void OnWebSocketMessageReceived(WebSocket ws, string rawMessage)
 		{
 			EmitLog($"Received Message: '{rawMessage}' from client: {ws.RemoteEndpoint.ToString()}");
@@ -164,16 +174,7 @@ namespace CameraSlider.UI
 					{
 						if (messageParts.Length > 1)
 						{
-							PresetSettings preset= GetPresetByName(messageParts[1]);
-							if (preset != null)
-							{
-								EmitLog($"Preset '{messageParts[1]}' activate requested.");
-								ActivatePreset(preset);
-							}
-							else
-							{
-								EmitLog($"Preset '{messageParts[1]}' not found!");
-							}
+							_messageQueue.Enqueue(new ActivatePresetArgs() { PresetName=messageParts[1] });
 						}
 					} break;
 
@@ -181,10 +182,7 @@ namespace CameraSlider.UI
 					{
 						EmitLog($"getPresetList requested.");
 
-						string[] presetNames= _configState._presets.Select(p => p.PresetName).ToArray();
-						string response= "getPresetList "+string.Join(" ", presetNames);
-
-						ws.WriteString(response);
+						ws.WriteString("getPresetList " + _configState.PresetNameListString);
 					} break;
 				}				
 			}
@@ -309,17 +307,17 @@ namespace CameraSlider.UI
 			}
 		}
 
-		private void TiltPosChanged(object sender, CameraIntValueChangedEventArgs e)
+		private void TiltPosChanged(object sender, CameraPositionValueChangedEventArgs e)
 		{
 			_targetTiltPos = e.Value;
 		}
 
-		private void PanPosChanged(object sender, CameraIntValueChangedEventArgs e)
+		private void PanPosChanged(object sender, CameraPositionValueChangedEventArgs e)
 		{
 			_targetPanPos = e.Value;
 		}
 
-		private void SliderPosChanged(object sender, CameraIntValueChangedEventArgs e)
+		private void SliderPosChanged(object sender, CameraPositionValueChangedEventArgs e)
 		{
 			_targetSlidePos = e.Value;
 			SetCameraSliderPosition(_targetSlidePos);
@@ -371,7 +369,7 @@ namespace CameraSlider.UI
 			}
 		}
 
-		private async Task StartDeviceWatchdogWorker(CancellationToken cancellationToken)
+		private async Task StartMessagePump(CancellationToken cancellationToken)
 		{
 			try
 			{
@@ -406,18 +404,68 @@ namespace CameraSlider.UI
 						}
 					}
 
+					// Process any enqueued messages from the device or websocket threads
+					ProcessMessageQueue();
+
+					// Save the config settings if they are dirty
 					if (_configState._areConfigSettingsDirty)
 					{
+						if (_configState._arePresetsDirty)
+						{
+
+						}
+
 						_configState.SaveConfig();
 					}
 
-					await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+					await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
 				}
 			}
 			catch (OperationCanceledException)
 			{
 				// Handle the cancellation
 				Console.WriteLine("Shut down watch dog worker");
+			}
+		}
+
+		private void ProcessMessageQueue()
+		{
+			while (_messageQueue.TryDequeue(out EventArgs evt))
+			{
+				if (evt is ConnectionStatusChangedEventArgs)
+				{
+					OnDeviceConnectionStatusChanged(this, evt as ConnectionStatusChangedEventArgs);
+				}
+				else if (evt is CameraResponseArgs)
+				{
+					CameraSliderResponseReceived(this, evt as CameraResponseArgs);
+				}
+				else if (evt is CameraStatusChangedEventArgs)
+				{
+					OnCameraStatusChanged(this, evt as CameraStatusChangedEventArgs);
+				}
+				else if (evt is CameraPositionValueChangedEventArgs)
+				{
+					var posEvt = evt as CameraPositionValueChangedEventArgs;
+
+					switch (posEvt.Type)
+					{
+					case CameraPositionValueChangedEventArgs.PositionType.Slider:
+						SliderPosChanged(this, posEvt);
+						break;
+					case CameraPositionValueChangedEventArgs.PositionType.Pan:
+						PanPosChanged(this, posEvt);
+						break;
+					case CameraPositionValueChangedEventArgs.PositionType.Tilt:
+						TiltPosChanged(this, posEvt);
+						break;
+					}
+				}
+				else if (evt is ActivatePresetArgs)
+				{
+					var presetArgs = evt as ActivatePresetArgs;
+					ActivatePreset(GetPresetByName(presetArgs.PresetName));
+				}
 			}
 		}
 
@@ -428,6 +476,11 @@ namespace CameraSlider.UI
 
 		private void ActivatePreset(PresetSettings preset)
 		{
+			if (preset == null)
+			{
+				return;
+			}
+
 			// Cancel any previous preset status polling
 			if (_presetCancelSignaler != null)
 			{
@@ -674,6 +727,8 @@ namespace CameraSlider.UI
 			{
 				int index = PresetComboBox.SelectedIndex;
 				_configState._presets.RemoveAt(index);
+				_configState._arePresetsDirty = true;
+				_configState._areConfigSettingsDirty= true;
 				PresetComboBox.Items.RemoveAt(index);
 			}
 		}

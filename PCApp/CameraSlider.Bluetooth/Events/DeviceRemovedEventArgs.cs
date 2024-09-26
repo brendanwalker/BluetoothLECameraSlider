@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CameraSlider.Bluetooth.Events
 {
-    public class DeviceRemovedEventArgs
+    public class DeviceRemovedEventArgs : EventArgs
     {
         public Schema.WatcherDevice Device { get; set; }
     }
