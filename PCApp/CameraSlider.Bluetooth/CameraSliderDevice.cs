@@ -9,6 +9,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Devices.Enumeration;
 using System.Collections.Generic;
+using CameraSlider.Bluetooth.Commands;
 
 namespace CameraSlider.Bluetooth
 {
@@ -40,16 +41,14 @@ namespace CameraSlider.Bluetooth
 		private GattCharacteristic _speedCharacteristic = null;
 		private GattCharacteristic _accelCharacteristic = null;
 
+		private RequestManager _requestManager = new RequestManager();
+
 		public event EventHandler<Events.ConnectionStatusChangedEventArgs> ConnectionStatusChanged;
 		public event EventHandler<Events.CameraStatusChangedEventArgs> CameraStatusChanged;
 		public event EventHandler<Events.CameraResponseArgs> CameraResponseHandler;
 		public event EventHandler<Events.CameraPositionValueChangedEventArgs> SliderPosChanged;
 		public event EventHandler<Events.CameraPositionValueChangedEventArgs> PanPosChanged;
 		public event EventHandler<Events.CameraPositionValueChangedEventArgs> TiltPosChanged;
-
-		private int _pendingCommandId = 0;
-		private int _nextCommandId = 1;
-		private TaskCompletionSource<string> _commandCompletionSource = null;
 
 		public async Task<bool> ConnectAsync(string deviceName)
 		{
@@ -254,7 +253,13 @@ namespace CameraSlider.Bluetooth
 			}
 		}
 
-		private async Task<bool> SendCommand(string command)
+		private void SendCommand(string command)
+		{
+			_requestManager.EnqueueRequest(command);
+			SendNextPendingCommand();
+		}
+
+		private async Task<bool> SendRequest(string command)
 		{
 			try
 			{
@@ -263,86 +268,34 @@ namespace CameraSlider.Bluetooth
 					return false;
 				}
 
-				_pendingCommandId = _nextCommandId;
-				_commandCompletionSource= new TaskCompletionSource<string>("");
-				_nextCommandId++;
-
-				string commandWithId = $"{_pendingCommandId} {command}";
-
 				GattWriteResult result =
 					await _requestCharacteristic.WriteValueWithResultAsync(
-						CryptographicBuffer.ConvertStringToBinary(commandWithId, BinaryStringEncoding.Utf8));
+						CryptographicBuffer.ConvertStringToBinary(command, BinaryStringEncoding.Utf8));
 
-				if (result.Status == GattCommunicationStatus.Success)
-				{
-					for (int i = 0; i < 10; i++)
-					{
-						var task = _commandCompletionSource.Task;
-						if (await Task.WhenAny(task, Task.Delay(1000)) == task)
-						{
-							if (task.IsCompleted)
-							{
-								string response = task.Result;
-
-								// Clear the pending command state BEFORE handling the response
-								// Since the response handler may issue another command
-								_commandCompletionSource= null;
-								_pendingCommandId = 0;
-
-								ProcessResponse(task.Result);
-								return true;
-							}
-							else
-							{
-								continue;
-							}
-						}
-						else
-						{
-							_pendingCommandId = 0;
-							return false;
-						}
-					}
-
-					// Exceeded wait-for-response attempts counts
-					_pendingCommandId = 0;
-					return false;
-				}
-				else
-				{
-					// Command write failed
-					return false;
-				}
+				return result.Status == GattCommunicationStatus.Success;
 			}
 			catch (Exception)
 			{
-				_pendingCommandId = 0;
 				return false;
 			}
 		}
 
-		private void ProcessResponse(string response)
+		public async void SendNextPendingCommand()
 		{
-			string[] Args = response.Split(' ');
-
-			if (Args.Length > 0 && int.TryParse(Args[0], out int CommandId))
+			if (_requestManager.TryDequeueRequestToSend(out Request request))
 			{
-				if (CommandId == _pendingCommandId)
+				if (await SendRequest(request.Message) == false)
 				{
-					var ResponseArgs = new Events.CameraResponseArgs()
-					{
-						Args = Args.Skip(1).ToArray() // Strip the command ID
-					};
-					CameraResponseHandler?.Invoke(this, ResponseArgs);
+					_requestManager.ClearInFlightRequest(request);
 				}
 			}
 		}
 
-		public async Task<bool> SetPosition(float slide, float pan, float tilt)
+		public void SetPosition(float slide, float pan, float tilt)
 		{
 			string command = $"set_pos {slide} {pan} {tilt}";
 
-			return await SendCommand(command);
+			SendCommand(command);
 		}
 
 		private async Task<bool> SendFloat(GattCharacteristic characteristic, float value)
@@ -438,22 +391,22 @@ namespace CameraSlider.Bluetooth
 			return await GetFloat(_accelCharacteristic);
 		}
 
-		public async Task<bool> GetSliderCalibration()
+		public void GetSliderCalibration()
 		{
-			return await SendCommand("get_slider_calibration");
+			SendCommand("get_slider_calibration");
 		}
 
-		public async Task<bool> WakeUp()
+		public void WakeUp()
 		{
-			return await SendCommand("ping");
+			SendCommand("ping");
 		}
 
-		public async Task<bool> ResetCalibration()
+		public void ResetCalibration()
 		{
-			return await SendCommand("reset_calibration");
+			SendCommand("reset_calibration");
 		}
 
-		public async Task<bool> StartCalibration(bool slide, bool pan, bool tilt)
+		public void StartCalibration(bool slide, bool pan, bool tilt)
 		{
 			List<string> calibrateArgs = new List<string>();
 
@@ -466,29 +419,29 @@ namespace CameraSlider.Bluetooth
 
 			string command = "calibrate " + string.Join(" ", calibrateArgs);
 
-			return await SendCommand(command);
+			SendCommand(command);
 		}
 
-		public async Task<bool> StopAllMotors()
+		public void StopAllMotors()
 		{
-			return await SendCommand("stop");
+			SendCommand("stop");
 		}
 
-		public async Task<bool> MoveSlider(int delta)
+		public void MoveSlider(int delta)
 		{
 			string command = $"move_slider {delta}";
 
-			return await SendCommand(command);
+			SendCommand(command);
 		}
 
-		public async Task<bool> SetSlideMin()
+		public void SetSlideMin()
 		{
-			return await SendCommand("set_slide_min_pos");
+			SendCommand("set_slide_min_pos");
 		}
 
-		public async Task<bool> SetSlideMax()
+		public void SetSlideMax()
 		{
-			return await SendCommand("set_slide_max_pos");
+			SendCommand("set_slide_max_pos");
 		}
 
 		private void DeviceConnectionStatusChanged(BluetoothLEDevice sender, object args)
@@ -500,16 +453,6 @@ namespace CameraSlider.Bluetooth
 
 			if (!result.IsConnected)
 			{
-				if (_pendingCommandId != 0)
-				{
-					// If we are disconnected while waiting for a command response,
-					// we should just mark the command as complete
-					if (_commandCompletionSource != null && !_commandCompletionSource.Task.IsCompleted)
-					{
-						_commandCompletionSource.SetResult("");
-					}
-				}
-
 				CleanUpGattState();
 			}
 
@@ -531,7 +474,16 @@ namespace CameraSlider.Bluetooth
 		{
 			string Response = CryptographicBuffer.ConvertBinaryToString(BinaryStringEncoding.Utf8, e.CharacteristicValue);
 
-			_commandCompletionSource.SetResult(Response);
+			var ResponseArgs = new Events.CameraResponseArgs()
+			{
+				Args = Response.Split(' ')
+			};
+
+			var ProcessedArgs = _requestManager.HandleResponse(ResponseArgs);
+			if (ProcessedArgs != null)
+			{
+				CameraResponseHandler?.Invoke(this, ResponseArgs);
+			}
 		}
 
 		private Events.CameraPositionValueChangedEventArgs CreatePositionChangedEvent(

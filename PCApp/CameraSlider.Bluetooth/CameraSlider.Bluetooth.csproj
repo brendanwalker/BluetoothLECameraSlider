@@ -49,6 +49,8 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands\Request.cs" />
+    <Compile Include="Commands\RequestManager.cs" />
     <Compile Include="Events\ConnectionStatusChangedEventArgs.cs" />
     <Compile Include="Events\DeviceRemovedEventArgs.cs" />
     <Compile Include="Events\DeviceUpdatedEventArgs.cs" />
