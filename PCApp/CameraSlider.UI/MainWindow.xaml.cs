@@ -89,6 +89,8 @@ namespace CameraSlider.UI
 
 			// Setup the UI
 			SetUIControlsDisableFlag(UIControlDisableFlags.DeviceDisconnected, true);
+
+			// Apply the config settings to the UI (without trying to send them to the device)
 			ApplyConfigToUI();
 
 			// Kick off the watchdog workers
@@ -349,7 +351,6 @@ namespace CameraSlider.UI
 				SetCameraSliderPosition(_targetSlidePos);
 
 				_suppressUIUpdatesToDevice = true;
-
 				await RunOnUiThread(() =>
 				{
 					SlidePosSlider.Value = _configState._cameraSettingsConfig.SlidePos;
@@ -358,7 +359,6 @@ namespace CameraSlider.UI
 					SpeedSlider.Value = _configState._cameraSettingsConfig.Speed;
 					AccelSlider.Value = _configState._cameraSettingsConfig.Accel;
 				});
-
 				_suppressUIUpdatesToDevice = false;
 			}
 			else
@@ -416,11 +416,6 @@ namespace CameraSlider.UI
 					// Save the config settings if they are dirty
 					if (_configState._areConfigSettingsDirty)
 					{
-						if (_configState._arePresetsDirty)
-						{
-
-						}
-
 						_configState.SaveConfig();
 					}
 
@@ -513,12 +508,14 @@ namespace CameraSlider.UI
 				_presetTargetPanPosition, 
 				_presetTargetTiltPosition);
 
+			_suppressUIUpdatesToDevice= true;
 			await RunOnUiThread(() =>
 			{
 				SlidePosSlider.Value = preset.SlidePosition;
 				PanPosSlider.Value = preset.PanPosition;
 				TiltPosSlider.Value = preset.TiltPosition;
 			});
+			_suppressUIUpdatesToDevice= false;
 
 			// Wait for the camera to reach the target position
 			try
@@ -556,6 +553,8 @@ namespace CameraSlider.UI
 		// UI Functions
 		protected void ApplyConfigToUI()
 		{
+			_suppressUIUpdatesToDevice = true;
+
 			SlidePosSlider.Value = _configState._cameraSettingsConfig.SlidePos;
 			PanPosSlider.Value = _configState._cameraSettingsConfig.PanPos;
 			TiltPosSlider.Value = _configState._cameraSettingsConfig.TiltPos;
@@ -575,6 +574,8 @@ namespace CameraSlider.UI
 			ManualMoveAmountTextBox.Text = _configState._cameraSettingsConfig.ManualSlideStepSize.ToString();
 
 			RebuildPresetComboBox();
+
+			_suppressUIUpdatesToDevice = false;
 		}
 
 		private void SetUIControlsDisableFlag(UIControlDisableFlags flag, bool bSetFlag)
@@ -793,12 +794,14 @@ namespace CameraSlider.UI
 				_configState._areConfigSettingsDirty= true;
 
 				// Update the UI
+				_suppressUIUpdatesToDevice= true;
 				await RunOnUiThread(() =>
 				{
 					SlidePosSlider.Value = _configState._cameraSettingsConfig.SlidePos;
 					PanPosSlider.Value = _configState._cameraSettingsConfig.PanPos;
 					TiltPosSlider.Value = _configState._cameraSettingsConfig.TiltPos;
 				});
+				_suppressUIUpdatesToDevice= false;
 
 				// Refetch the slider state to update the UI
 				_cameraSliderDevice.GetSliderCalibration();

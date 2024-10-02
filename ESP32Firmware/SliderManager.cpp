@@ -160,7 +160,7 @@ void SliderState::loop()
         abs(motorPanPos - m_lastTargetPanPosition) <= 10 && 
         abs(motorTiltPos - m_lastTargetTiltPosition) <= 10)
       {
-        Serial.printf("Finished move to: Slide=%d, Pad=%d, Tilt=%d\n", motorSlidePos, motorPanPos, motorTiltPos);
+        Serial.printf("Finished move to: Slide=%d, Pan=%d, Tilt=%d\n", motorSlidePos, motorPanPos, motorTiltPos);
         setIsMovingToTargetFlag(false);        
       }
   }
@@ -570,37 +570,64 @@ void SliderState::setSlideStepperPosition(int32_t newTargetSliderPosition)
 
 float computeSecondsToCompleteMove(FastAccelStepper* stepper, const int32_t absSteps)
 {
-  const float stepsPerSecond= (float)stepper->getSpeedInMilliHz() / 1000.f;
+  const float stepVel= (float)stepper->getSpeedInMilliHz() / 1000.f;
+  const float stepAccel= (float)stepper->getAcceleration();
 
-  return (float)absSteps * stepsPerSecond;  
+  const float timeToFullSpeed = stepVel / stepAccel; // v = a*t -> t = v_target / a
+  const float maxAllowedRampSteps = 0.5f*(float)absSteps; // Need to ramp up and down in absSteps
+  const float clampedStepsToFullSpeed = min(0.5f * stepAccel * timeToFullSpeed * timeToFullSpeed, maxAllowedRampSteps); // s = 0.5*a*t^2
+  const float clampedTotalRampTime= 2.f*clampedStepsToFullSpeed;
+  const float clampedTimeToFullSpeed= sqrt(clampedTotalRampTime / stepAccel); // t = sqrt(2*s/a)
+
+  const float stepsAtFullSpeed = max((float)absSteps - 2.f * clampedStepsToFullSpeed, 0.f);
+  const float timeAtFullSpeed = (float)stepsAtFullSpeed / stepVel;
+
+  const float totalMoveTime = clampedTotalRampTime + timeAtFullSpeed;
+
+  return totalMoveTime;  
 }
 
-void setSliderSpeedByStepsAndTime(FastAccelStepper* stepper, int32_t absSlideSteps, float timeToComplete)
+void setStepperSpeedByStepsAndTime(FastAccelStepper* stepper, int32_t absSlideSteps, float timeToComplete)
 {
   stepper->setSpeedInHz((uint32_t)((float)absSlideSteps / timeToComplete));  
 }
 
-void SliderState::setSlidePanTiltPosFraction(float slide, float pan, float tilt)
+void SliderState::setSlidePanTiltPosFraction(float slideFraction, float panFraction, float tiltFraction)
 {
-  int32_t oldSlidePosition= m_lastTargetSlidePosition;
-  int32_t oldPanPosition= m_lastTargetPanPosition;
-  int32_t oldTiltPosition= m_lastTargetTiltPosition;
-
   // Re-apply global speed fraction to each slider
   applyLastSpeedFraction();
 
-  // Apply target slider fraction to each slider
-  setSliderPosFraction(slide);
-  setPanPosFraction(pan);
-  setTiltPosFraction(tilt);
+  // Remap [-1, 1] unit position to calibrated slider min and max step position  
+  int32_t newSlidePosition= remapFloatToInt32(-1.f, 1.f, m_sliderStepperMin, m_sliderStepperMax, slideFraction);
+
+  float newTargetPanDegrees= remapFloatToFloat(-1.f, 1.f, PAN_MIN_ANGLE, PAN_MAX_ANGLE, panFraction);
+  // Use Pan gear ratio to determine motor target angle from given camera angle
+  float clampedCameraPanDegrees = max(min(newTargetPanDegrees, PAN_MAX_ANGLE), PAN_MIN_ANGLE);
+  float motorPanDegrees = clampedCameraPanDegrees * PAN_GEAR_RATIO;
+  // degrees*steps/degree + center step position = target step position
+  int32_t newPanPosition= motorAngleToSteps(motorPanDegrees) + m_panStepperCenter;
+  
+  float newTargetTiltDegrees= remapFloatToFloat(-1.f, 1.f, TILT_MIN_ANGLE, TILT_MAX_ANGLE, tiltFraction);  
+  // Use Tilt gear ratio to determine motor target angle from given camera angle
+  float clampedCameraTiltDegrees = max(min(newTargetTiltDegrees, TILT_MAX_ANGLE), TILT_MIN_ANGLE);
+  float motorTiltDegrees = clampedCameraTiltDegrees * TILT_GEAR_RATIO;
+  // degrees*steps/degree + center step position = target step position
+  int32_t newTiltPosition= motorAngleToSteps(motorTiltDegrees) + m_tiltStepperCenter;
+
+  Serial.printf("New SlidePanTilt Fractions: %f, %f, %d\n", slideFraction, panFraction, tiltFraction);
+  Serial.printf("    SlidePanTilt Positions: %d, %d, %d\n", newSlidePosition, newPanPosition, newTiltPosition);
 
   // See if any slider actually wants to move
-  if (m_isMovingToTarget)
+  if (m_lastTargetSlidePosition != newSlidePosition || 
+      m_lastTargetPanPosition != newPanPosition ||
+      m_lastTargetTiltPosition != newTiltPosition)
   {
     // Compute the absolute number of steps each slider has to move
-    const int32_t absSlideSteps= abs(m_lastTargetSlidePosition - oldSlidePosition);
-    const int32_t absPanSteps= abs(m_lastTargetPanPosition - oldPanPosition);
-    const int32_t absTiltSteps= abs(m_lastTargetTiltPosition - oldTiltPosition);
+    const int32_t absSlideSteps= abs(m_lastTargetSlidePosition - newSlidePosition);
+    const int32_t absPanSteps= abs(m_lastTargetPanPosition - newPanPosition);
+    const int32_t absTiltSteps= abs(m_lastTargetTiltPosition - newTiltPosition);
+
+    Serial.printf("    SlidePanTilt Steps: %d, %d, %d\n", absSlideSteps, absPanSteps, absTiltSteps);
 
     // Find the max time amongst all moving steppers that it will take to reach their target step position
     float maxTimeToComplete= 0;
@@ -617,22 +644,28 @@ void SliderState::setSlidePanTiltPosFraction(float slide, float pan, float tilt)
       maxTimeToComplete= max(computeSecondsToCompleteMove(m_tiltStepper, absTiltSteps), maxTimeToComplete);
     }
 
+    Serial.printf("    Time to complete: %f\n", maxTimeToComplete);
+
     // Given a desired time to complete, recompute each slider speed so that they all complete at the same time
     if (maxTimeToComplete > 0.f)
     {
       if (absSlideSteps > 0)
       {
-        setSliderSpeedByStepsAndTime(m_slideStepper, absSlideSteps, maxTimeToComplete);
+        setStepperSpeedByStepsAndTime(m_slideStepper, absSlideSteps, maxTimeToComplete);
       }
       if (absPanSteps > 0)
       {
-        setSliderSpeedByStepsAndTime(m_panStepper, absSlideSteps, maxTimeToComplete);
+        setStepperSpeedByStepsAndTime(m_panStepper, absPanSteps, maxTimeToComplete);
       }
       if (absTiltSteps > 0)
       {
-        setSliderSpeedByStepsAndTime(m_tiltStepper, absSlideSteps, maxTimeToComplete);
+        setStepperSpeedByStepsAndTime(m_tiltStepper, absTiltSteps, maxTimeToComplete);
       }
     }
+
+    setSliderPosFraction(slideFraction);
+    setPanPosFraction(panFraction);
+    setTiltPosFraction(tiltFraction);
   }
 }
 
@@ -662,7 +695,7 @@ float SliderState::getPanPosFraction()
 
 void SliderState::setTiltPosFraction(float fraction)
 {
-  int32_t newTargetDegrees= remapFloatToFloat(-1.f, 1.f, TILT_MIN_ANGLE, TILT_MAX_ANGLE, fraction);
+  float newTargetDegrees= remapFloatToFloat(-1.f, 1.f, TILT_MIN_ANGLE, TILT_MAX_ANGLE, fraction);
   setTiltStepperTargetDegrees(newTargetDegrees);
 }
 

@@ -284,7 +284,9 @@ namespace CameraSlider.Bluetooth
 		{
 			if (_requestManager.TryDequeueRequestToSend(out Request request))
 			{
-				if (await SendRequest(request.Message) == false)
+				string message = $"{request.RequestId} {request.Message}";
+
+				if (await SendRequest(message) == false)
 				{
 					_requestManager.ClearInFlightRequest(request);
 				}
@@ -482,7 +484,7 @@ namespace CameraSlider.Bluetooth
 			var ProcessedArgs = _requestManager.HandleResponse(ResponseArgs);
 			if (ProcessedArgs != null)
 			{
-				CameraResponseHandler?.Invoke(this, ResponseArgs);
+				CameraResponseHandler?.Invoke(this, ProcessedArgs);
 			}
 		}
 
