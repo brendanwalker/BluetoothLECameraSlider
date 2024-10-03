@@ -572,30 +572,80 @@ float computeSecondsToCompleteMove(FastAccelStepper* stepper, const int32_t absS
 {
   const float stepVel= (float)stepper->getSpeedInMilliHz() / 1000.f;
   const float stepAccel= (float)stepper->getAcceleration();
+  Serial.printf("computeSecondsToCompleteMove\n");  
+  Serial.printf(" stepVel: %f, stepAccel: %f\n", stepVel, stepAccel);
 
   const float timeToFullSpeed = stepVel / stepAccel; // v = a*t -> t = v_target / a
+  Serial.printf(" timeToFullSpeed: %f\n", timeToFullSpeed);
   const float maxAllowedRampSteps = 0.5f*(float)absSteps; // Need to ramp up and down in absSteps
   const float clampedStepsToFullSpeed = min(0.5f * stepAccel * timeToFullSpeed * timeToFullSpeed, maxAllowedRampSteps); // s = 0.5*a*t^2
-  const float clampedTotalRampTime= 2.f*clampedStepsToFullSpeed;
-  const float clampedTimeToFullSpeed= sqrt(clampedTotalRampTime / stepAccel); // t = sqrt(2*s/a)
+  Serial.printf(" clampedStepsToFullSpeed: %f\n", clampedStepsToFullSpeed);
+  const float clampedTimeToFullSpeed= sqrt(2.f* clampedStepsToFullSpeed / stepAccel); // t = sqrt(2*s/a)
+  Serial.printf(" clampedTimeToFullSpeed: %f\n", clampedTimeToFullSpeed);
 
   const float stepsAtFullSpeed = max((float)absSteps - 2.f * clampedStepsToFullSpeed, 0.f);
   const float timeAtFullSpeed = (float)stepsAtFullSpeed / stepVel;
+  Serial.printf(" stepsAtFullSpeed: %f\n", stepsAtFullSpeed);
+  Serial.printf(" timeAtFullSpeed: %f\n", timeAtFullSpeed);
 
-  const float totalMoveTime = clampedTotalRampTime + timeAtFullSpeed;
+  const float totalMoveTime = 2.f*clampedTimeToFullSpeed + timeAtFullSpeed;
+  Serial.printf(" totalMoveTime: %f\n", totalMoveTime);
 
   return totalMoveTime;  
 }
 
-void setStepperSpeedByStepsAndTime(FastAccelStepper* stepper, int32_t absSlideSteps, float timeToComplete)
+void setStepperSpeedAndAccelByStepsAndTime(FastAccelStepper* stepper, int32_t absSteps, float timeToComplete)
 {
-  stepper->setSpeedInHz((uint32_t)((float)absSlideSteps / timeToComplete));  
+  const float currentStepAccel= (float)stepper->getAcceleration();
+  // Position due to acceleration only after time is: s = a*t^2 
+  // Solving for acceleration: a = s / t^2
+  // Min acceleration is the acceleration that takes us to the halfway point
+  // so a_min = s / t^2 = (absSteps / 2) / (timeToComplete / 2)^2 = 4 * absSteps / timeToComplete^2
+  const float minStepAccel= 4.f * absSteps / (timeToComplete * timeToComplete);
+
+  float targetAccel;
+  float timeToTargetVel;
+  if (currentStepAccel > minStepAccel)
+  {
+    // Solve for time to accelerate to target velocity given total steps S, acceleration a, and total time T
+    // S = S0 + S1 + S2, 
+    // where S0 = S2 = distance covered ramping up/down to/from target velocity and S1 is distance covered at target vel
+    // T = t0 + t1 + t2
+    // where t0 = t2 = time spent ramping up/down to/from target velocity and t1 is time spent at target vel
+    // S0 = S2 = 0.5*a*t0^2
+    // S1 = Vt*t1, where Vt is the target velocity we want to solve for
+    // Solving for t1 we get
+    // t1 = T - t0 - t2 = T - 2*t0
+    // Plugging this all in for S0, S1, and S2 we get 
+    // S = 2*(0.5*a*t0^2) + Vt*(T - 2*t0)
+    // Which can be written in standard quadratic form
+    // 0 = -t0^2 + T*t0 - S/a
+    // And then solving for t0 using quadratic formula
+    // t0 = 0.5*(T +/- sqrt(T^2 - 4*S/a))
+    // There are two solutions: a short time/fast speed (pos root) and a long time/slow speed (neg root)
+    // we always choose the long time/slow speed solution
+    // Note that the sqrt becomes imaginary(invalid) if we use an acceleration < minStepAccel,
+    // which means the acceleration isn't fast enough to get to symmetrically ramp back down for the desired absSteps and timeToComplete
+    timeToTargetVel= 0.5f * (timeToComplete - sqrt(max(timeToComplete*timeToComplete - 4.f*(absSteps/currentStepAccel), 0.f)));
+    targetAccel= currentStepAccel;    
+  }
+  else
+  {
+    timeToTargetVel = 0.5f * timeToComplete;
+    targetAccel= minStepAccel;
+  }
+
+  float targetVel= targetAccel * timeToTargetVel; // Compute velocity at halfway time using min acceleration
+
+  stepper->setAcceleration((int32_t)targetAccel);
+  stepper->setSpeedInHz((uint32_t)targetVel);  
 }
 
 void SliderState::setSlidePanTiltPosFraction(float slideFraction, float panFraction, float tiltFraction)
 {
-  // Re-apply global speed fraction to each slider
+  // Re-apply global speed and acceleration fractions to each slider
   applyLastSpeedFraction();
+  applyLastAccelFraction();
 
   // Remap [-1, 1] unit position to calibrated slider min and max step position  
   int32_t newSlidePosition= remapFloatToInt32(-1.f, 1.f, m_sliderStepperMin, m_sliderStepperMax, slideFraction);
@@ -651,15 +701,15 @@ void SliderState::setSlidePanTiltPosFraction(float slideFraction, float panFract
     {
       if (absSlideSteps > 0)
       {
-        setStepperSpeedByStepsAndTime(m_slideStepper, absSlideSteps, maxTimeToComplete);
+        setStepperSpeedAndAccelByStepsAndTime(m_slideStepper, absSlideSteps, maxTimeToComplete);
       }
       if (absPanSteps > 0)
       {
-        setStepperSpeedByStepsAndTime(m_panStepper, absPanSteps, maxTimeToComplete);
+        setStepperSpeedAndAccelByStepsAndTime(m_panStepper, absPanSteps, maxTimeToComplete);
       }
       if (absTiltSteps > 0)
       {
-        setStepperSpeedByStepsAndTime(m_tiltStepper, absTiltSteps, maxTimeToComplete);
+        setStepperSpeedAndAccelByStepsAndTime(m_tiltStepper, absTiltSteps, maxTimeToComplete);
       }
     }
 
@@ -726,6 +776,19 @@ void SliderState::applyLastSpeedFraction()
   setSlideStepperLinearSpeed(newTargetSliderSpeed);
   setPanStepperAngularSpeed(newTargetPanSpeed);
   setTiltStepperAngularSpeed(newTargetTiltSpeed);
+}
+
+void SliderState::applyLastAccelFraction()
+{
+  // Remap [0, 1] unit accel to mm/s^2
+  float newTargetSliderAccel= remapFloatToFloat(0.f, 1.f, SLIDE_MIN_ACCELERATION, SLIDE_MAX_ACCELERATION, m_lastAccelerationFraction);
+  // Remap [0, 1] unit accel to deg/s^2
+  float newTargetPanAccel= remapFloatToFloat(0.f, 1.f, PAN_MIN_ACCELERATION, PAN_MAX_ACCELERATION, m_lastAccelerationFraction);
+  float newTargetTiltAccel= remapFloatToFloat(0.f, 1.f, TILT_MIN_ACCELERATION, TILT_MAX_ACCELERATION, m_lastAccelerationFraction);
+
+  setSlideStepperLinearAcceleration(newTargetSliderAccel);
+  setPanStepperAngularAcceleration(newTargetPanAccel);
+  setTiltStepperAngularAcceleration(newTargetTiltAccel);
 }
 
 float SliderState::getSpeedFraction()

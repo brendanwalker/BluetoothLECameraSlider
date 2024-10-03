@@ -126,6 +126,7 @@ private:
   int32_t motorAngleToSteps(float degrees) const;
   float stepsToMotorAngle(int32_t steps) const;
   void applyLastSpeedFraction();
+  void applyLastAccelFraction();
   void setIsMovingToTargetFlag(bool flag);
 
   uint8_t m_enPin;
