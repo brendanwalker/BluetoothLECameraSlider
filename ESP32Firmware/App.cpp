@@ -23,13 +23,8 @@ void App::setup()
   App::s_instance= this;
 }
 
-void App::loop()
+void App::loop(float deltaSeconds)
 {
-  unsigned long currentMillis = millis(); 
-  unsigned long millisDelta = currentMillis - previousMillis;
-  float deltaSeconds= (float)millisDelta / 1000.f;
-  previousMillis= currentMillis;
-
   autoSaveTimer-= deltaSeconds;
   if (autoSaveTimer <= 0.f)
   {

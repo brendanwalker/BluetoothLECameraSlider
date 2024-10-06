@@ -2,6 +2,7 @@
 #include "AppStage_Test.h"
 #include "AppStage_MagnetTest.h"
 #include "AppStage_MotorTest.h"
+#include "FanManager.h"
 
 //-- statics ----
 const char* AppStage_Test::APP_STAGE_NAME = "Test";
@@ -13,6 +14,7 @@ enum class eMonitorOptions : int
 
   MagnetTest,
   MotorTest,
+  FanTest,
   Back,
 
   COUNT
@@ -22,6 +24,7 @@ static const String kTestOptions[(int)eMonitorOptions::COUNT]=
 {
   "Magnet Test",
   "Motor Test",
+  "Fan Test",
   "Back"
 };
 
@@ -70,7 +73,10 @@ void AppStage_Test::onOptionClicked(int optionIndex)
     break;
   case eMonitorOptions::MotorTest:
     m_app->pushAppStage(AppStage_MotorTest::getInstance());
-    break;    
+    break;
+  case eMonitorOptions::FanTest:
+    FanManager::getInstance()->engageFan();
+    break;
   case eMonitorOptions::Back:
     m_app->popAppState();
     break;
