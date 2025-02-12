@@ -1,23 +1,68 @@
 ﻿using CameraSlider.Bluetooth.Events;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using Windows.Foundation;
 
 namespace CameraSlider.Bluetooth.Commands
 {
-	internal class RequestManager
+	public class RequestManager
 	{
-		private Queue<Request> _pendingRequests;
-		public bool HasPendingRequests => _pendingRequests.Count > 0;
+		private Queue<Request> _pendingCommandQueue;
+		public bool HasPendingRequests => _pendingCommandQueue.Count > 0;
 		private Request _inFlightRequest= null;
 		public bool HasInFlightRequest => _inFlightRequest != null;
 		private int nextRequestId = 1;
 
+		private Dictionary<int, AsyncOpFuture> _pendingAsyncOps;
+
 		public RequestManager()
 		{
-			_pendingRequests = new Queue<Request>();
+			_pendingCommandQueue = new Queue<Request>();
+			_pendingAsyncOps = new Dictionary<int, AsyncOpFuture>();
 		}
 
-		public void EnqueueRequest(string message)
+		public AsyncOpFuture AddAsyncOp<T>(IAsyncOperation<T> asyncRequest)
+		{
+			AsyncOpFuture pendingRequest = null;
+
+			lock (this)
+			{
+				pendingRequest= 
+					new AsyncOpFuture(
+						this, 
+						nextRequestId, 
+						 asyncRequest.AsTask());
+				_pendingAsyncOps[nextRequestId] = pendingRequest;
+				nextRequestId++;
+			}
+
+			return pendingRequest;
+		}
+
+		public AsyncOpFuture RemoveAsyncOp(int requestId)
+		{
+			AsyncOpFuture pendingRequest = null;
+
+			lock (this)
+			{
+				if (_pendingAsyncOps.TryGetValue(requestId, out pendingRequest))
+				{
+					_pendingAsyncOps.Remove(requestId);
+				}
+			}
+
+			return pendingRequest;
+		}
+
+		public ResultCode CancelAsyncOp(int requestId)
+		{
+			AsyncOpFuture existingRequest = RemoveAsyncOp(requestId);
+
+			return existingRequest != null ? ResultCode.Success : ResultCode.InvalidParam;
+		}
+
+		public void EnqueueCommand(string message)
 		{
 			lock(this)
 			{
@@ -28,7 +73,7 @@ namespace CameraSlider.Bluetooth.Commands
 				};
 				nextRequestId++;
 
-				_pendingRequests.Enqueue(request);
+				_pendingCommandQueue.Enqueue(request);
 			}
 		}
 
@@ -38,9 +83,9 @@ namespace CameraSlider.Bluetooth.Commands
 
 			lock(this)
 			{
-				if (_pendingRequests.Count > 0 && _inFlightRequest == null)
+				if (_pendingCommandQueue.Count > 0 && _inFlightRequest == null)
 				{
-					request = _pendingRequests.Dequeue();
+					request = _pendingCommandQueue.Dequeue();
 					
 					// Mark the request as in-flight
 					_inFlightRequest = request;
@@ -57,7 +102,7 @@ namespace CameraSlider.Bluetooth.Commands
 		}
 
 
-		public void ClearInFlightRequest(Request request)
+		public void ClearInFlightCommand(Request request)
 		{
 			lock (this)
 			{
@@ -68,7 +113,7 @@ namespace CameraSlider.Bluetooth.Commands
 			}
 		}
 
-		public CameraResponseArgs HandleResponse(CameraResponseArgs response)
+		public CameraResponseArgs HandleCommandResponse(CameraResponseArgs response)
 		{
 			CameraResponseArgs processedResponse = null;
 
@@ -97,7 +142,7 @@ namespace CameraSlider.Bluetooth.Commands
 			lock(this)
 			{
 				_inFlightRequest = null;
-				_pendingRequests.Clear();
+				_pendingCommandQueue.Clear();
 			}
 		}
 	}

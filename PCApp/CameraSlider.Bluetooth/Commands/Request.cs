@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CameraSlider.Bluetooth.Commands
 {
-	internal class Request
+	public class Request
 	{
 		public int RequestId { get; set; }
 		public string Message { get; set; }
