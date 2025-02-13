@@ -51,16 +51,11 @@ SliderState::SliderState(
   s_instance = this;
 
   m_lastTargetSlidePosition= 0; // step position
-  m_lastTargetSlideSpeed= 0; // steps / s
-  m_lastTargetSlideAcceleration= 0.f; // steps / s²
-
   m_lastTargetPanPosition= 0; // step position
-  m_lastTargetPanSpeed= 0; // steps / s
-  m_lastTargetPanAcceleration= 0; // steps / s²
-
   m_lastTargetTiltPosition= 0; // step position
-  m_lastTargetTiltSpeed= 0; // steps / s
-  m_lastTargetTiltAcceleration= 0; // steps / s²
+
+  m_lastSpeedFraction= 0; // [0, 1]
+  m_lastAccelerationFraction= 0; // [0, 1]
 }
 
 void SliderState::setListener(SliderStateEventListener *listener)
@@ -165,13 +160,8 @@ void SliderState::loop()
         abs(motorPanPos - m_lastTargetPanPosition) <= 10 && 
         abs(motorTiltPos - m_lastTargetTiltPosition) <= 10)
       {
-        m_isMovingToTarget= false;
-        Serial.printf("Finished move to: Slide=%d, Pad=%d, Tilt=%d\n", motorSlidePos, motorPanPos, motorTiltPos);
-        
-        if (m_listener != nullptr)
-        {
-          m_listener->onMoveToTargetComplete();
-        }
+        Serial.printf("Finished move to: Slide=%d, Pan=%d, Tilt=%d\n", motorSlidePos, motorPanPos, motorTiltPos);
+        setIsMovingToTargetFlag(false);        
       }
   }
 }
@@ -210,6 +200,49 @@ void SliderState::writePositionsToConfig()
     configManager->setMotorSlidePosition(m_slideStepper->getCurrentPosition());
     // Will no-op if none of the positions are actually changed
     configManager->saveMotorPositionConfig();  
+}
+
+void SliderState::saveSlideStepperPosAsMin()
+{
+  int32_t pos= m_slideStepper->getCurrentPosition();
+
+  if (pos != m_sliderStepperMin)
+  {
+    setSlideStepperMin(pos);
+    writeCalibrationToConfig();
+
+    // Tell any clients that the slider min pos changed
+    m_listener->onSliderMinSet(pos);
+  }
+}
+
+void SliderState::saveSlideStepperPosAsMax()
+{
+  int32_t pos= m_slideStepper->getCurrentPosition();
+
+  if (pos != m_sliderStepperMax)
+  {
+    setSlideStepperMax(pos);
+    writeCalibrationToConfig();
+
+    // Tell any clients that the slider max pos changed
+    m_listener->onSliderMaxSet(pos);    
+  }
+}
+
+void SliderState::resetCalibration()
+{  
+  m_panStepperCenter= DEFAULT_INITIAL_PAN_POSITION;
+  m_tiltStepperCenter= DEFAULT_INITIAL_TILT_POSITION;
+  m_sliderStepperMin= DEFAULT_INITIAL_SLIDE_POSITION - MAX_SLIDER_SEARCH_STEPS;
+  m_sliderStepperMax= DEFAULT_INITIAL_SLIDE_POSITION + MAX_SLIDER_SEARCH_STEPS;
+
+  m_panStepper->setCurrentPosition(DEFAULT_INITIAL_PAN_POSITION);
+  m_tiltStepper->setCurrentPosition(DEFAULT_INITIAL_TILT_POSITION);
+  m_slideStepper->setCurrentPosition(DEFAULT_INITIAL_SLIDE_POSITION);
+    
+  writeCalibrationToConfig();
+  writePositionsToConfig();
 }
 
 void SliderState::finalizeCalibration()
@@ -276,14 +309,7 @@ void SliderState::setPanStepperAngularAcceleration(float cameraAngAccelDegrees)
   // degrees/sec * steps/degree = steps/sec = speed in Hz
   int32_t newTargetPanAcceleration= motorAngleToSteps(motorAngAccelDegrees);
 
-  if (newTargetPanAcceleration != m_lastTargetPanAcceleration)
-  {
-    m_panStepper->setAcceleration(newTargetPanAcceleration);
-
-    // Remember new target pan step acceleration
-    Serial.printf("New Pan Accel Target: %d -> %d\n", m_lastTargetPanAcceleration, newTargetPanAcceleration);
-    m_lastTargetPanAcceleration= newTargetPanAcceleration;       
-  } 
+  m_panStepper->setAcceleration(newTargetPanAcceleration);
 }
 
 float SliderState::getPanStepperAngularAcceleration()
@@ -301,14 +327,7 @@ void SliderState::setTiltStepperAngularAcceleration(float cameraAngAccelDegrees)
   // degrees/sec * steps/degree = steps/sec = speed in Hz
   int32_t newTargetTiltAcceleration= motorAngleToSteps(motorAngAccelDegrees);
 
-  if (newTargetTiltAcceleration != m_lastTargetTiltAcceleration)
-  {
-    m_tiltStepper->setAcceleration(newTargetTiltAcceleration);
-
-    // Remember new target tilt step acceleration
-    Serial.printf("New Tilt Accel Target: %d -> %d\n", m_lastTargetTiltAcceleration, newTargetTiltAcceleration);
-    m_lastTargetTiltAcceleration= newTargetTiltAcceleration;        
-  }
+  m_tiltStepper->setAcceleration(newTargetTiltAcceleration);
 }
 
 float SliderState::getTiltStepperAngularAcceleration()
@@ -328,14 +347,7 @@ void SliderState::setSlideStepperLinearAcceleration(float cameraLinAccelMM)
   // degrees/sec² * steps/degree = steps/sec²
   int32_t newTargetSlideAcceleration= motorAngleToSteps(motorAngAccelDegrees);
 
-  if (newTargetSlideAcceleration != m_lastTargetSlideAcceleration)
-  {  
-    m_slideStepper->setAcceleration(newTargetSlideAcceleration);
-
-    // Remember new target slide step acceleration
-    Serial.printf("New Slide Accel Target: %d -> %d\n", m_lastTargetSlideAcceleration, newTargetSlideAcceleration);
-    m_lastTargetSlideAcceleration= newTargetSlideAcceleration;        
-  }
+  m_slideStepper->setAcceleration(newTargetSlideAcceleration);
 }
 
 float SliderState::getSlideStepperLinearAcceleration()
@@ -355,14 +367,7 @@ void SliderState::setPanStepperAngularSpeed(float cameraDegreesPerSecond)
   // degrees/sec * steps/degree = steps/sec = speed in Hz
   int32_t newTargetPanSpeed= motorAngleToSteps(motorDegreesPerSecond);
 
-  if (newTargetPanSpeed != m_lastTargetPanSpeed)
-  {
-    m_panStepper->setSpeedInHz(newTargetPanSpeed);
-
-    // Remember new target pan step speed
-    Serial.printf("New Pan Speed Target: %d -> %d\n", m_lastTargetPanSpeed, newTargetPanSpeed);
-    m_lastTargetPanSpeed= newTargetPanSpeed;
-  }
+  m_panStepper->setSpeedInHz(newTargetPanSpeed);
 }
 
 float SliderState::getPanStepperAngularSpeed()
@@ -381,15 +386,7 @@ void SliderState::setTiltStepperAngularSpeed(float cameraDegreesPerSecond)
   // degrees/sec * steps/degree = steps/sec = speed in Hz
   int32_t newTargetTiltSpeed= motorAngleToSteps(motorDegreesPerSecond);
 
-  if (newTargetTiltSpeed != m_lastTargetTiltSpeed)
-  {
-    m_tiltStepper->setSpeedInHz(newTargetTiltSpeed);
-
-    // Remember new target tilt angle angular speed
-    Serial.printf("New Tilt Speed Target: %d -> %d\n", m_lastTargetTiltSpeed, newTargetTiltSpeed);
-    m_lastTargetTiltSpeed= newTargetTiltSpeed;    
-    getTiltStepperAngularSpeed();
-  }
+  m_tiltStepper->setSpeedInHz(newTargetTiltSpeed);
 }
 
 float SliderState::getTiltStepperAngularSpeed()
@@ -411,14 +408,7 @@ void SliderState::setSlideStepperLinearSpeed(float cameraMMPerSecond)
   // degrees/sec * steps/degree = steps/sec = speed in Hz
   int32_t newTargetSlideSpeed= motorAngleToSteps(turnDegreesPerSecond);
 
-  if (newTargetSlideSpeed != m_lastTargetSlideSpeed)
-  {
-    m_slideStepper->setSpeedInHz(newTargetSlideSpeed);
-
-    // Remember new target slider linear speed
-    Serial.printf("New Slide Speed Target: %d -> %d\n", m_lastTargetSlideSpeed, newTargetSlideSpeed);
-    m_lastTargetSlideSpeed= newTargetSlideSpeed;
-  }
+  m_slideStepper->setSpeedInHz(newTargetSlideSpeed);
 }
 
 float SliderState::getSlideStepperLinearSpeed()
@@ -446,7 +436,10 @@ void SliderState::setPanStepperTargetDegrees(float cameraDegrees)
     // Remember new target pan position
     Serial.printf("New Pan Position Target: %d -> %d\n", m_lastTargetPanPosition, newTargetPanPosition);
     m_lastTargetPanPosition= newTargetPanPosition;
-    m_isMovingToTarget= true;    
+    setIsMovingToTargetFlag(true);
+
+    // Tell any clients what the final target pan position is
+    m_listener->onPanTargetSet(newTargetPanPosition);
   }
 }
 
@@ -458,6 +451,24 @@ float SliderState::getPanStepperDegrees() const
   float clampedCameraDegrees = max(min(cameraDegrees, PAN_MAX_ANGLE), PAN_MIN_ANGLE);  
 
   return clampedCameraDegrees;
+}
+
+void SliderState::setIsMovingToTargetFlag(bool flag)
+{
+  if (!m_isMovingToTarget && flag)
+  {
+    m_isMovingToTarget= true;
+
+    if (m_listener != nullptr)
+      m_listener->onMoveToTargetStart();
+  }
+  else if (m_isMovingToTarget && !flag)
+  {
+    m_isMovingToTarget= false;
+
+    if (m_listener != nullptr)
+      m_listener->onMoveToTargetComplete();
+  }
 }
 
 void SliderState::setTiltStepperTargetDegrees(float cameraDegrees)
@@ -475,7 +486,10 @@ void SliderState::setTiltStepperTargetDegrees(float cameraDegrees)
     // Remember new target tilt position
     Serial.printf("New Tilt Position Target: %d -> %d\n", m_lastTargetTiltPosition, newTargetTiltPosition);
     m_lastTargetTiltPosition= newTargetTiltPosition;
-    m_isMovingToTarget= true;    
+    setIsMovingToTargetFlag(true);
+
+    // Tell any clients what the final target tilt position is
+    m_listener->onPanTargetSet(newTargetTiltPosition);
   }
 }
 
@@ -538,11 +552,8 @@ float SliderState::getSlideStepperWidthMillimeters() const
   return millimeters;
 }
 
-void SliderState::setSliderPosFraction(float fraction)
+void SliderState::setSlideStepperPosition(int32_t newTargetSliderPosition)
 {
-  // Remap [-1, 1] unit position to calibrated slider min and max step position  
-  int32_t newTargetSliderPosition= remapFloatToInt32(-1.f, 1.f, m_sliderStepperMin, m_sliderStepperMax, fraction);
-
   if (newTargetSliderPosition != m_lastTargetSlidePosition)
   {
     m_slideStepper->moveTo(newTargetSliderPosition);
@@ -550,38 +561,175 @@ void SliderState::setSliderPosFraction(float fraction)
     // Remember new target slide position
     Serial.printf("New Slide Position Target: %d -> %d\n", m_lastTargetSlidePosition, newTargetSliderPosition);
     m_lastTargetSlidePosition= newTargetSliderPosition;
-    m_isMovingToTarget= true;
+    setIsMovingToTargetFlag(true);
+
+    // Tell any clients what the final target slider position is
+    m_listener->onSliderTargetSet(newTargetSliderPosition);    
   }
+}
+
+float computeSecondsToCompleteMove(FastAccelStepper* stepper, const int32_t absSteps)
+{
+  const float stepVel= (float)stepper->getSpeedInMilliHz() / 1000.f;
+  const float stepAccel= (float)stepper->getAcceleration();
+  Serial.printf("computeSecondsToCompleteMove\n");  
+  Serial.printf(" stepVel: %f, stepAccel: %f\n", stepVel, stepAccel);
+
+  const float timeToFullSpeed = stepVel / stepAccel; // v = a*t -> t = v_target / a
+  Serial.printf(" timeToFullSpeed: %f\n", timeToFullSpeed);
+  const float maxAllowedRampSteps = 0.5f*(float)absSteps; // Need to ramp up and down in absSteps
+  const float clampedStepsToFullSpeed = min(0.5f * stepAccel * timeToFullSpeed * timeToFullSpeed, maxAllowedRampSteps); // s = 0.5*a*t^2
+  Serial.printf(" clampedStepsToFullSpeed: %f\n", clampedStepsToFullSpeed);
+  const float clampedTimeToFullSpeed= sqrt(2.f* clampedStepsToFullSpeed / stepAccel); // t = sqrt(2*s/a)
+  Serial.printf(" clampedTimeToFullSpeed: %f\n", clampedTimeToFullSpeed);
+
+  const float stepsAtFullSpeed = max((float)absSteps - 2.f * clampedStepsToFullSpeed, 0.f);
+  const float timeAtFullSpeed = (float)stepsAtFullSpeed / stepVel;
+  Serial.printf(" stepsAtFullSpeed: %f\n", stepsAtFullSpeed);
+  Serial.printf(" timeAtFullSpeed: %f\n", timeAtFullSpeed);
+
+  const float totalMoveTime = 2.f*clampedTimeToFullSpeed + timeAtFullSpeed;
+  Serial.printf(" totalMoveTime: %f\n", totalMoveTime);
+
+  return totalMoveTime;  
+}
+
+void setStepperSpeedAndAccelByStepsAndTime(FastAccelStepper* stepper, int32_t absSteps, float timeToComplete)
+{
+  const float currentStepAccel= (float)stepper->getAcceleration();
+  // Position due to acceleration only after time is: s = a*t^2 
+  // Solving for acceleration: a = s / t^2
+  // Min acceleration is the acceleration that takes us to the halfway point
+  // so a_min = s / t^2 = (absSteps / 2) / (timeToComplete / 2)^2 = 4 * absSteps / timeToComplete^2
+  const float minStepAccel= 4.f * absSteps / (timeToComplete * timeToComplete);
+
+  float targetAccel;
+  float timeToTargetVel;
+  if (currentStepAccel > minStepAccel)
+  {
+    // Solve for time to accelerate to target velocity given total steps S, acceleration a, and total time T
+    // S = S0 + S1 + S2, 
+    // where S0 = S2 = distance covered ramping up/down to/from target velocity and S1 is distance covered at target vel
+    // T = t0 + t1 + t2
+    // where t0 = t2 = time spent ramping up/down to/from target velocity and t1 is time spent at target vel
+    // S0 = S2 = 0.5*a*t0^2
+    // S1 = Vt*t1, where Vt is the target velocity we want to solve for
+    // Solving for t1 we get
+    // t1 = T - t0 - t2 = T - 2*t0
+    // Plugging this all in for S0, S1, and S2 we get 
+    // S = 2*(0.5*a*t0^2) + Vt*(T - 2*t0)
+    // Which can be written in standard quadratic form
+    // 0 = -t0^2 + T*t0 - S/a
+    // And then solving for t0 using quadratic formula
+    // t0 = 0.5*(T +/- sqrt(T^2 - 4*S/a))
+    // There are two solutions: a short time/fast speed (pos root) and a long time/slow speed (neg root)
+    // we always choose the long time/slow speed solution
+    // Note that the sqrt becomes imaginary(invalid) if we use an acceleration < minStepAccel,
+    // which means the acceleration isn't fast enough to get to symmetrically ramp back down for the desired absSteps and timeToComplete
+    timeToTargetVel= 0.5f * (timeToComplete - sqrt(max(timeToComplete*timeToComplete - 4.f*(absSteps/currentStepAccel), 0.f)));
+    targetAccel= currentStepAccel;    
+  }
+  else
+  {
+    timeToTargetVel = 0.5f * timeToComplete;
+    targetAccel= minStepAccel;
+  }
+
+  float targetVel= targetAccel * timeToTargetVel; // Compute velocity at halfway time using min acceleration
+
+  stepper->setAcceleration((int32_t)targetAccel);
+  stepper->setSpeedInHz((uint32_t)targetVel);  
+}
+
+void SliderState::setSlidePanTiltPosFraction(float slideFraction, float panFraction, float tiltFraction)
+{
+  // Re-apply global speed and acceleration fractions to each slider
+  applyLastSpeedFraction();
+  applyLastAccelFraction();
+
+  // Remap [-1, 1] unit position to calibrated slider min and max step position  
+  int32_t newSlidePosition= remapFloatToInt32(-1.f, 1.f, m_sliderStepperMin, m_sliderStepperMax, slideFraction);
+
+  float newTargetPanDegrees= remapFloatToFloat(-1.f, 1.f, PAN_MIN_ANGLE, PAN_MAX_ANGLE, panFraction);
+  // Use Pan gear ratio to determine motor target angle from given camera angle
+  float clampedCameraPanDegrees = max(min(newTargetPanDegrees, PAN_MAX_ANGLE), PAN_MIN_ANGLE);
+  float motorPanDegrees = clampedCameraPanDegrees * PAN_GEAR_RATIO;
+  // degrees*steps/degree + center step position = target step position
+  int32_t newPanPosition= motorAngleToSteps(motorPanDegrees) + m_panStepperCenter;
+  
+  float newTargetTiltDegrees= remapFloatToFloat(-1.f, 1.f, TILT_MIN_ANGLE, TILT_MAX_ANGLE, tiltFraction);  
+  // Use Tilt gear ratio to determine motor target angle from given camera angle
+  float clampedCameraTiltDegrees = max(min(newTargetTiltDegrees, TILT_MAX_ANGLE), TILT_MIN_ANGLE);
+  float motorTiltDegrees = clampedCameraTiltDegrees * TILT_GEAR_RATIO;
+  // degrees*steps/degree + center step position = target step position
+  int32_t newTiltPosition= motorAngleToSteps(motorTiltDegrees) + m_tiltStepperCenter;
+
+  Serial.printf("New SlidePanTilt Fractions: %f, %f, %d\n", slideFraction, panFraction, tiltFraction);
+  Serial.printf("    SlidePanTilt Positions: %d, %d, %d\n", newSlidePosition, newPanPosition, newTiltPosition);
+
+  // See if any slider actually wants to move
+  if (m_lastTargetSlidePosition != newSlidePosition || 
+      m_lastTargetPanPosition != newPanPosition ||
+      m_lastTargetTiltPosition != newTiltPosition)
+  {
+    // Compute the absolute number of steps each slider has to move
+    const int32_t absSlideSteps= abs(m_lastTargetSlidePosition - newSlidePosition);
+    const int32_t absPanSteps= abs(m_lastTargetPanPosition - newPanPosition);
+    const int32_t absTiltSteps= abs(m_lastTargetTiltPosition - newTiltPosition);
+
+    Serial.printf("    SlidePanTilt Steps: %d, %d, %d\n", absSlideSteps, absPanSteps, absTiltSteps);
+
+    // Find the max time amongst all moving steppers that it will take to reach their target step position
+    float maxTimeToComplete= 0;
+    if (absSlideSteps > 0)
+    {
+      maxTimeToComplete= max(computeSecondsToCompleteMove(m_slideStepper, absSlideSteps), maxTimeToComplete);
+    }
+    if (absPanSteps > 0)
+    {
+      maxTimeToComplete= max(computeSecondsToCompleteMove(m_panStepper, absPanSteps), maxTimeToComplete);
+    }
+    if (absTiltSteps > 0)
+    {
+      maxTimeToComplete= max(computeSecondsToCompleteMove(m_tiltStepper, absTiltSteps), maxTimeToComplete);
+    }
+
+    Serial.printf("    Time to complete: %f\n", maxTimeToComplete);
+
+    // Given a desired time to complete, recompute each slider speed so that they all complete at the same time
+    if (maxTimeToComplete > 0.f)
+    {
+      if (absSlideSteps > 0)
+      {
+        setStepperSpeedAndAccelByStepsAndTime(m_slideStepper, absSlideSteps, maxTimeToComplete);
+      }
+      if (absPanSteps > 0)
+      {
+        setStepperSpeedAndAccelByStepsAndTime(m_panStepper, absPanSteps, maxTimeToComplete);
+      }
+      if (absTiltSteps > 0)
+      {
+        setStepperSpeedAndAccelByStepsAndTime(m_tiltStepper, absTiltSteps, maxTimeToComplete);
+      }
+    }
+
+    setSliderPosFraction(slideFraction);
+    setPanPosFraction(panFraction);
+    setTiltPosFraction(tiltFraction);
+  }
+}
+
+void SliderState::setSliderPosFraction(float fraction)
+{
+  // Remap [-1, 1] unit position to calibrated slider min and max step position  
+  int32_t newTargetSliderPosition= remapFloatToInt32(-1.f, 1.f, m_sliderStepperMin, m_sliderStepperMax, fraction);
+
+  setSlideStepperPosition(newTargetSliderPosition);
 }
 
 float SliderState::getSliderPosFraction()
 {
   return remapInt32ToFloat(m_sliderStepperMin, m_sliderStepperMax, -1.f, 1.f, getSlideStepperPosition());
-}
-
-void SliderState::setSliderSpeedFraction(float fraction)
-{
-  // Remap [0, 1] unit speed to mm/s
-  // (special case for 0: use 0 speed to stop the slider rather than SLIDE_MIN_SPEED)
-  float newTargetSliderSpeed= fraction > 0.f ? remapFloatToFloat(0.f, 1.f, SLIDE_MIN_SPEED, SLIDE_MAX_SPEED, fraction) : 0.f;
-  setSlideStepperLinearSpeed(newTargetSliderSpeed);
-}
-
-float SliderState::getSliderSpeedFraction()
-{
-  return remapFloatToFloat(SLIDE_MIN_SPEED, SLIDE_MAX_SPEED, 0.f, 1.f, getSlideStepperLinearSpeed());
-}
-
-void SliderState::setSliderAccelFraction(float fraction)
-{
-  // Remap [0, 1] unit accel to mm/s^2
-  float newTargetSliderAccel= remapFloatToFloat(0.f, 1.f, SLIDE_MIN_ACCELERATION, SLIDE_MAX_ACCELERATION, fraction);
-  setSlideStepperLinearAcceleration(newTargetSliderAccel);
-}
-
-float SliderState::getSliderAccelFraction()
-{
-  return remapFloatToFloat(SLIDE_MIN_ACCELERATION, SLIDE_MAX_ACCELERATION, 0.f, 1.f, getSlideStepperLinearAcceleration());
 }
 
 void SliderState::setPanPosFraction(float fraction)
@@ -595,31 +743,9 @@ float SliderState::getPanPosFraction()
   return remapFloatToFloat(PAN_MIN_ANGLE, PAN_MAX_ANGLE, -1.f, 1.f, getPanStepperDegrees());
 }
 
-void SliderState::setPanSpeedFraction(float fraction)
-{
-  float newTargetSpeed= fraction > 0.f ? remapFloatToFloat(0.f, 1.f, PAN_MIN_SPEED, PAN_MAX_SPEED, fraction) : 0.f;
-  setPanStepperAngularSpeed(newTargetSpeed);
-}
-
-float SliderState::getPanSpeedFraction()
-{
-  return remapFloatToFloat(PAN_MIN_SPEED, PAN_MAX_SPEED, 0.f, 1.f, getPanStepperAngularSpeed());
-}
-
-void SliderState::setPanAccelFraction(float fraction)
-{
-  float newTargetAccel= remapFloatToFloat(0.f, 1.f, PAN_MIN_ACCELERATION, PAN_MAX_ACCELERATION, fraction);
-  setPanStepperAngularAcceleration(newTargetAccel);
-}
-
-float SliderState::getPanAccelFraction()
-{
-  return remapFloatToFloat(PAN_MIN_ACCELERATION, PAN_MAX_ACCELERATION, 0.f, 1.f, getPanStepperAngularAcceleration());
-}
-
 void SliderState::setTiltPosFraction(float fraction)
 {
-  int32_t newTargetDegrees= remapFloatToFloat(-1.f, 1.f, TILT_MIN_ANGLE, TILT_MAX_ANGLE, fraction);
+  float newTargetDegrees= remapFloatToFloat(-1.f, 1.f, TILT_MIN_ANGLE, TILT_MAX_ANGLE, fraction);
   setTiltStepperTargetDegrees(newTargetDegrees);
 }
 
@@ -628,24 +754,68 @@ float SliderState::getTiltPosFraction()
   return remapFloatToFloat(TILT_MIN_ANGLE, TILT_MAX_ANGLE, -1.f, 1.f, getTiltStepperDegrees());
 }
 
-void SliderState::setTiltSpeedFraction(float fraction)
+void SliderState::setSpeedFraction(float newFraction)
 {
-  float newTargetSpeed= fraction > 0.f ? remapFloatToFloat(0.f, 1.f, TILT_MIN_SPEED, TILT_MAX_SPEED, fraction) : 0.f;
-  setTiltStepperAngularSpeed(newTargetSpeed);
+  if (newFraction != m_lastSpeedFraction)
+  {
+    Serial.printf("New Speed Target: %f -> %f\n", m_lastSpeedFraction, newFraction);
+    m_lastSpeedFraction= newFraction;
+    applyLastSpeedFraction();
+  }
 }
 
-float SliderState::getTiltSpeedFraction()
+void SliderState::applyLastSpeedFraction()
 {
-  return remapFloatToFloat(TILT_MIN_SPEED, TILT_MAX_SPEED, 0.f, 1.f, getTiltStepperAngularSpeed());
+  // (special case for 0: use 0 speed to stop the stepper rather than ..._MIN_SPEED)
+  // Remap [0, 1] unit speed to mm/s
+  float newTargetSliderSpeed= m_lastSpeedFraction > 0.f ? remapFloatToFloat(0.f, 1.f, SLIDE_MIN_SPEED, SLIDE_MAX_SPEED, m_lastSpeedFraction) : 0.f;
+  // Remap [0, 1] unit speed to deg/s
+  float newTargetPanSpeed= m_lastSpeedFraction > 0.f ? remapFloatToFloat(0.f, 1.f, PAN_MIN_SPEED, PAN_MAX_SPEED, m_lastSpeedFraction) : 0.f;
+  float newTargetTiltSpeed= m_lastSpeedFraction > 0.f ? remapFloatToFloat(0.f, 1.f, TILT_MIN_SPEED, TILT_MAX_SPEED, m_lastSpeedFraction) : 0.f;
+
+  setSlideStepperLinearSpeed(newTargetSliderSpeed);
+  setPanStepperAngularSpeed(newTargetPanSpeed);
+  setTiltStepperAngularSpeed(newTargetTiltSpeed);
 }
 
-void SliderState::setTiltAccelFraction(float fraction)
+void SliderState::applyLastAccelFraction()
 {
-  float newTargetAccel= remapFloatToFloat(0.f, 1.f, TILT_MIN_ACCELERATION, TILT_MAX_ACCELERATION, fraction);
-  setTiltStepperAngularAcceleration(newTargetAccel);
+  // Remap [0, 1] unit accel to mm/s^2
+  float newTargetSliderAccel= remapFloatToFloat(0.f, 1.f, SLIDE_MIN_ACCELERATION, SLIDE_MAX_ACCELERATION, m_lastAccelerationFraction);
+  // Remap [0, 1] unit accel to deg/s^2
+  float newTargetPanAccel= remapFloatToFloat(0.f, 1.f, PAN_MIN_ACCELERATION, PAN_MAX_ACCELERATION, m_lastAccelerationFraction);
+  float newTargetTiltAccel= remapFloatToFloat(0.f, 1.f, TILT_MIN_ACCELERATION, TILT_MAX_ACCELERATION, m_lastAccelerationFraction);
+
+  setSlideStepperLinearAcceleration(newTargetSliderAccel);
+  setPanStepperAngularAcceleration(newTargetPanAccel);
+  setTiltStepperAngularAcceleration(newTargetTiltAccel);
 }
 
-float SliderState::getTiltAccelFraction()
+float SliderState::getSpeedFraction()
 {
-  return remapFloatToFloat(TILT_MIN_ACCELERATION, TILT_MAX_ACCELERATION, 0.f, 1.f, getTiltStepperAngularAcceleration());
+  return m_lastSpeedFraction;
+}
+
+void SliderState::setAccelFraction(float newFraction)
+{
+  if (newFraction != m_lastAccelerationFraction)
+  {
+    // Remap [0, 1] unit accel to mm/s^2
+    float newTargetSliderAccel= remapFloatToFloat(0.f, 1.f, SLIDE_MIN_ACCELERATION, SLIDE_MAX_ACCELERATION, newFraction);
+    // Remap [0, 1] unit accel to deg/s^2
+    float newTargetPanAccel= remapFloatToFloat(0.f, 1.f, PAN_MIN_ACCELERATION, PAN_MAX_ACCELERATION, newFraction);
+    float newTargetTiltAccel= remapFloatToFloat(0.f, 1.f, TILT_MIN_ACCELERATION, TILT_MAX_ACCELERATION, newFraction);
+
+    setSlideStepperLinearAcceleration(newTargetSliderAccel);
+    setPanStepperAngularAcceleration(newTargetPanAccel);
+    setTiltStepperAngularAcceleration(newTargetTiltAccel);
+
+    Serial.printf("New Acceleration Target: %f -> %f\n", m_lastAccelerationFraction, newFraction);
+    m_lastAccelerationFraction= newFraction;
+  }
+}
+
+float SliderState::getAccelFraction()
+{
+  return m_lastAccelerationFraction;
 }

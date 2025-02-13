@@ -8,15 +8,6 @@
 
 #include <Adafruit_SSD1306.h>
 
-#define PAN_CALIBRATION_SPEED   10.f // degrees / second
-#define TILT_CALIBRATION_SPEED  10.f // degrees / second
-#define SLIDE_CALIBRATION_SPEED 50.f // mm / second
-
-#define DEFAULT_INITIAL_PAN_POSITION        10000
-#define DEFAULT_INITIAL_TILT_POSITION       10000
-#define DEFAULT_INITIAL_SLIDE_POSITION      32767
-#define MAX_SLIDER_SEARCH_STEPS             32767
-
 enum class eSliderReadyOptions : int
 {
     Start,
@@ -52,6 +43,7 @@ void AppStage_SliderCalibration::enter()
     Serial.println("Enter Slider Calibration");
     AppStage::enter();
 
+    BLEManager::getInstance()->setCommandHandler(this);
     HallSensorManager::getInstance()->setListener(this);
     setState(eSliderCalibrationState::Setup);
 }
@@ -63,6 +55,22 @@ void AppStage_SliderCalibration::exit()
 
     setState(eSliderCalibrationState::INVALID);
     HallSensorManager::getInstance()->clearListener(this);
+    BLEManager::getInstance()->clearCommandHandler(this);
+}
+
+// BLEManager Events
+void AppStage_SliderCalibration::onCommand(const std::vector<std::string>& args, std::vector<std::string>& results)
+{
+    if (args[0] == "stop")
+    {
+        Serial.println("AppStage_SliderCalibration: Received stop command. Halt calibration.");
+        SliderState::getInstance()->stopAll();
+        m_app->popAppState();
+    }
+    else
+    {
+        Serial.printf("AppStage_SliderCalibration: Ignoring command %s", args[0].c_str());
+    }
 }
 
 // HallSensorEventListener Events
@@ -103,7 +111,7 @@ void AppStage_SliderCalibration::onSlideMaxSensorChanged(bool bActive)
         silderState->getSlideStepper()->moveTo(midpointPosition);
         Serial.printf("Return to mid point: %d\n", midpointPosition);
 
-        setState(eSliderCalibrationState::FindPanCenter);       
+        setState(dequeueNextCalibrationState());       
     }
 }
 
@@ -121,7 +129,7 @@ void AppStage_SliderCalibration::onPanSensorChanged(bool bActive)
         // Stop!
         silderState->getPanStepper()->stopMove();
 
-        setState(eSliderCalibrationState::FindTiltCenter);           
+        setState(dequeueNextCalibrationState());           
     }
 }
 
@@ -139,7 +147,7 @@ void AppStage_SliderCalibration::onTiltSensorChanged(bool bActive)
         // Stop!
         silderState->getTiltStepper()->stopMove();
 
-        setState(eSliderCalibrationState::Recenter);            
+        setState(dequeueNextCalibrationState());            
     }
 }
 
@@ -181,7 +189,7 @@ void AppStage_SliderCalibration::onOptionClicked(int optionIndex)
         {
         case eSliderReadyOptions::Start:
             {
-                setState(eSliderCalibrationState::FindSlideMin);
+                setState(dequeueNextCalibrationState());
             }
             break;
         case eSliderReadyOptions::Cancel:
@@ -204,6 +212,29 @@ void AppStage_SliderCalibration::onOptionClicked(int optionIndex)
     }
 }
 
+eSliderCalibrationState AppStage_SliderCalibration::dequeueNextCalibrationState()
+{
+    if (m_bWantsSlideCalibration)
+    {
+        m_bWantsSlideCalibration= false;
+        return eSliderCalibrationState::FindSlideMin;
+    }
+    else if (m_bWantsPanCalibration)
+    {
+        m_bWantsPanCalibration= false;
+        return eSliderCalibrationState::FindPanCenter;
+    }
+    else if (m_bWantsTiltCalibration)
+    {
+        m_bWantsTiltCalibration= false;
+        return eSliderCalibrationState::FindTiltCenter;
+    }
+    else
+    {
+        return eSliderCalibrationState::Recenter;
+    }
+}
+
 void AppStage_SliderCalibration::update(float deltaSeconds)
 {
     SliderState* sliderState= SliderState::getInstance();
@@ -215,7 +246,7 @@ void AppStage_SliderCalibration::update(float deltaSeconds)
         if (m_bAutoCalibrate)
         {
             Serial.println("Auto-starting slider calibration.");
-            nextState= eSliderCalibrationState::FindSlideMin;
+            nextState= dequeueNextCalibrationState();
         }
         break;
     case eSliderCalibrationState::FindSlideMin:
@@ -384,7 +415,7 @@ void AppStage_SliderCalibration::onEnterState(eSliderCalibrationState newState)
     {
     case eSliderCalibrationState::Setup:
         {
-            bleManager->sendEvent("calibration_started");
+            bleManager->setStatus("calibration_started");
 
             m_activeMenu = &m_setupMenu;
 
@@ -425,11 +456,11 @@ void AppStage_SliderCalibration::onEnterState(eSliderCalibrationState newState)
         }    
         break;
     case eSliderCalibrationState::Complete:
-        bleManager->sendEvent("calibration_completed");
+        bleManager->setStatus("calibration_completed");
         m_activeMenu = &m_completeMenu;
         break;
     case eSliderCalibrationState::Failed:
-        bleManager->sendEvent("calibration_failed");
+        bleManager->setStatus("calibration_failed");
         m_activeMenu = &m_failedMenu;
         break;
     default:

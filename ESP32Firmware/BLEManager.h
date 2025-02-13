@@ -7,10 +7,13 @@
 #include "ConfigManager.h"
 #include "SliderManager.h"
 
+#include <vector>
+#include <string>
+
 class BLECommandHandler
 {
 public:
-  virtual void onCommand(const std::string& command) {}
+  virtual void onCommand(const std::vector<std::string>& args, std::vector<std::string>& results) {}
 };
 
 class BLEManager : public BLECharacteristicCallbacks, public BLEServerCallbacks, public SliderStateEventListener
@@ -22,7 +25,7 @@ public:
   void setBLEControlEnabled(bool bEnabled) { m_bleControlEnabled= bEnabled; }
   void setCommandHandler(BLECommandHandler *handler);
   void clearCommandHandler(BLECommandHandler *handler);
-  void sendEvent(const std::string& event);
+  void setStatus(const std::string& event);
 
   void setup();
   void loop();
@@ -35,6 +38,12 @@ private:
   ConfigManager* m_config= nullptr;
 
   // SliderManager Events
+  virtual void onSliderMinSet(int32_t pos) override;
+  virtual void onSliderMaxSet(int32_t pos) override; 
+  virtual void onSliderTargetSet(int32_t pos) override;
+  virtual void onPanTargetSet(int32_t pos) override;
+  virtual void onTiltTargetSet(int32_t pos) override;
+  virtual void onMoveToTargetStart() override;
   virtual void onMoveToTargetComplete() override;
 
   // BLEServerCallbacks
@@ -42,7 +51,8 @@ private:
   virtual void onDisconnect(BLEServer *pServer) override;
 
   // BLECharacteristicCallbacks
-  BLECharacteristic *makeFloatCharacteristic(const char* UUID, bool bWritable, float initialValue);
+  BLECharacteristic *makeFloatInputCharacteristic(const char* UUID, float initialValue);
+  BLECharacteristic *makeInt32OutputCharacteristic(const char* UUID, int32_t initialValue);
   BLECharacteristic *makeUTF8OutputCharacteristic(const char* UUID);
   BLECharacteristic *makeUTF8InputCharacteristic(const char* UUID);
   float getFloatCharacteristicValue(BLECharacteristic *pCharacteristic);
@@ -51,17 +61,14 @@ private:
 
   BLEServer *m_pServer= nullptr;
   BLEService *m_pService= nullptr;
-  BLECharacteristic *m_pCommandCharacteristic= nullptr;
-  BLECharacteristic *m_pEventCharacteristic= nullptr;
+  BLECharacteristic *m_pStatusCharacteristic= nullptr;
+  BLECharacteristic *m_pRequestCharacteristic= nullptr;
+  BLECharacteristic *m_pResponseCharacteristic= nullptr;
   BLECharacteristic *m_pSliderPosCharacteristic= nullptr;
-  BLECharacteristic *m_pSliderSpeedCharacteristic= nullptr;
-  BLECharacteristic *m_pSliderAccelCharacteristic= nullptr;
   BLECharacteristic *m_pPanPosCharacteristic= nullptr;
-  BLECharacteristic *m_pPanSpeedCharacteristic= nullptr;
-  BLECharacteristic *m_pPanAccelCharacteristic= nullptr;
   BLECharacteristic *m_pTiltPosCharacteristic= nullptr;
-  BLECharacteristic *m_pTiltSpeedCharacteristic= nullptr;
-  BLECharacteristic *m_pTiltAccelCharacteristic= nullptr;    
+  BLECharacteristic *m_pSpeedCharacteristic= nullptr;
+  BLECharacteristic *m_pAccelCharacteristic= nullptr;    
   BLEAdvertising *m_pAdvertising= nullptr;
 
   bool m_bleControlEnabled= true;

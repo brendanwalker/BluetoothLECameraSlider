@@ -20,14 +20,18 @@
 #include "AppStage_SliderCalibration.h"
 #include "AppStage_Test.h"
 #include "BLEManager.h"
+#include "FanManager.h"
 #include "HallSensorManager.h"
 #include "SliderManager.h"
+#include "FanManager.h"
 
 #define SCREEN_WIDTH 128                    // OLED display width, in pixels
 #define SCREEN_HEIGHT 64                    // OLED display height, in pixels
 
 #define OLED_RESET -1                                                           // Reset pin # (or -1 if sharing Arduino reset pin)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);       // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+
+#define FAN_PIN 2
 
 #define ROTARY_ENCODER_A_PIN 32
 #define ROTARY_ENCODER_B_PIN 13
@@ -52,6 +56,9 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);       
 
 #define WAKEUP_TOUCH_THRESHOLD   40
 
+// Timer state
+unsigned long previousMillis= 0;
+
 // Persistent storage
 ConfigManager configManager;
 
@@ -68,6 +75,9 @@ Button2 rotaryButton;
 
 // Hall Effect Sensors
 HallSensorManager hallSensorManager(HALL_PAN_PIN, HALL_TILT_PIN, HALL_SLIDE_MIN_PIN, HALL_SLIDE_MAX_PIN);
+
+// Fan Management
+FanManager fanManager(FAN_PIN);
 
 // BluetoothLE Manager
 BLEManager bleManager(&configManager);
@@ -104,6 +114,9 @@ void setup()
 {
   Serial.begin(115200);
   Serial.print("Begin Setup");
+
+  // Initialize fan management
+  fanManager.setup();
 
   // Initialize rotary encoder
   Serial.println(F("Setup Rotary Encoder"));
@@ -157,12 +170,20 @@ void setup()
 
 void loop() 
 {
+  unsigned long currentMillis = millis(); 
+  unsigned long millisDelta = currentMillis - previousMillis;
+  float deltaSeconds= (float)millisDelta / 1000.f;
+  previousMillis= currentMillis;
+
   // Process Input events from the Rotary Encoder
   rotaryEncoder.loop();
   rotaryButton.loop();
 
   // Update motor positions stored in config
   sliderState.loop();
+
+  // Update fan control if the motors are running
+  fanManager.loop(deltaSeconds);
 
   // Update hall effect sensor state
   hallSensorManager.loop();
@@ -171,5 +192,5 @@ void loop()
   bleManager.loop();
   
   // Update UI
-  app.loop();
+  app.loop(deltaSeconds);
 }

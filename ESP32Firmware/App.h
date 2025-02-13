@@ -38,7 +38,7 @@ public:
     static App* getInstance() { return s_instance; }
 
     void setup();
-    void loop();
+    void loop(float deltaSeconds);
     void save();
 
     inline int getAppStageStackSize() const
@@ -74,7 +74,6 @@ private:
     static App* s_instance;
 
     // Time
-    unsigned long previousMillis= 0;
     float autoSaveTimer= AUTO_SAVE_DURATION;
 
     // App Stages

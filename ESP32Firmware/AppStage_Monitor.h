@@ -21,7 +21,7 @@ public:
     virtual void render() override;
 
     // BLECommandHandler
-    virtual void onCommand(const std::string& command) override;
+    virtual void onCommand(const std::vector<std::string>& args, std::vector<std::string>& results) override;
 
     // Input Event Handling (active when menu is not active)
     virtual bool getIsRotaryEncoderWrapped() const override { return true; }

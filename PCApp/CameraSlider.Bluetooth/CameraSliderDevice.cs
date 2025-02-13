@@ -1,79 +1,85 @@
 ﻿using CameraSlider.Bluetooth.Events;
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Security.Cryptography;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Devices.Enumeration;
+using System.Collections.Generic;
+using CameraSlider.Bluetooth.Commands;
 
 namespace CameraSlider.Bluetooth
 {
 	public class CameraSliderDevice
 	{
-		public readonly short MAX_SMOKE_DURATION_MILLIS = 10 * 1000; // Max 10 milliseconds
-
 		public readonly string SERVICE_UUID = "6b42e290-28cb-11ee-be56-0242ac120002";
-		public readonly string COMMAND_CHARACTERISTIC_UUID = "62c6b5d1-d304-4b9c-b12b-decd1e5b3614";
-		public readonly string EVENT_CHARACTERISTIC_UUID = "5c88bae1-db64-4483-a0f3-6b6786c6c145";
+		public readonly string STATUS_CHARACTERISTIC_UUID = "6b390b6c-b306-4ccb-a126-d759c5113177";
+		public readonly string REQUEST_CHARACTERISTIC_UUID = "62c6b5d1-d304-4b9c-b12b-decd1e5b3614";
+		public readonly string RESPONSE_CHARACTERISTIC_UUID = "5c88bae1-db64-4483-a0f3-6b6786c6c145";
 		public readonly string SLIDER_POS_CHARACTERISTIC_UUID = "87b8f554-28cb-11ee-be56-0242ac120002";
-		public readonly string SLIDER_SPEED_CHARACTERISTIC_UUID = "781ef5a1-e5df-411d-9276-7a229e469719";
-		public readonly string SLIDER_ACCEL_CHARACTERISTIC_UUID = "5cf074e3-2014-4776-8734-b0d0eb49229a";
 		public readonly string PAN_POS_CHARACTERISTIC_UUID = "a86268cb-73bb-497c-bb9b-cf7af318919f";
-		public readonly string PAN_SPEED_CHARACTERISTIC_UUID = "838a79d5-c5f2-40ea-8f3d-c9d6fde08f56";
-		public readonly string PAN_ACCEL_CHARACTERISTIC_UUID = "4049db30-2096-460a-821f-05380dc37212";
 		public readonly string TILT_POS_CHARACTERISTIC_UUID = "9881b453-6636-4a73-a335-11bc737f6812";
-		public readonly string TILT_SPEED_CHARACTERISTIC_UUID = "d40730f2-7be2-425a-a70c-58d56f8d2295";
-		public readonly string TILT_ACCEL_CHARACTERISTIC_UUID = "885bee55-f069-4077-b18f-5cdb8b4a7003";
+		public readonly string SPEED_CHARACTERISTIC_UUID = "781ef5a1-e5df-411d-9276-7a229e469719";
+		public readonly string ACCEL_CHARACTERISTIC_UUID = "5cf074e3-2014-4776-8734-b0d0eb49229a";
 
 		private BluetoothLEDevice _cameraSliderDevice = null;
 
 		private GattDeviceService _cameraSliderService = null;
 
-		private GattCharacteristic _commandCharacteristic = null;
-		private GattCharacteristic _eventCharacteristic = null;
+		private GattCharacteristic _statusCharacteristic = null;
+
+		private GattCharacteristic _requestCharacteristic = null;
+		private GattCharacteristic _responseCharacteristic = null;
 
 		private GattCharacteristic _slidePosCharacteristic = null;
-		private GattCharacteristic _slideSpeedCharacteristic = null;
-		private GattCharacteristic _slideAccelCharacteristic = null;
-
 		private GattCharacteristic _panPosCharacteristic = null;
-		private GattCharacteristic _panSpeedCharacteristic = null;
-		private GattCharacteristic _panAccelCharacteristic = null;
-
 		private GattCharacteristic _tiltPosCharacteristic = null;
-		private GattCharacteristic _tiltSpeedCharacteristic = null;
-		private GattCharacteristic _tiltAccelCharacteristic = null;
 
-		public event EventHandler<Events.ConnectionStatusChangedEventArgs> ConnectionStatusChanged;
-		protected virtual void OnConnectionStatusChanged(Events.ConnectionStatusChangedEventArgs e)
-		{
-			ConnectionStatusChanged?.Invoke(this, e);
-		}
+		private GattCharacteristic _speedCharacteristic = null;
+		private GattCharacteristic _accelCharacteristic = null;
 
-		public event EventHandler<Events.CameraSliderEventArgs> CameraSliderEventHandler;
-		protected virtual void OnCameraSliderEvent(Events.CameraSliderEventArgs e)
-		{
-			CameraSliderEventHandler?.Invoke(this, e);
-		}
+		private CommandManager _requestManager = new CommandManager();
 
-		public async Task<bool> ConnectAsync(string deviceName)
+		public event EventHandler<ConnectionStatusChangedEventArgs> ConnectionStatusChanged;
+		public event EventHandler<CameraStatusChangedEventArgs> CameraStatusChanged;
+		public event EventHandler<CameraResponseArgs> CameraResponseHandler;
+		public event EventHandler<CameraPositionChangedEventArgs> SliderPosChanged;
+		public event EventHandler<CameraPositionChangedEventArgs> PanPosChanged;
+		public event EventHandler<CameraPositionChangedEventArgs> TiltPosChanged;
+
+		public bool Connect(string deviceName)
 		{
 			// Get Bluetooth devices
-			//string deviceSelector = BluetoothLEDevice.GetDeviceSelector();
 			string deviceSelector= BluetoothLEDevice.GetDeviceSelectorFromPairingState(true);
-			var devices = await DeviceInformation.FindAllAsync(deviceSelector);
+			var deviceCollectionResponse= AsyncOpFuture.Create(
+				DeviceInformation.FindAllAsync(deviceSelector))
+				.FetchResponse<DeviceInformationCollection>();
+			if (deviceCollectionResponse.Code != ResultCode.Success)
+			{
+				return false;
+			}
 
-			foreach (var device in devices)
+			foreach (var device in deviceCollectionResponse.Data)
 			{
 				if (device.Name == deviceName)
 				{
 					try
 					{
 						// Connect to the Bluetooth LE device
-						_cameraSliderDevice = await BluetoothLEDevice.FromIdAsync(device.Id);
+						var deviceResponse= 
+							AsyncOpFuture.Create(
+								BluetoothLEDevice.FromIdAsync(device.Id))
+							.FetchResponse<BluetoothLEDevice>();
+						if (deviceResponse.Code == ResultCode.Success)
+						{
+							_cameraSliderDevice = deviceResponse.Data;
+						}
+						else
+						{
+							Console.WriteLine($"Error connecting to device, error code: {deviceResponse.Code}");
+						}
 					}
 					catch (Exception ex)
 					{
@@ -99,7 +105,7 @@ namespace CameraSlider.Bluetooth
 			_cameraSliderDevice.ConnectionStatusChanged -= DeviceConnectionStatusChanged;
 			_cameraSliderDevice.ConnectionStatusChanged += DeviceConnectionStatusChanged;
 
-			if (await SetupCameraSliderCharacteristics() == false)
+			if (SetupCameraSliderCharacteristics() == false)
 			{
 				return false;
 			}
@@ -110,125 +116,146 @@ namespace CameraSlider.Bluetooth
 			return true;
 		}
 
-		private async Task<bool> SetupCameraSliderCharacteristics()
+		private bool SetupCameraSliderCharacteristics()
 		{
-			_cameraSliderService = await GetDeviceServiceByUuidAsync(SERVICE_UUID);
+			_cameraSliderService = GetDeviceServiceByUuidAsync(SERVICE_UUID);
 			if (_cameraSliderService == null)
 				return false;
 
-			_commandCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, COMMAND_CHARACTERISTIC_UUID);
-			if (_commandCharacteristic == null)
+			_statusCharacteristic = GetServiceCharacteristicByUuidAsync(_cameraSliderService, STATUS_CHARACTERISTIC_UUID);
+			if (_statusCharacteristic != null)
+				RegisterCharacteristicValueChangeCallback(_statusCharacteristic, NotifyCameraStatusEvent);
+			else
 				return false;
 
-			_eventCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, EVENT_CHARACTERISTIC_UUID);
-			if (_eventCharacteristic == null)
+			_requestCharacteristic = GetServiceCharacteristicByUuidAsync(_cameraSliderService, REQUEST_CHARACTERISTIC_UUID);
+			if (_requestCharacteristic == null)
 				return false;
 
-			await RegisterCharacteristicValueChangeCallback(_eventCharacteristic, NotifyCameraSliderEvent);
-
-			_slidePosCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, SLIDER_POS_CHARACTERISTIC_UUID);
-			if (_slidePosCharacteristic == null)
+			_responseCharacteristic = GetServiceCharacteristicByUuidAsync(_cameraSliderService, RESPONSE_CHARACTERISTIC_UUID);
+			if (_responseCharacteristic != null)
+				RegisterCharacteristicValueChangeCallback(_responseCharacteristic, NotifyCameraResponseEvent);
+			else
 				return false;
 
-			_slideSpeedCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, SLIDER_SPEED_CHARACTERISTIC_UUID);
-			if (_slideSpeedCharacteristic == null)
+			_slidePosCharacteristic = GetServiceCharacteristicByUuidAsync(_cameraSliderService, SLIDER_POS_CHARACTERISTIC_UUID);
+			if (_slidePosCharacteristic != null)
+				RegisterCharacteristicValueChangeCallback(_slidePosCharacteristic, NotifySliderPosChangedEvent);
+			else
 				return false;
 
-			_slideAccelCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, SLIDER_ACCEL_CHARACTERISTIC_UUID);
-			if (_slideAccelCharacteristic == null)
+			_panPosCharacteristic = GetServiceCharacteristicByUuidAsync(_cameraSliderService, PAN_POS_CHARACTERISTIC_UUID);
+			if (_panPosCharacteristic != null)
+				RegisterCharacteristicValueChangeCallback(_panPosCharacteristic, NotifyPanPosChangedEvent);
+			else
 				return false;
 
-			_panPosCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, PAN_POS_CHARACTERISTIC_UUID);
-			if (_panPosCharacteristic == null)
+			_tiltPosCharacteristic = GetServiceCharacteristicByUuidAsync(_cameraSliderService, TILT_POS_CHARACTERISTIC_UUID);
+			if (_tiltPosCharacteristic != null)
+				RegisterCharacteristicValueChangeCallback(_tiltPosCharacteristic, NotifyTiltPosChangedEvent);
+			else
 				return false;
 
-			_panSpeedCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, PAN_SPEED_CHARACTERISTIC_UUID);
-			if (_panSpeedCharacteristic == null)
+			_speedCharacteristic = GetServiceCharacteristicByUuidAsync(_cameraSliderService, SPEED_CHARACTERISTIC_UUID);
+			if (_speedCharacteristic == null)
 				return false;
 
-			_panAccelCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, PAN_ACCEL_CHARACTERISTIC_UUID);
-			if (_panAccelCharacteristic == null)
-				return false;
-
-			_tiltPosCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, TILT_POS_CHARACTERISTIC_UUID);
-			if (_tiltPosCharacteristic == null)
-				return false;
-
-			_tiltSpeedCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, TILT_SPEED_CHARACTERISTIC_UUID);
-			if (_tiltSpeedCharacteristic == null)
-				return false;
-
-			_tiltAccelCharacteristic = await GetServiceCharacteristicByUuidAsync(_cameraSliderService, TILT_ACCEL_CHARACTERISTIC_UUID);
-			if (_tiltAccelCharacteristic == null)
+			_accelCharacteristic = GetServiceCharacteristicByUuidAsync(_cameraSliderService, ACCEL_CHARACTERISTIC_UUID);
+			if (_accelCharacteristic == null)
 				return false;
 
 			return true;
 		}
 
-		private async Task<GattDeviceService> GetDeviceServiceByUuidAsync(string serviceUuid)
+		private GattDeviceService GetDeviceServiceByUuidAsync(string serviceUuid)
 		{
 			// Note: BluetoothLEDevice.GattServices property will return an empty list for unpaired devices. For all uses we recommend using the GetGattServicesAsync method.
 			// BT_Code: GetGattServicesAsync returns a list of all the supported services of the device (even if it's not paired to the system).
 			// If the services supported by the device are expected to change during BT usage, subscribe to the GattServicesChanged event.
-			GattDeviceServicesResult result = await _cameraSliderDevice.GetGattServicesForUuidAsync(new Guid(serviceUuid), BluetoothCacheMode.Uncached);
+			var response =
+				AsyncOpFuture.Create(
+					_cameraSliderDevice.GetGattServicesForUuidAsync(
+						new Guid(serviceUuid), BluetoothCacheMode.Uncached))
+				.FetchResponse<GattDeviceServicesResult>();
 
-			if (result.Status == GattCommunicationStatus.Success)
+			if (response.Code == ResultCode.Success)
 			{
-				return result.Services.FirstOrDefault();
+				var result = response.Data;
+
+				if (result.Status == GattCommunicationStatus.Success)
+				{
+					return result.Services.FirstOrDefault();
+				}
 			}
-			else
-			{
-				return null;
-			}
+
+			return null;
 		}
 
-		private async Task<GattCharacteristic> GetServiceCharacteristicByUuidAsync(GattDeviceService service, string characteristicUuid)
+		private GattCharacteristic GetServiceCharacteristicByUuidAsync(GattDeviceService service, string characteristicUuid)
 		{
-			GattCharacteristicsResult result = await service.GetCharacteristicsForUuidAsync(new Guid(characteristicUuid), BluetoothCacheMode.Uncached);
+			var response =
+				AsyncOpFuture.Create(
+					service.GetCharacteristicsForUuidAsync(
+						new Guid(characteristicUuid), 
+						BluetoothCacheMode.Uncached))
+				.FetchResponse<GattCharacteristicsResult>();
 
-			if (result.Status == GattCommunicationStatus.Success)
+			if (response.Code == ResultCode.Success)
 			{
-				return result.Characteristics.FirstOrDefault();
+				var result = response.Data;
+
+				if (result.Status == GattCommunicationStatus.Success)
+				{
+					return result.Characteristics.FirstOrDefault();
+				}
 			}
-			else
-			{
-				return null;
-			}
+
+			return null;
 		}
 
-		private async Task<bool> RegisterCharacteristicValueChangeCallback(GattCharacteristic characteristic, TypedEventHandler<GattCharacteristic, GattValueChangedEventArgs> callback)
+		private bool RegisterCharacteristicValueChangeCallback(GattCharacteristic characteristic, TypedEventHandler<GattCharacteristic, GattValueChangedEventArgs> callback)
 		{
 			if (characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Notify))
 			{
-				var status = await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
-					GattClientCharacteristicConfigurationDescriptorValue.Notify);
-				if (status == GattCommunicationStatus.Success)
-				{
-					characteristic.ValueChanged += callback;
-				}
+				var response =
+					AsyncOpFuture.Create(
+						characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
+							GattClientCharacteristicConfigurationDescriptorValue.Notify))
+					.FetchResponse<GattCommunicationStatus>();
 
-				return status == GattCommunicationStatus.Success;
+				if (response.Code == ResultCode.Success)
+				{
+					if (response.Data == GattCommunicationStatus.Success)
+					{
+						characteristic.ValueChanged += callback;
+					}
+
+					return response.Data == GattCommunicationStatus.Success;
+				}
 			}
-			else
-			{
-				return false;
-			}
+
+			return false;
 		}
 
-		public async Task<bool> DisconnectAsync()
+		public bool Disconnect()
 		{
 			bool success = true;
 
 			if (_cameraSliderDevice != null)
 			{
-				if (_eventCharacteristic != null)
+				if (_responseCharacteristic != null)
 				{
 					try
 					{
-						GattCommunicationStatus status =
-							await _eventCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
-								GattClientCharacteristicConfigurationDescriptorValue.None);
-						success = status == GattCommunicationStatus.Success;
+						var response =
+							AsyncOpFuture.Create(
+								_responseCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
+									GattClientCharacteristicConfigurationDescriptorValue.None))
+							.FetchResponse<GattCommunicationStatus>();
+
+						success = 
+							response.Code == ResultCode.Success &&
+							response.Data == GattCommunicationStatus.Success;
 					}
 					catch (Exception)
 					{
@@ -252,180 +279,241 @@ namespace CameraSlider.Bluetooth
 					_cameraSliderService = null;
 				}
 
-				_commandCharacteristic = null;
-				_eventCharacteristic = null;
+				_statusCharacteristic = null;
+
+				_requestCharacteristic = null;
+				_responseCharacteristic = null;
 
 				_slidePosCharacteristic = null;
-				_slideSpeedCharacteristic = null;
-				_slideAccelCharacteristic = null;
-
 				_panPosCharacteristic = null;
-				_panSpeedCharacteristic = null;
-				_panAccelCharacteristic = null;
-
 				_tiltPosCharacteristic = null;
-				_tiltSpeedCharacteristic = null;
-				_tiltAccelCharacteristic = null;
+
+				_speedCharacteristic = null;
+				_accelCharacteristic = null;
 			}
 		}
 
-		private async Task<bool> SendCommand(string command)
+		private void SendCommand(string command)
 		{
+			_requestManager.EnqueueCommand(command);
+
+			// Try and send the command right away
+			// No-ops if there is already a command in-flight
+			SendNextPendingCommand();
+		}
+
+		private bool SendRequest(string command)
+		{
+			bool success= false;
+
 			try
 			{
-				if (_commandCharacteristic == null)
-          return false;
-
-				GattWriteResult result =
-					await _commandCharacteristic.WriteValueWithResultAsync(
-						CryptographicBuffer.ConvertStringToBinary(command, BinaryStringEncoding.Utf8));
-
-				return result.Status == GattCommunicationStatus.Success;
+				if (_requestCharacteristic != null)
+				{
+					var response =
+						AsyncOpFuture.Create(
+							_requestCharacteristic.WriteValueWithResultAsync(
+								CryptographicBuffer.ConvertStringToBinary(command, BinaryStringEncoding.Utf8)))
+						.FetchResponse<GattWriteResult>();
+					if (response.Code == ResultCode.Success)
+					{
+						success = response.Data.Status == GattCommunicationStatus.Success;
+					}
+				}
 			}
 			catch (Exception)
 			{
-				return false;
+				success= false;
+			}
+
+			return success;
+		}
+
+		public void SendNextPendingCommand()
+		{
+			if (_requestManager.TryDequeueRequestToSend(out CommandRequest request))
+			{
+				string message = $"{request.RequestId} {request.Message}";
+
+				if (!SendRequest(message))
+				{
+					_requestManager.ClearInFlightCommand(request);
+				}
 			}
 		}
 
-		private async Task<bool> SendFloat(GattCharacteristic characteristic, float value)
+		public void SetPosition(float slide, float pan, float tilt)
 		{
+			string command = $"set_pos {slide} {pan} {tilt}";
+
+			SendCommand(command);
+		}
+
+		private bool SendFloat(GattCharacteristic characteristic, float value)
+		{
+			bool success = false;
+
 			try
 			{
-        if (characteristic == null)
-          return false;
+				if (characteristic != null)
+				{
+					byte[] Message = BitConverter.GetBytes(value);
+					var response =
+						AsyncOpFuture.Create(
+							characteristic.WriteValueWithResultAsync(Message.AsBuffer()))
+						.FetchResponse<GattWriteResult>();
 
-        byte[] Message = BitConverter.GetBytes(value);
-				GattWriteResult result = await characteristic.WriteValueWithResultAsync(Message.AsBuffer());
-
-				return result.Status == GattCommunicationStatus.Success;
+					success =
+						response.Code == ResultCode.Success &&
+						response.Data.Status == GattCommunicationStatus.Success;
+				}
 			}
 			catch (Exception)
 			{
-				return false;
+				success= false;
 			}
+
+			return success;
 		}
 
-		public async Task<bool> SetSlidePosition(float position)
+		public bool SetSpeed(float speed)
 		{
-			return await SendFloat(_slidePosCharacteristic, position);
+			return SendFloat(_speedCharacteristic, speed);
 		}
 
-		public async Task<bool> SetPanPosition(float position)
+		public bool SetAcceleration(float acceleration)
 		{
-			return await SendFloat(_panPosCharacteristic, position);
+			return SendFloat(_accelCharacteristic, acceleration);
 		}
 
-		public async Task<bool> SetTiltPosition(float position)
+		private float GetFloat(GattCharacteristic characteristic)
 		{
-			return await SendFloat(_tiltPosCharacteristic, position);
-		}
+			float result= 0.0f;
 
-		public async Task<bool> SetSlideSpeed(float speed)
-		{
-			return await SendFloat(_slideSpeedCharacteristic, speed);
-		}
-
-		public async Task<bool> SetPanSpeed(float speed)
-		{
-			return await SendFloat(_panSpeedCharacteristic, speed);
-		}
-
-		public async Task<bool> SetTiltSpeed(float speed)
-		{
-			return await SendFloat(_tiltSpeedCharacteristic, speed);
-		}
-
-		public async Task<bool> SetSlideAcceleration(float acceleration)
-		{
-			return await SendFloat(_slideAccelCharacteristic, acceleration);
-		}
-
-		public async Task<bool> SetPanAcceleration(float acceleration)
-		{
-			return await SendFloat(_panAccelCharacteristic, acceleration);
-		}
-
-		public async Task<bool> SetTiltAcceleration(float acceleration)
-		{
-			return await SendFloat(_tiltAccelCharacteristic, acceleration);
-		}
-
-		private async Task<float> GetFloat(GattCharacteristic characteristic)
-		{
 			try
 			{
-        if (characteristic == null)
-          return 0f;
+				if (characteristic != null)
+				{
+					var response =
+						AsyncOpFuture.Create(characteristic.ReadValueAsync())
+						.FetchResponse<GattReadResult>();
 
-        GattReadResult result = await characteristic.ReadValueAsync();
-
-				return BitConverter.ToSingle(result.Value.ToArray(), 0);
+					if (response.Code == ResultCode.Success)
+					{
+						result= BitConverter.ToSingle(response.Data.Value.ToArray(), 0);
+					}
+				}
 			}
 			catch (Exception)
 			{
-				return 0.0f;
+				result= 0.0f;
 			}
+
+			return result;
 		}
 
-		public async Task<float> GetSlidePosition()
+		private int GetInt(GattCharacteristic characteristic)
 		{
-			return await GetFloat(_slidePosCharacteristic);
+			int result= 0;
+
+			try
+			{
+				if (characteristic == null)
+				{
+					var response =
+						AsyncOpFuture.Create(characteristic.ReadValueAsync())
+						.FetchResponse<GattReadResult>();
+
+					if (response.Code == ResultCode.Success)
+					{
+						result = BitConverter.ToInt32(response.Data.Value.ToArray(), 0);
+					}
+				}
+			}
+			catch (Exception)
+			{
+				result= 0;
+			}
+
+			return result;
 		}
 
-		public async Task<float> GetPanPosition()
+		public int GetSlidePosition()
 		{
-			return await GetFloat(_panPosCharacteristic);
+			return GetInt(_slidePosCharacteristic);
 		}
 
-		public async Task<float> GetTiltPosition()
+		public int GetPanPosition()
 		{
-			return await GetFloat(_tiltPosCharacteristic);
+			return GetInt(_panPosCharacteristic);
 		}
 
-		public async Task<float> GetSlideSpeed()
+		public int GetTiltPosition()
 		{
-			return await GetFloat(_slideSpeedCharacteristic);
+			return GetInt(_tiltPosCharacteristic);
 		}
 
-		public async Task<float> GetPanSpeed()
+		public float GetSpeed()
 		{
-			return await GetFloat(_panSpeedCharacteristic);
+			return GetFloat(_speedCharacteristic);
 		}
 
-		public async Task<float> GetTiltSpeed()
+		public float GetAcceleration()
 		{
-			return await GetFloat(_tiltSpeedCharacteristic);
+			return GetFloat(_accelCharacteristic);
 		}
 
-		public async Task<float> GetSlideAcceleration()
+		public void GetSliderCalibration()
 		{
-			return await GetFloat(_slideAccelCharacteristic);
+			SendCommand("get_slider_calibration");
 		}
 
-		public async Task<float> GetPanAcceleration()
+		public void WakeUp()
 		{
-			return await GetFloat(_panAccelCharacteristic);
+			SendCommand("ping");
 		}
 
-		public async Task<float> GetTiltAcceleration()
+		public void ResetCalibration()
 		{
-			return await GetFloat(_tiltAccelCharacteristic);
+			SendCommand("reset_calibration");
 		}
 
-		public async Task<bool> WakeUp()
+		public void StartCalibration(bool slide, bool pan, bool tilt)
 		{
-			return await SendCommand("ping");
+			List<string> calibrateArgs = new List<string>();
+
+			if (slide)
+				calibrateArgs.Add("slide");
+			if (pan)
+				calibrateArgs.Add("pan");
+			if (tilt)
+				calibrateArgs.Add("tilt");
+
+			string command = "calibrate " + string.Join(" ", calibrateArgs);
+
+			SendCommand(command);
 		}
 
-		public async Task<bool> StartCalibration()
+		public void StopAllMotors()
 		{
-			return await SendCommand("calibrate");
+			SendCommand("stop");
 		}
 
-		public async Task<bool> StopAllMotors()
+		public void MoveSlider(int delta)
 		{
-			return await SendCommand("stop");
+			string command = $"move_slider {delta}";
+
+			SendCommand(command);
+		}
+
+		public void SetSlideMin()
+		{
+			SendCommand("set_slide_min_pos");
+		}
+
+		public void SetSlideMax()
+		{
+			SendCommand("set_slide_max_pos");
 		}
 
 		private void DeviceConnectionStatusChanged(BluetoothLEDevice sender, object args)
@@ -440,18 +528,80 @@ namespace CameraSlider.Bluetooth
 				CleanUpGattState();
 			}
 
-			OnConnectionStatusChanged(result);
+			ConnectionStatusChanged?.Invoke(this, result);
 		}
 
-		private void NotifyCameraSliderEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
+		private void NotifyCameraStatusEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
 		{
-			string Result = CryptographicBuffer.ConvertBinaryToString(BinaryStringEncoding.Utf8, e.CharacteristicValue);
+			string StatusString = CryptographicBuffer.ConvertBinaryToString(BinaryStringEncoding.Utf8, e.CharacteristicValue);
 
-			var args = new Events.CameraSliderEventArgs()
+			var StatusArgs = new Events.CameraStatusChangedEventArgs()
 			{
-				Message = Result
+				Status = StatusString
 			};
-			OnCameraSliderEvent(args);
+			CameraStatusChanged?.Invoke(this, StatusArgs);
+		}
+
+		private void NotifyCameraResponseEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
+		{
+			string Response = CryptographicBuffer.ConvertBinaryToString(BinaryStringEncoding.Utf8, e.CharacteristicValue);
+
+			var ResponseArgs = new CameraResponseArgs()
+			{
+				Args = Response.Split(' ')
+			};
+
+			var ProcessedArgs = _requestManager.HandleCommandResponse(ResponseArgs);
+			if (ProcessedArgs != null)
+			{
+				CameraResponseHandler?.Invoke(this, ProcessedArgs);
+			}
+		}
+
+		private CameraPositionChangedEventArgs CreatePositionChangedEvent(
+			CameraPositionChangedEventArgs.PositionType type,
+			GattValueChangedEventArgs e)
+		{
+			try
+			{
+				int result = BitConverter.ToInt32(e.CharacteristicValue.ToArray(), 0);
+
+				var PositionChangeEvent = new CameraPositionChangedEventArgs()
+				{
+					Type = type,
+					Value = result
+				};
+
+				return PositionChangeEvent;
+			}
+			catch (Exception)
+			{
+				return null;
+			}
+		}
+
+		private void NotifySliderPosChangedEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
+		{
+			var Event = CreatePositionChangedEvent(
+				CameraPositionChangedEventArgs.PositionType.Slider, e);
+			if (Event != null)
+				SliderPosChanged?.Invoke(this, Event);
+		}
+
+		private void NotifyPanPosChangedEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
+		{
+			var Event = CreatePositionChangedEvent(
+				CameraPositionChangedEventArgs.PositionType.Pan, e);
+			if (Event != null)
+				PanPosChanged?.Invoke(this, Event);
+		}
+
+		private void NotifyTiltPosChangedEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
+		{
+			var Event = CreatePositionChangedEvent(
+				CameraPositionChangedEventArgs.PositionType.Tilt, e);
+			if (Event != null)
+				TiltPosChanged?.Invoke(this, Event);
 		}
 
 		public bool IsConnected

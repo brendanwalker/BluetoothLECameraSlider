@@ -2,9 +2,12 @@
 #define AppStage_SliderCalibration_h
 
 #include "AppStage.h"
+#include "BLEManager.h"
 #include "ConfigManager.h"
 #include "HallSensorManager.h"
 #include "SelectionMenu.h"
+
+#include <string>
 
 enum class eSliderCalibrationState : int
 {
@@ -31,9 +34,11 @@ enum class eSearchMode : int
     COUNT
 };
 
+
 class AppStage_SliderCalibration : 
   public AppStage, 
-  public InputEventListener,
+  public BLECommandHandler,  
+  public InputEventListener,  
   public SelectionMenuListener, 
   public HallSensorEventListener
 {
@@ -42,12 +47,21 @@ public:
 
     static AppStage_SliderCalibration *getInstance() { return s_instance; }
 
+    void setDesiredCalibrations(bool pan, bool tilt, bool slide)
+    {
+        m_bWantsPanCalibration= pan;
+        m_bWantsTiltCalibration= tilt;
+        m_bWantsSlideCalibration= slide;
+    }
     void setAutoCalibration(bool bFlag) { m_bAutoCalibrate= bFlag; }
 
     virtual void enter() override;
     virtual void exit() override;
     virtual void update(float deltaSeconds) override;
-    virtual void render() override;    
+    virtual void render() override;
+
+    // BLEManager Events
+    virtual void onCommand(const std::vector<std::string>& args, std::vector<std::string>& results) override;
 
     // HallSensorEventListener Events
     virtual void onPanSensorChanged(bool bActive) override;
@@ -69,6 +83,7 @@ public:
     static const char *APP_STAGE_NAME;
 
 private:
+    eSliderCalibrationState dequeueNextCalibrationState();
     void setState(eSliderCalibrationState newState);
     void onEnterState(eSliderCalibrationState newState);
     void onLeaveState(eSliderCalibrationState oldState);
@@ -77,6 +92,9 @@ private:
 
     static AppStage_SliderCalibration *s_instance;
 
+    bool m_bWantsPanCalibration= false;
+    bool m_bWantsTiltCalibration= false;
+    bool m_bWantsSlideCalibration= false;
     bool m_bAutoCalibrate= false;
     SelectionMenu m_setupMenu;
     SelectionMenu m_completeMenu;

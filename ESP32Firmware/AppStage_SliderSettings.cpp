@@ -6,12 +6,14 @@
 
 enum class eSliderSettingOptions : int
 {
-  Calibrate,
+  CalibratePan,
+  CalibrateTilt,
+  CalibrateSlide,
   Back,
 
   COUNT
 };
-static const String kSliderSettingsStrings[(int)eSliderSettingOptions::COUNT] = {"Calibrate", "Back"};
+static const String kSliderSettingsStrings[(int)eSliderSettingOptions::COUNT] = {"Find Pan Center", "Find Tilt Center", "Find Slide Limits", "Back"};
 
 const char* AppStage_SliderSettings::APP_STAGE_NAME = "SliderSettings";
 AppStage_SliderSettings* AppStage_SliderSettings::s_instance= nullptr;
@@ -43,12 +45,25 @@ void AppStage_SliderSettings::exit()
 // Selection Events
 void AppStage_SliderSettings::onOptionClicked(int optionIndex)
 {
+    AppStage_SliderCalibration* calibrator= AppStage_SliderCalibration::getInstance();
+
     switch((eSliderSettingOptions)optionIndex)
     {
-    case eSliderSettingOptions::Calibrate:
-        Serial.println("Calibration clicked");
-        m_app->pushAppStage(AppStage_SliderCalibration::getInstance());
+    case eSliderSettingOptions::CalibratePan:
+        Serial.println("Pan Calibration clicked");
+        calibrator->setDesiredCalibrations(true, false, false);
+        m_app->pushAppStage(calibrator);
         break;
+    case eSliderSettingOptions::CalibrateTilt:
+        Serial.println("Tilt Calibration clicked");
+        calibrator->setDesiredCalibrations(false, true, false);
+        m_app->pushAppStage(calibrator);
+        break;
+    case eSliderSettingOptions::CalibrateSlide:
+        Serial.println("Slide Calibration clicked");
+        calibrator->setDesiredCalibrations(false, false, true);
+        m_app->pushAppStage(calibrator);
+        break;                
     case eSliderSettingOptions::Back:
         Serial.println("Back clicked");
         m_app->popAppState();
