@@ -1,72 +1,27 @@
 ﻿using CameraSlider.Bluetooth.Events;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using Windows.Foundation;
 
 namespace CameraSlider.Bluetooth.Commands
 {
-	public class RequestManager
+	public class CommandManager
 	{
-		private Queue<Request> _pendingCommandQueue;
+		private Queue<CommandRequest> _pendingCommandQueue;
 		public bool HasPendingRequests => _pendingCommandQueue.Count > 0;
-		private Request _inFlightRequest= null;
+		private CommandRequest _inFlightRequest= null;
 		public bool HasInFlightRequest => _inFlightRequest != null;
 		private int nextRequestId = 1;
 
-		private Dictionary<int, AsyncOpFuture> _pendingAsyncOps;
-
-		public RequestManager()
+		public CommandManager()
 		{
-			_pendingCommandQueue = new Queue<Request>();
-			_pendingAsyncOps = new Dictionary<int, AsyncOpFuture>();
-		}
-
-		public AsyncOpFuture AddAsyncOp<T>(IAsyncOperation<T> asyncRequest)
-		{
-			AsyncOpFuture pendingRequest = null;
-
-			lock (this)
-			{
-				pendingRequest= 
-					new AsyncOpFuture(
-						this, 
-						nextRequestId, 
-						 asyncRequest.AsTask());
-				_pendingAsyncOps[nextRequestId] = pendingRequest;
-				nextRequestId++;
-			}
-
-			return pendingRequest;
-		}
-
-		public AsyncOpFuture RemoveAsyncOp(int requestId)
-		{
-			AsyncOpFuture pendingRequest = null;
-
-			lock (this)
-			{
-				if (_pendingAsyncOps.TryGetValue(requestId, out pendingRequest))
-				{
-					_pendingAsyncOps.Remove(requestId);
-				}
-			}
-
-			return pendingRequest;
-		}
-
-		public ResultCode CancelAsyncOp(int requestId)
-		{
-			AsyncOpFuture existingRequest = RemoveAsyncOp(requestId);
-
-			return existingRequest != null ? ResultCode.Success : ResultCode.InvalidParam;
+			_pendingCommandQueue = new Queue<CommandRequest>();
 		}
 
 		public void EnqueueCommand(string message)
 		{
 			lock(this)
 			{
-				Request request = new Request
+				CommandRequest request = new CommandRequest
 				{
 					RequestId = nextRequestId,
 					Message = message
@@ -77,7 +32,7 @@ namespace CameraSlider.Bluetooth.Commands
 			}
 		}
 
-		public bool TryDequeueRequestToSend(out Request request)
+		public bool TryDequeueRequestToSend(out CommandRequest request)
 		{
 			bool hasRequest = false;
 
@@ -102,7 +57,7 @@ namespace CameraSlider.Bluetooth.Commands
 		}
 
 
-		public void ClearInFlightCommand(Request request)
+		public void ClearInFlightCommand(CommandRequest request)
 		{
 			lock (this)
 			{

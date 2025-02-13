@@ -1,7 +1,6 @@
 ﻿using CameraSlider.Bluetooth.Events;
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Security.Cryptography;
@@ -41,20 +40,20 @@ namespace CameraSlider.Bluetooth
 		private GattCharacteristic _speedCharacteristic = null;
 		private GattCharacteristic _accelCharacteristic = null;
 
-		private RequestManager _requestManager = new RequestManager();
+		private CommandManager _requestManager = new CommandManager();
 
-		public event EventHandler<Events.ConnectionStatusChangedEventArgs> ConnectionStatusChanged;
-		public event EventHandler<Events.CameraStatusChangedEventArgs> CameraStatusChanged;
-		public event EventHandler<Events.CameraResponseArgs> CameraResponseHandler;
-		public event EventHandler<Events.CameraPositionValueChangedEventArgs> SliderPosChanged;
-		public event EventHandler<Events.CameraPositionValueChangedEventArgs> PanPosChanged;
-		public event EventHandler<Events.CameraPositionValueChangedEventArgs> TiltPosChanged;
+		public event EventHandler<ConnectionStatusChangedEventArgs> ConnectionStatusChanged;
+		public event EventHandler<CameraStatusChangedEventArgs> CameraStatusChanged;
+		public event EventHandler<CameraResponseArgs> CameraResponseHandler;
+		public event EventHandler<CameraPositionChangedEventArgs> SliderPosChanged;
+		public event EventHandler<CameraPositionChangedEventArgs> PanPosChanged;
+		public event EventHandler<CameraPositionChangedEventArgs> TiltPosChanged;
 
-		public async Task<bool> ConnectAsync(string deviceName)
+		public bool Connect(string deviceName)
 		{
 			// Get Bluetooth devices
 			string deviceSelector= BluetoothLEDevice.GetDeviceSelectorFromPairingState(true);
-			var deviceCollectionResponse= _requestManager.AddAsyncOp<DeviceInformationCollection>(
+			var deviceCollectionResponse= AsyncOpFuture.Create(
 				DeviceInformation.FindAllAsync(deviceSelector))
 				.FetchResponse<DeviceInformationCollection>();
 			if (deviceCollectionResponse.Code != ResultCode.Success)
@@ -70,7 +69,7 @@ namespace CameraSlider.Bluetooth
 					{
 						// Connect to the Bluetooth LE device
 						var deviceResponse= 
-							_requestManager.AddAsyncOp<BluetoothLEDevice>(
+							AsyncOpFuture.Create(
 								BluetoothLEDevice.FromIdAsync(device.Id))
 							.FetchResponse<BluetoothLEDevice>();
 						if (deviceResponse.Code == ResultCode.Success)
@@ -174,7 +173,7 @@ namespace CameraSlider.Bluetooth
 			// BT_Code: GetGattServicesAsync returns a list of all the supported services of the device (even if it's not paired to the system).
 			// If the services supported by the device are expected to change during BT usage, subscribe to the GattServicesChanged event.
 			var response =
-				_requestManager.AddAsyncOp<GattDeviceServicesResult>(
+				AsyncOpFuture.Create(
 					_cameraSliderDevice.GetGattServicesForUuidAsync(
 						new Guid(serviceUuid), BluetoothCacheMode.Uncached))
 				.FetchResponse<GattDeviceServicesResult>();
@@ -195,7 +194,7 @@ namespace CameraSlider.Bluetooth
 		private GattCharacteristic GetServiceCharacteristicByUuidAsync(GattDeviceService service, string characteristicUuid)
 		{
 			var response =
-				_requestManager.AddAsyncOp<GattCharacteristicsResult>(
+				AsyncOpFuture.Create(
 					service.GetCharacteristicsForUuidAsync(
 						new Guid(characteristicUuid), 
 						BluetoothCacheMode.Uncached))
@@ -219,7 +218,7 @@ namespace CameraSlider.Bluetooth
 			if (characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Notify))
 			{
 				var response =
-					_requestManager.AddAsyncOp<GattCommunicationStatus>(
+					AsyncOpFuture.Create(
 						characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
 							GattClientCharacteristicConfigurationDescriptorValue.Notify))
 					.FetchResponse<GattCommunicationStatus>();
@@ -238,7 +237,7 @@ namespace CameraSlider.Bluetooth
 			return false;
 		}
 
-		public bool DisconnectAsync()
+		public bool Disconnect()
 		{
 			bool success = true;
 
@@ -249,7 +248,7 @@ namespace CameraSlider.Bluetooth
 					try
 					{
 						var response =
-							_requestManager.AddAsyncOp<GattCommunicationStatus>(
+							AsyncOpFuture.Create(
 								_responseCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
 									GattClientCharacteristicConfigurationDescriptorValue.None))
 							.FetchResponse<GattCommunicationStatus>();
@@ -297,37 +296,46 @@ namespace CameraSlider.Bluetooth
 		private void SendCommand(string command)
 		{
 			_requestManager.EnqueueCommand(command);
+
+			// Try and send the command right away
+			// No-ops if there is already a command in-flight
 			SendNextPendingCommand();
 		}
 
-		private async Task<bool> SendRequest(string command)
+		private bool SendRequest(string command)
 		{
+			bool success= false;
+
 			try
 			{
-				if (_requestCharacteristic == null)
+				if (_requestCharacteristic != null)
 				{
-					return false;
+					var response =
+						AsyncOpFuture.Create(
+							_requestCharacteristic.WriteValueWithResultAsync(
+								CryptographicBuffer.ConvertStringToBinary(command, BinaryStringEncoding.Utf8)))
+						.FetchResponse<GattWriteResult>();
+					if (response.Code == ResultCode.Success)
+					{
+						success = response.Data.Status == GattCommunicationStatus.Success;
+					}
 				}
-
-				GattWriteResult result =
-					await _requestCharacteristic.WriteValueWithResultAsync(
-						CryptographicBuffer.ConvertStringToBinary(command, BinaryStringEncoding.Utf8));
-
-				return result.Status == GattCommunicationStatus.Success;
 			}
 			catch (Exception)
 			{
-				return false;
+				success= false;
 			}
+
+			return success;
 		}
 
-		public async void SendNextPendingCommand()
+		public void SendNextPendingCommand()
 		{
-			if (_requestManager.TryDequeueRequestToSend(out Request request))
+			if (_requestManager.TryDequeueRequestToSend(out CommandRequest request))
 			{
 				string message = $"{request.RequestId} {request.Message}";
 
-				if (await SendRequest(message) == false)
+				if (!SendRequest(message))
 				{
 					_requestManager.ClearInFlightCommand(request);
 				}
@@ -341,97 +349,118 @@ namespace CameraSlider.Bluetooth
 			SendCommand(command);
 		}
 
-		private async Task<bool> SendFloat(GattCharacteristic characteristic, float value)
+		private bool SendFloat(GattCharacteristic characteristic, float value)
 		{
+			bool success = false;
+
+			try
+			{
+				if (characteristic != null)
+				{
+					byte[] Message = BitConverter.GetBytes(value);
+					var response =
+						AsyncOpFuture.Create(
+							characteristic.WriteValueWithResultAsync(Message.AsBuffer()))
+						.FetchResponse<GattWriteResult>();
+
+					success =
+						response.Code == ResultCode.Success &&
+						response.Data.Status == GattCommunicationStatus.Success;
+				}
+			}
+			catch (Exception)
+			{
+				success= false;
+			}
+
+			return success;
+		}
+
+		public bool SetSpeed(float speed)
+		{
+			return SendFloat(_speedCharacteristic, speed);
+		}
+
+		public bool SetAcceleration(float acceleration)
+		{
+			return SendFloat(_accelCharacteristic, acceleration);
+		}
+
+		private float GetFloat(GattCharacteristic characteristic)
+		{
+			float result= 0.0f;
+
+			try
+			{
+				if (characteristic != null)
+				{
+					var response =
+						AsyncOpFuture.Create(characteristic.ReadValueAsync())
+						.FetchResponse<GattReadResult>();
+
+					if (response.Code == ResultCode.Success)
+					{
+						result= BitConverter.ToSingle(response.Data.Value.ToArray(), 0);
+					}
+				}
+			}
+			catch (Exception)
+			{
+				result= 0.0f;
+			}
+
+			return result;
+		}
+
+		private int GetInt(GattCharacteristic characteristic)
+		{
+			int result= 0;
+
 			try
 			{
 				if (characteristic == null)
 				{
-					return false;
+					var response =
+						AsyncOpFuture.Create(characteristic.ReadValueAsync())
+						.FetchResponse<GattReadResult>();
+
+					if (response.Code == ResultCode.Success)
+					{
+						result = BitConverter.ToInt32(response.Data.Value.ToArray(), 0);
+					}
 				}
-
-				byte[] Message = BitConverter.GetBytes(value);
-				GattWriteResult result = await characteristic.WriteValueWithResultAsync(Message.AsBuffer());
-
-				return result.Status == GattCommunicationStatus.Success;
 			}
 			catch (Exception)
 			{
-				return false;
+				result= 0;
 			}
+
+			return result;
 		}
 
-		public async Task<bool> SetSpeed(float speed)
+		public int GetSlidePosition()
 		{
-			return await SendFloat(_speedCharacteristic, speed);
+			return GetInt(_slidePosCharacteristic);
 		}
 
-		public async Task<bool> SetAcceleration(float acceleration)
+		public int GetPanPosition()
 		{
-			return await SendFloat(_accelCharacteristic, acceleration);
+			return GetInt(_panPosCharacteristic);
 		}
 
-		private async Task<float> GetFloat(GattCharacteristic characteristic)
+		public int GetTiltPosition()
 		{
-			try
-			{
-				if (characteristic == null)
-				{
-					return 0f;
-				}
-
-				GattReadResult result = await characteristic.ReadValueAsync();
-
-				return BitConverter.ToSingle(result.Value.ToArray(), 0);
-			}
-			catch (Exception)
-			{
-				return 0.0f;
-			}
+			return GetInt(_tiltPosCharacteristic);
 		}
 
-		private async Task<int> GetInt(GattCharacteristic characteristic)
+		public float GetSpeed()
 		{
-			try
-			{
-				if (characteristic == null)
-				{
-					return 0;
-				}
-
-				GattReadResult result = await characteristic.ReadValueAsync();
-
-				return BitConverter.ToInt32(result.Value.ToArray(), 0);
-			}
-			catch (Exception)
-			{
-				return 0;
-			}
+			return GetFloat(_speedCharacteristic);
 		}
 
-		public async Task<int> GetSlidePosition()
+		public float GetAcceleration()
 		{
-			return await GetInt(_slidePosCharacteristic);
-		}
-
-		public async Task<int> GetPanPosition()
-		{
-			return await GetInt(_panPosCharacteristic);
-		}
-
-		public async Task<int> GetTiltPosition()
-		{
-			return await GetInt(_tiltPosCharacteristic);
-		}
-
-		public async Task<float> GetSpeed()
-		{
-			return await GetFloat(_speedCharacteristic);
-		}
-
-		public async Task<float> GetAcceleration()
-		{
-			return await GetFloat(_accelCharacteristic);
+			return GetFloat(_accelCharacteristic);
 		}
 
 		public void GetSliderCalibration()
@@ -517,7 +546,7 @@ namespace CameraSlider.Bluetooth
 		{
 			string Response = CryptographicBuffer.ConvertBinaryToString(BinaryStringEncoding.Utf8, e.CharacteristicValue);
 
-			var ResponseArgs = new Events.CameraResponseArgs()
+			var ResponseArgs = new CameraResponseArgs()
 			{
 				Args = Response.Split(' ')
 			};
@@ -529,15 +558,15 @@ namespace CameraSlider.Bluetooth
 			}
 		}
 
-		private Events.CameraPositionValueChangedEventArgs CreatePositionChangedEvent(
-			CameraPositionValueChangedEventArgs.PositionType type,
+		private CameraPositionChangedEventArgs CreatePositionChangedEvent(
+			CameraPositionChangedEventArgs.PositionType type,
 			GattValueChangedEventArgs e)
 		{
 			try
 			{
 				int result = BitConverter.ToInt32(e.CharacteristicValue.ToArray(), 0);
 
-				var PositionChangeEvent = new Events.CameraPositionValueChangedEventArgs()
+				var PositionChangeEvent = new CameraPositionChangedEventArgs()
 				{
 					Type = type,
 					Value = result
@@ -554,7 +583,7 @@ namespace CameraSlider.Bluetooth
 		private void NotifySliderPosChangedEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
 		{
 			var Event = CreatePositionChangedEvent(
-				CameraPositionValueChangedEventArgs.PositionType.Slider, e);
+				CameraPositionChangedEventArgs.PositionType.Slider, e);
 			if (Event != null)
 				SliderPosChanged?.Invoke(this, Event);
 		}
@@ -562,7 +591,7 @@ namespace CameraSlider.Bluetooth
 		private void NotifyPanPosChangedEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
 		{
 			var Event = CreatePositionChangedEvent(
-				CameraPositionValueChangedEventArgs.PositionType.Pan, e);
+				CameraPositionChangedEventArgs.PositionType.Pan, e);
 			if (Event != null)
 				PanPosChanged?.Invoke(this, Event);
 		}
@@ -570,7 +599,7 @@ namespace CameraSlider.Bluetooth
 		private void NotifyTiltPosChangedEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
 		{
 			var Event = CreatePositionChangedEvent(
-				CameraPositionValueChangedEventArgs.PositionType.Tilt, e);
+				CameraPositionChangedEventArgs.PositionType.Tilt, e);
 			if (Event != null)
 				TiltPosChanged?.Invoke(this, Event);
 		}

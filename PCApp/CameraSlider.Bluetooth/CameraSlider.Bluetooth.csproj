@@ -49,15 +49,17 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Commands\Response.cs" />
-    <Compile Include="Commands\Request.cs" />
-    <Compile Include="Commands\RequestManager.cs" />
+    <Compile Include="Commands\AsyncOpResponse.cs" />
+    <Compile Include="Commands\CommandRequest.cs" />
+    <Compile Include="Commands\CommandManager.cs" />
     <Compile Include="Commands\AsyncOpFuture.cs" />
+    <Compile Include="Events\CameraResponseArgs.cs" />
+    <Compile Include="Events\CameraStatusChagedEventsArgs.cs" />
     <Compile Include="Events\ConnectionStatusChangedEventArgs.cs" />
     <Compile Include="Events\DeviceRemovedEventArgs.cs" />
     <Compile Include="Events\DeviceUpdatedEventArgs.cs" />
     <Compile Include="Events\DeviceAddedEventArgs.cs" />
-    <Compile Include="Events\CameraResponseArgs.cs" />
+    <Compile Include="Events\CameraPositionChangedEventArgs.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="CameraSliderDevice.cs" />
     <Compile Include="PairingHelper.cs" />

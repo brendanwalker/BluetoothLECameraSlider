@@ -1,32 +1,21 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Windows.Foundation;
 
 namespace CameraSlider.Bluetooth.Commands
 {
 	public class AsyncOpFuture
 	{
-		private RequestManager _ownerRequestManager = null;
-		private int _requestId = -1;
 		private Task _task = null;
 
-		public AsyncOpFuture()
+		public static AsyncOpFuture Create<T>(IAsyncOperation<T> asyncRequest)
 		{
+			return new AsyncOpFuture(asyncRequest.AsTask());
 		}
 
-		public AsyncOpFuture(
-			RequestManager requestManager,
-			int requestId,
-			Task future)
+		private AsyncOpFuture(Task future)
 		{
-			_ownerRequestManager = requestManager;
-			_requestId = requestId;
 			_task = future;
-		}
-
-		public AsyncOpFuture(AsyncOpFuture other)
-		{
-			_requestId = other._requestId;
-			_task = other._task;
 		}
 
 		public bool IsValid()
@@ -51,11 +40,6 @@ namespace CameraSlider.Bluetooth.Commands
 
 				response = typedTask.Result;
 
-				if (_ownerRequestManager != null && _requestId != -1)
-				{
-					_ownerRequestManager.RemoveAsyncOp(_requestId);
-				}
-
 				return true;
 			}
 
@@ -64,9 +48,9 @@ namespace CameraSlider.Bluetooth.Commands
 
 		// Blocking Response Fetch
 		// Return the response if it is ready, or a timeout response if the timeout is reached
-		public TypedResponse<T> FetchResponse<T>(double timeoutMilliseconds = 1000)
+		public TypedAsyncOpResponse<T> FetchResponse<T>(double timeoutMilliseconds = 1000)
 		{
-			TypedResponse<T> response;
+			TypedAsyncOpResponse<T> response;
 
 			if (IsValid())
 			{
@@ -79,25 +63,16 @@ namespace CameraSlider.Bluetooth.Commands
 
 					if (_task.IsCompleted && !_task.IsFaulted)
 					{
-						response = new TypedResponse<T> { 
-							RequestId = _requestId,
+						response = new TypedAsyncOpResponse<T> { 
 							Code = ResultCode.Success,
 							Data = typedTask.Result
 						};
 					}
 					else
 					{
-						// Timeout reached, cancel the request
-						if (_ownerRequestManager != null &&
-							_requestId != -1)
-						{
-							_ownerRequestManager.CancelAsyncOp(_requestId);
-						}
-
 						// Return a timeout response instead
-						response = new TypedResponse<T>
+						response = new TypedAsyncOpResponse<T>
 						{
-							RequestId = _requestId,
 							Code = ResultCode.Timeout,
 							Data = default(T)
 						};
@@ -109,9 +84,8 @@ namespace CameraSlider.Bluetooth.Commands
 					_task.Wait();
 
 					// Return the result once the task succeeds or fails
-					response = new TypedResponse<T>
+					response = new TypedAsyncOpResponse<T>
 					{
-						RequestId = _requestId,
 						Code = ResultCode.Success,
 						Data = typedTask.Result
 					};
@@ -119,17 +93,11 @@ namespace CameraSlider.Bluetooth.Commands
 			}
 			else
 			{
-				response = new TypedResponse<T>
+				response = new TypedAsyncOpResponse<T>
 				{
-					RequestId = _requestId,
 					Code = ResultCode.Uninitialized,
 					Data = default(T)
 				};
-			}
-
-			if (_ownerRequestManager != null && _requestId != -1)
-			{
-				_ownerRequestManager.RemoveAsyncOp(_requestId);
 			}
 
 			return response;

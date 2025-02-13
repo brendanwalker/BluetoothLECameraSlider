@@ -97,7 +97,7 @@ namespace CameraSlider.UI
 			_ = StartMessagePump(_messagePumpCancelSignaler.Token);
 		}
 
-		protected async override void OnClosing(CancelEventArgs e)
+		protected override void OnClosing(CancelEventArgs e)
 		{
 			base.OnClosing(e);
 
@@ -111,7 +111,7 @@ namespace CameraSlider.UI
 			// Disconnect from everything
 			if (_cameraSliderDevice.IsConnected)
 			{
-				await _cameraSliderDevice.DisconnectAsync();
+				_cameraSliderDevice.Disconnect();
 			}
 		}
 
@@ -191,6 +191,25 @@ namespace CameraSlider.UI
 		}
 
 		// Camera Slider Functions
+		private async void SetCameraPositionSliders(float slidePos, float panPos, float tiltPos)
+		{
+			await RunOnUiThread(() =>
+			{
+				SlidePosSlider.Value = slidePos;
+				PanPosSlider.Value = panPos;
+				TiltPosSlider.Value = tiltPos;
+			});
+		}
+
+		private async void SetCameraSpeedSliders(float speed, float accel)
+		{
+			await RunOnUiThread(() =>
+			{
+				SpeedSlider.Value = speed;
+				AccelSlider.Value = accel;
+			});
+		}
+
 		private async void SetCameraStatusLabel(string status)
 		{
 			await RunOnUiThread(() =>
@@ -199,7 +218,7 @@ namespace CameraSlider.UI
 			});
 		}
 
-		private async void SetCameraSliderPosition(int slidePos)
+		private async void SetCameraSliderPositionLabel(int slidePos)
 		{
 			await RunOnUiThread(() =>
 			{
@@ -207,7 +226,7 @@ namespace CameraSlider.UI
 			});
 		}
 
-		private async void SetCameraSliderMinPosition(int slidePos)
+		private async void SetCameraSliderMinPositionLabel(int slidePos)
 		{
 			await RunOnUiThread(() =>
 			{
@@ -215,7 +234,7 @@ namespace CameraSlider.UI
 			});
 		}
 
-		private async void SetCameraSliderMaxPosition(int slidePos)
+		private async void SetCameraSliderMaxPositionLabel(int slidePos)
 		{
 			await RunOnUiThread(() =>
 			{
@@ -244,21 +263,21 @@ namespace CameraSlider.UI
 						_sliderMinPos= int.Parse(args[1]);
 						_sliderMaxPos= int.Parse(args[2]);
 
-						SetCameraSliderMinPosition(_sliderMinPos);
-						SetCameraSliderMaxPosition(_sliderMaxPos);
+						SetCameraSliderMinPositionLabel(_sliderMinPos);
+						SetCameraSliderMaxPositionLabel(_sliderMaxPos);
 					}
 				}
 				break;
 				case "slide_min_set":
 				{
 					_sliderMinPos= args.Length >= 2 ? int.Parse(args[1]) : 0;
-					SetCameraSliderMinPosition(_sliderMinPos);
+					SetCameraSliderMinPositionLabel(_sliderMinPos);
 				}
 				break;
 				case "slide_max_set":
 				{
 					_sliderMaxPos = args.Length >= 2 ? int.Parse(args[1]) : 0;
-					SetCameraSliderMaxPosition(_sliderMaxPos);
+					SetCameraSliderMaxPositionLabel(_sliderMaxPos);
 				}
 				break;
 				}
@@ -309,23 +328,23 @@ namespace CameraSlider.UI
 			}
 		}
 
-		private void TiltPosChanged(object sender, CameraPositionValueChangedEventArgs e)
+		private void TiltPosChanged(object sender, CameraPositionChangedEventArgs e)
 		{
 			_targetTiltPos = e.Value;
 		}
 
-		private void PanPosChanged(object sender, CameraPositionValueChangedEventArgs e)
+		private void PanPosChanged(object sender, CameraPositionChangedEventArgs e)
 		{
 			_targetPanPos = e.Value;
 		}
 
-		private void SliderPosChanged(object sender, CameraPositionValueChangedEventArgs e)
+		private void SliderPosChanged(object sender, CameraPositionChangedEventArgs e)
 		{
 			_targetSlidePos = e.Value;
-			SetCameraSliderPosition(_targetSlidePos);
+			SetCameraSliderPositionLabel(_targetSlidePos);
 		}
 
-		private async void OnDeviceConnectionStatusChanged(object sender, ConnectionStatusChangedEventArgs args)
+		private void OnDeviceConnectionStatusChanged(object sender, ConnectionStatusChangedEventArgs args)
 		{
 			bool connected = args.IsConnected;
 			EmitLog("CameraSlider connection status is: " + connected);
@@ -339,26 +358,25 @@ namespace CameraSlider.UI
 				_cameraSliderDevice.GetSliderCalibration();
 
 				// Send the desired speed, accel, and position params to the device
-				await _cameraSliderDevice.SetSpeed(_configState._cameraSettingsConfig.Speed);
-				await _cameraSliderDevice.SetAcceleration(_configState._cameraSettingsConfig.Accel);
+				_cameraSliderDevice.SetSpeed(_configState._cameraSettingsConfig.Speed);
+				_cameraSliderDevice.SetAcceleration(_configState._cameraSettingsConfig.Accel);
 				_cameraSliderDevice.SetPosition(
 						_configState._cameraSettingsConfig.SlidePos,
 						_configState._cameraSettingsConfig.PanPos,
 						_configState._cameraSettingsConfig.TiltPos);
 
 				// Get the actual target raw slider position from the device
-				_targetSlidePos = await _cameraSliderDevice.GetSlidePosition();
-				SetCameraSliderPosition(_targetSlidePos);
+				_targetSlidePos = _cameraSliderDevice.GetSlidePosition();
+				SetCameraSliderPositionLabel(_targetSlidePos);
 
 				_suppressUIUpdatesToDevice = true;
-				await RunOnUiThread(() =>
-				{
-					SlidePosSlider.Value = _configState._cameraSettingsConfig.SlidePos;
-					PanPosSlider.Value = _configState._cameraSettingsConfig.PanPos;
-					TiltPosSlider.Value = _configState._cameraSettingsConfig.TiltPos;
-					SpeedSlider.Value = _configState._cameraSettingsConfig.Speed;
-					AccelSlider.Value = _configState._cameraSettingsConfig.Accel;
-				});
+				SetCameraPositionSliders(
+					_configState._cameraSettingsConfig.SlidePos,
+					_configState._cameraSettingsConfig.PanPos,
+					_configState._cameraSettingsConfig.TiltPos);
+				SetCameraSpeedSliders(
+					_configState._cameraSettingsConfig.Speed,
+					_configState._cameraSettingsConfig.Accel);
 				_suppressUIUpdatesToDevice = false;
 			}
 			else
@@ -390,7 +408,7 @@ namespace CameraSlider.UI
 					{
 						try
 						{
-							await _cameraSliderDevice.ConnectAsync(_deviceName);
+							_cameraSliderDevice.Connect(_deviceName);
 						}
 						catch (Exception ex)
 						{
@@ -445,19 +463,19 @@ namespace CameraSlider.UI
 				{
 					OnCameraStatusChanged(this, evt as CameraStatusChangedEventArgs);
 				}
-				else if (evt is CameraPositionValueChangedEventArgs)
+				else if (evt is CameraPositionChangedEventArgs)
 				{
-					var posEvt = evt as CameraPositionValueChangedEventArgs;
+					var posEvt = evt as CameraPositionChangedEventArgs;
 
 					switch (posEvt.Type)
 					{
-					case CameraPositionValueChangedEventArgs.PositionType.Slider:
+					case CameraPositionChangedEventArgs.PositionType.Slider:
 						SliderPosChanged(this, posEvt);
 						break;
-					case CameraPositionValueChangedEventArgs.PositionType.Pan:
+					case CameraPositionChangedEventArgs.PositionType.Pan:
 						PanPosChanged(this, posEvt);
 						break;
-					case CameraPositionValueChangedEventArgs.PositionType.Tilt:
+					case CameraPositionChangedEventArgs.PositionType.Tilt:
 						TiltPosChanged(this, posEvt);
 						break;
 					}
@@ -595,6 +613,7 @@ namespace CameraSlider.UI
 			if (_uiDisableBitmask != newFlags)
 			{
 				bool bEnabled = newFlags == UIControlDisableFlags.None;
+				_uiDisableBitmask = newFlags;
 
 				await RunOnUiThread(() =>
 				{
@@ -618,8 +637,6 @@ namespace CameraSlider.UI
 					BtnSetSlideMax.IsEnabled = bEnabled;
 					BtnSetSlideMin.IsEnabled = bEnabled;
 				});
-
-				_uiDisableBitmask = newFlags;
 			}
 		}
 
@@ -672,21 +689,21 @@ namespace CameraSlider.UI
 			TiltPosStatus.Content = _configState._cameraSettingsConfig.TiltPos.ToString("0.00");
 		}
 
-		private async void Speed_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+		private void Speed_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
 		{
 			_configState._cameraSettingsConfig.Speed = (float)SpeedSlider.Value;
 			_configState._areConfigSettingsDirty = true;
 			if (!_suppressUIUpdatesToDevice && !_isSpeedDragging)
-				await _cameraSliderDevice.SetSpeed(_configState._cameraSettingsConfig.Speed);
+				_cameraSliderDevice.SetSpeed(_configState._cameraSettingsConfig.Speed);
 			SpeedStatus.Content = _configState._cameraSettingsConfig.Speed.ToString("0.00");
 		}
 
-		private async void Accel_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+		private void Accel_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
 		{
 			_configState._cameraSettingsConfig.Accel = (float)AccelSlider.Value;
 			_configState._areConfigSettingsDirty = true;
 			if (!_suppressUIUpdatesToDevice && !_isAccelDragging)
-				await _cameraSliderDevice.SetAcceleration(_configState._cameraSettingsConfig.Accel);
+				_cameraSliderDevice.SetAcceleration(_configState._cameraSettingsConfig.Accel);
 			AccelStatus.Content = _configState._cameraSettingsConfig.Accel.ToString("0.00");
 		}
 
@@ -795,12 +812,10 @@ namespace CameraSlider.UI
 
 				// Update the UI
 				_suppressUIUpdatesToDevice= true;
-				await RunOnUiThread(() =>
-				{
-					SlidePosSlider.Value = _configState._cameraSettingsConfig.SlidePos;
-					PanPosSlider.Value = _configState._cameraSettingsConfig.PanPos;
-					TiltPosSlider.Value = _configState._cameraSettingsConfig.TiltPos;
-				});
+				SetCameraPositionSliders(
+					_configState._cameraSettingsConfig.SlidePos,
+					_configState._cameraSettingsConfig.PanPos, 
+					_configState._cameraSettingsConfig.TiltPos);
 				_suppressUIUpdatesToDevice= false;
 
 				// Refetch the slider state to update the UI
@@ -867,9 +882,9 @@ namespace CameraSlider.UI
 			_isSpeedDragging = true;
 		}
 
-		private async void SpeedSlider_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+		private void SpeedSlider_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
 		{
-			await _cameraSliderDevice.SetSpeed((float)((Slider)sender).Value);
+			_cameraSliderDevice.SetSpeed((float)((Slider)sender).Value);
 			_isSpeedDragging = false;
 		}
 
@@ -878,9 +893,9 @@ namespace CameraSlider.UI
 			_isAccelDragging = true;
 		}
 
-		private async void AccelSlider_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+		private void AccelSlider_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
 		{
-			await _cameraSliderDevice.SetAcceleration((float)((Slider)sender).Value);
+			_cameraSliderDevice.SetAcceleration((float)((Slider)sender).Value);
 			_isAccelDragging = false;
 		}
 
