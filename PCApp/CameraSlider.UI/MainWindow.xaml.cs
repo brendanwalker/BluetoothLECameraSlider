@@ -143,11 +143,13 @@ namespace CameraSlider.UI
 		private void OnWebSocketClientConnected(WebSocket ws)
 		{
 			EmitLog($"Client with GUID: {ws.RemoteEndpoint.ToString()} Connected!");
+			SetWebsocketStatusLabel("Connected");
 		}
 
 		private void OnWebSocketClientDisconnected(WebSocket ws)
 		{
 			EmitLog($"Client {ws.RemoteEndpoint.ToString()} Disconnected!");
+			SetWebsocketStatusLabel("Disconnected");
 		}
 
 		private void OnWebSocketClientError(WebSocket ws, Exception ex)
@@ -190,7 +192,15 @@ namespace CameraSlider.UI
 			}
 		}
 
-		// Camera Slider Functions
+		// UI Functions
+		private async void SetWebsocketStatusLabel(string status)
+		{
+			await RunOnUiThread(() =>
+			{
+				WebsocketTxtStatus.Content = status;
+			});
+		}
+
 		private async void SetCameraPositionSliders(float slidePos, float panPos, float tiltPos)
 		{
 			await RunOnUiThread(() =>
