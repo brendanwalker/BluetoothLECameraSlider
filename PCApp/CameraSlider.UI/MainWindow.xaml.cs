@@ -14,6 +14,7 @@ using CameraSlider.UI.WebSocketServer;
 using System.Net;
 using vtortola.WebSockets;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace CameraSlider.UI
 {
@@ -34,12 +35,14 @@ namespace CameraSlider.UI
 
 		// Web Socket Server
 		private WebSocketEventListener _webSocketServer;
+		private HashSet<WebSocket> _clientWebSockets = new HashSet<WebSocket>();
 
 		// Camera Slider
 		CancellationTokenSource _messagePumpCancelSignaler = new CancellationTokenSource();
 		private string _deviceName = "Camera Slider";
 		private CameraSliderDevice _cameraSliderDevice;
 		private bool _deviceCalibrationRunning = false;
+		private bool _deviceIsMoving = false;
 		private static int _deviceKeepAliveDelay = 100;
 		private int _deviceKeepAliveCountdown = _deviceKeepAliveDelay;
 		private bool _suppressUIUpdatesToDevice = false;
@@ -137,6 +140,7 @@ namespace CameraSlider.UI
 			{
 				_webSocketServer.Stop();
 				_webSocketServer = null;
+				_clientWebSockets.Clear();
 			}
 		}
 
@@ -144,17 +148,20 @@ namespace CameraSlider.UI
 		{
 			EmitLog($"Client with GUID: {ws.RemoteEndpoint.ToString()} Connected!");
 			SetWebsocketStatusLabel("Connected");
+			_clientWebSockets.Add(ws);
 		}
 
 		private void OnWebSocketClientDisconnected(WebSocket ws)
 		{
 			EmitLog($"Client {ws.RemoteEndpoint.ToString()} Disconnected!");
 			SetWebsocketStatusLabel("Disconnected");
+			_clientWebSockets.Remove(ws);
 		}
 
 		private void OnWebSocketClientError(WebSocket ws, Exception ex)
 		{
 			EmitLog($"Client {ws.RemoteEndpoint.ToString()} Error: {ex.Message}");
+			_clientWebSockets.Remove(ws);
 		}
 
 		internal class ActivatePresetArgs : EventArgs
@@ -180,6 +187,9 @@ namespace CameraSlider.UI
 						{
 							_messageQueue.Enqueue(new ActivatePresetArgs() { PresetName=messageParts[1] });
 						}
+
+						// TODO: Check if the preset name is valid
+						ws.WriteString("activatePreset ok");
 					} break;
 
 					case "getPresetList":
@@ -188,7 +198,41 @@ namespace CameraSlider.UI
 
 						ws.WriteString("getPresetList " + _configState.PresetNameListString);
 					} break;
-				}				
+
+					case "getCameraConnectionStatus":
+					{
+						EmitLog($"getCameraConnectionStatus requested.");
+
+						string statusString= _cameraSliderDevice.IsConnected ? "connected" : "disconnected";
+						ws.WriteString($"getCameraConnectionStatus {statusString}");
+					} break;
+
+					case "getCameraMoveStatus":
+					{
+						EmitLog($"getCameraMoveStatus requested.");
+
+						string statusString = _deviceIsMoving ? "moving" : "idle";
+						ws.WriteString($"getCameraMoveStatus {statusString}");
+					}
+					break;
+
+					case "getCameraCalibrationStatus":
+					{
+						EmitLog($"getCameraCalibrationStatus requested.");
+
+						string statusString = _deviceCalibrationRunning ? "calibrating" : "idle";
+						ws.WriteString($"getCameraMoveStatus {statusString}");
+					}
+					break;
+				}
+			}
+		}
+
+		private void BroadcastMessageToAllWebSocketClients(string message)
+		{
+			foreach (var ws in _clientWebSockets)
+			{
+				ws.WriteString(message);
 			}
 		}
 
@@ -302,13 +346,17 @@ namespace CameraSlider.UI
 			{
 			case "move_start":
 			{
+				_deviceIsMoving = true;
 				SetCameraStatusLabel("Moving...");
+				BroadcastMessageToAllWebSocketClients("moveStatusChanged moving");
 			}
 			break;
 			case "move_complete":
 			{
-				SetCameraStatusLabel("Idle");
 				_hasPendingPresetTarget = false;
+				_deviceIsMoving = false;
+				SetCameraStatusLabel("Idle");
+				BroadcastMessageToAllWebSocketClients("moveStatusChanged idle");
 			}
 			break;
 			case "calibration_started":
@@ -316,6 +364,7 @@ namespace CameraSlider.UI
 				_deviceCalibrationRunning = true;
 				SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, true);
 				SetCameraStatusLabel("Calibrating...");
+				BroadcastMessageToAllWebSocketClients("calibrationStatusChanged calibrating");
 			}
 			break;
 			case "calibration_completed":
@@ -323,6 +372,7 @@ namespace CameraSlider.UI
 				_deviceCalibrationRunning = false;
 				SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, false);
 				SetCameraStatusLabel("Idle");
+				BroadcastMessageToAllWebSocketClients("calibrationStatusChanged completed");
 
 				// Refetch the slider calibration to update the UI
 				_cameraSliderDevice.GetSliderCalibration();
@@ -333,6 +383,7 @@ namespace CameraSlider.UI
 				_deviceCalibrationRunning = false;
 				SetUIControlsDisableFlag(UIControlDisableFlags.Calibrating, false);
 				SetCameraStatusLabel("Calibration Failed!");
+				BroadcastMessageToAllWebSocketClients("calibrationStatusChanged failed");
 			}
 			break;
 			}
@@ -388,12 +439,16 @@ namespace CameraSlider.UI
 					_configState._cameraSettingsConfig.Speed,
 					_configState._cameraSettingsConfig.Accel);
 				_suppressUIUpdatesToDevice = false;
+
+				BroadcastMessageToAllWebSocketClients("cameraConnectionStatusChanged connected");
 			}
 			else
 			{
 				SetCameraStatusLabel("Searching...");
 				SetActivePresetStatusLabel("");
 				SetUIControlsDisableFlag(UIControlDisableFlags.DeviceDisconnected, true);
+
+				BroadcastMessageToAllWebSocketClients("cameraConnectionStatusChanged disconnected");
 			}
 		}
 
