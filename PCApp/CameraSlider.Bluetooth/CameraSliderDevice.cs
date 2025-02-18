@@ -418,7 +418,7 @@ namespace CameraSlider.Bluetooth
 
 			try
 			{
-				if (characteristic == null)
+				if (characteristic != null)
 				{
 					var response =
 						AsyncOpFuture.Create(characteristic.ReadValueAsync())
