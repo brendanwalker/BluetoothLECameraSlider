@@ -160,8 +160,12 @@ namespace CameraSlider.UI
 
 		private void OnWebSocketClientError(WebSocket ws, Exception ex)
 		{
-			EmitLog($"Client {ws.RemoteEndpoint.ToString()} Error: {ex.Message}");
-			_clientWebSockets.Remove(ws);
+			string remoteEndpoint = ws != null ? ws.RemoteEndpoint.ToString() : "Unknown";
+			EmitLog($"Client {remoteEndpoint} Error: {ex.Message}");
+			if (ws != null)
+			{
+				_clientWebSockets.Remove(ws);
+			}
 		}
 
 		internal class ActivatePresetArgs : EventArgs
