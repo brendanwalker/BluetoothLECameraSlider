@@ -59,17 +59,19 @@ void AppStage_SliderCalibration::exit()
 }
 
 // BLEManager Events
-void AppStage_SliderCalibration::onCommand(const std::vector<std::string>& args, std::vector<std::string>& results)
+bool AppStage_SliderCalibration::onCommand(const std::vector<std::string>& args, BLECommandResponse& results)
 {
     if (args[0] == "stop")
     {
         Serial.println("AppStage_SliderCalibration: Received stop command. Halt calibration.");
         SliderState::getInstance()->stopAll();
         m_app->popAppState();
+        return true;
     }
     else
     {
         Serial.printf("AppStage_SliderCalibration: Ignoring command %s", args[0].c_str());
+        return false;
     }
 }
 

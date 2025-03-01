@@ -3,6 +3,7 @@
 
 #include "Arduino.h"
 #include "FastAccelStepper.h"
+#include "ConfigManager.h"
 
 #define PAN_CALIBRATION_SPEED   10.f // degrees / second
 #define TILT_CALIBRATION_SPEED  10.f // degrees / second
@@ -25,7 +26,7 @@ public:
   virtual void onMoveToTargetComplete() {}  
 };
 
-class SliderState
+class SliderState : public ConfigEventListener
 {
 public:
   SliderState(
@@ -44,6 +45,9 @@ public:
   void loop();
   void stopAll();  
   bool isAnySliderRunning() const;
+
+  // Limit Config change listener
+  void onLimitsChanged() override;
 
   void setPanStepperAngularAcceleration(float cameraAngAccelDegrees);
   float getPanStepperAngularAcceleration();
@@ -141,6 +145,8 @@ private:
   FastAccelStepper* m_panStepper;
   FastAccelStepper* m_tiltStepper;
   FastAccelStepper* m_slideStepper;
+
+  StepperMotorLimits m_limits;
 
   float m_lastSpeedFraction; // [0,1]
   float m_lastAccelerationFraction; // [0,1]

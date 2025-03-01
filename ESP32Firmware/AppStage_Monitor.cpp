@@ -3,6 +3,7 @@
 #include "AppStage_MainMenu.h"
 #include "AppStage_SliderCalibration.h"
 #include "BLEManager.h"
+#include "ConfigManager.h"
 #include "SliderManager.h"
 
 #include <sstream>
@@ -30,19 +31,20 @@ void AppStage_Monitor::enter()
   m_app->pushInputListener(this);
 }
 
-void AppStage_Monitor::onCommand(const std::vector<std::string>& args, std::vector<std::string>& results)
+bool AppStage_Monitor::onCommand(const std::vector<std::string>& args, BLECommandResponse& results)
 {
   SliderState* sliderState= SliderState::getInstance();
 
   if (args[0] == "reset_calibration")
   {
-    Serial.println("MainMenu: Received reset_calibration command");
+    Serial.println("Monitor: Received reset_calibration command");
 
     sliderState->resetCalibration();
+    return true;
   }
   else if (args[0] == "calibrate")
   {    
-    Serial.println("MainMenu: Received calibrate command");
+    Serial.println("Monitor: Received calibrate command");
     
     bool pan= false;
     bool tilt= false;
@@ -69,18 +71,66 @@ void AppStage_Monitor::onCommand(const std::vector<std::string>& args, std::vect
     sliderCalibration->setDesiredCalibrations(pan, tilt, slide);
     sliderCalibration->setAutoCalibration(true);
     m_app->pushAppStage(sliderCalibration);
+    return true;
   }
   else if (args[0] == "get_slider_calibration")
   {
     int32_t min_pos= sliderState->getSlideStepperMin();
     int32_t max_pos= sliderState->getSlideStepperMax();
 
-    Serial.println("MainMenu: Received get_slider_state command");
+    Serial.println("Monitor: Received get_slider_state command");
     
-    results.push_back("slider_calibration");
-    results.push_back(std::to_string(min_pos));
-    results.push_back(std::to_string(max_pos));
+    results.addStringParam("slider_calibration");
+    results.addIntParam(min_pos);
+    results.addIntParam(max_pos);
+    return true;
   }
+  else if (args[0] == "get_motor_pan_limits")
+  {
+    Serial.println("Monitor: Received get_motor_pan_limits command");
+
+    StepperMotorLimits limits;
+    ConfigManager::getInstance()->getMotorLimitsConfig(limits);
+
+    results.addStringParam("motor_pan_limits");
+    results.addFloatParam(limits.panMinAngle);
+    results.addFloatParam(limits.panMaxAngle);
+    results.addFloatParam(limits.panMinSpeed);
+    results.addFloatParam(limits.panMaxSpeed);
+    results.addFloatParam(limits.panMinAcceleration);
+    results.addFloatParam(limits.panMaxAcceleration);
+    return true;
+  }
+  else if (args[0] == "get_motor_tilt_limits")
+  {
+    Serial.println("Monitor: Received get_motor_tilt_limits command");
+
+    StepperMotorLimits limits;
+    ConfigManager::getInstance()->getMotorLimitsConfig(limits);
+
+    results.addStringParam("motor_tilt_limits");
+    results.addFloatParam(limits.tiltMinAngle);
+    results.addFloatParam(limits.tiltMaxAngle);
+    results.addFloatParam(limits.tiltMinSpeed);
+    results.addFloatParam(limits.tiltMaxSpeed);
+    results.addFloatParam(limits.tiltMinAcceleration);
+    results.addFloatParam(limits.tiltMaxAcceleration);
+    return true;
+  }
+  else if (args[0] == "get_motor_slide_limits")
+  {
+    Serial.println("Monitor: Received get_slider_tilt_limits command");
+
+    StepperMotorLimits limits;
+    ConfigManager::getInstance()->getMotorLimitsConfig(limits);
+
+    results.addStringParam("motor_slide_limits");
+    results.addFloatParam(limits.slideMinSpeed);
+    results.addFloatParam(limits.slideMaxSpeed);
+    results.addFloatParam(limits.slideMinAcceleration);
+    results.addFloatParam(limits.slideMaxAcceleration);
+    return true;
+  }   
   else if (args[0] == "set_pos")
   {
     float slide= (float)std::atof(args[1].c_str());
@@ -88,43 +138,51 @@ void AppStage_Monitor::onCommand(const std::vector<std::string>& args, std::vect
     float tilt= (float)std::atof(args[3].c_str());
 
     sliderState->setSlidePanTiltPosFraction(slide, pan, tilt);
+    return true;
   }
   else if (args[0] == "move_slider" && args.size() >= 2)
   {
     int delta = std::stoi(args[1]);
 
-    Serial.println("MainMenu: Received move_slider command");
+    Serial.println("Monitor: Received move_slider command");
     int32_t pos= sliderState->getSlideStepperPosition();
-    sliderState->setSlideStepperPosition(pos + delta);    
+    sliderState->setSlideStepperPosition(pos + delta);
+    return true;
   }
   else if (args[0] == "set_slide_min_pos")
   {
-    Serial.println("MainMenu: Received set_slide_min_pos command");
+    Serial.println("Monitor: Received set_slide_min_pos command");
     sliderState->saveSlideStepperPosAsMin();
     int32_t min_pos= sliderState->getSlideStepperMin();
 
-    results.push_back("slide_min_set");
-    results.push_back(std::to_string(min_pos));
+    results.addStringParam("slide_min_set");
+    results.addIntParam(min_pos);
+    return true;
   }
   else if (args[0] == "set_slide_max_pos")
   {
-    Serial.println("MainMenu: Received set_slide_max_pos command");
+    Serial.println("Monitor: Received set_slide_max_pos command");
     sliderState->saveSlideStepperPosAsMax();
     int32_t max_pos= sliderState->getSlideStepperMax();
 
-    results.push_back("slide_max_set");
-    results.push_back(std::to_string(max_pos));    
+    results.addStringParam("slide_max_set");
+    results.addIntParam(max_pos);
+    return true;
   }  
   else if (args[0] == "stop")
   {
-    Serial.println("MainMenu: Received stop command");
+    Serial.println("Monitor: Received stop command");
     sliderState->stopAll();
+    return true;
   }
   else if (args[0] == "save")
   {
-    Serial.println("MainMenu: Received save command");
+    Serial.println("Monitor: Received save command");
     m_app->save();
+    return true;
   }
+
+  return false;
 }
 
 void AppStage_Monitor::pause()
@@ -161,7 +219,7 @@ void AppStage_Monitor::exit()
 void AppStage_Monitor::onRotaryButtonClicked(Button2* button)
 {
   Serial.println("onRotaryButtonClicked");
-  m_app->pushAppStage(AppStage_MainMenu::getInstance());
+  m_app->pushAppStage(AppStage_Monitor::getInstance());
 }
 
 void AppStage_Monitor::render()

@@ -17,6 +17,31 @@ void ConfigManager::load()
   {
     size_t bytesRead= 0;
 
+    Serial.printf("[Motor Limits Config]\n");
+    bytesRead= m_preferences.getBytes("motor_limits", &m_motorLimitsConfig, sizeof(StepperMotorLimits));
+    if (bytesRead != sizeof(StepperMotorLimits) || m_motorLimitsConfig.version != STEPPER_MOTOR_LIMITS_VER)
+    {
+      Serial.printf("  Invalid. Setting Defaults.\n");
+      m_motorLimitsConfig.setDefaults();        
+    }
+    Serial.printf("  ver: %d\n", m_motorLimitsConfig.version);
+    Serial.printf("  panMinAngle: %.1f degrees\n", m_motorLimitsConfig.panMinAngle);
+    Serial.printf("  panMaxAngle: %.1f degrees\n", m_motorLimitsConfig.panMaxAngle);
+    Serial.printf("  panMinSpeed: %.1f degrees / s\n", m_motorLimitsConfig.panMinSpeed);
+    Serial.printf("  panMaxSpeed: %.1f degrees / s\n", m_motorLimitsConfig.panMaxSpeed);
+    Serial.printf("  panMinAcceleration: %.1f degrees / s²\n", m_motorLimitsConfig.panMinAcceleration);
+    Serial.printf("  panMaxAcceleration: %.1fdegrees / s²\n", m_motorLimitsConfig.panMaxAcceleration);
+    Serial.printf("  tiltMinAngle: %.1f degrees\n", m_motorLimitsConfig.tiltMinAngle);
+    Serial.printf("  tiltMaxAngle: %.1f degrees\n", m_motorLimitsConfig.tiltMaxAngle);
+    Serial.printf("  tiltMinSpeed: %.1f degrees / s\n", m_motorLimitsConfig.tiltMinSpeed);
+    Serial.printf("  tiltMaxSpeed: %.1f degrees / s\n", m_motorLimitsConfig.tiltMaxSpeed);
+    Serial.printf("  tiltMinAcceleration: %.1f degrees / s²\n", m_motorLimitsConfig.tiltMinAcceleration);
+    Serial.printf("  tiltMaxAcceleration: %.1f degrees / s²\n", m_motorLimitsConfig.tiltMaxAcceleration);
+    Serial.printf("  slideMinSpeed: %.1f mm / s\n", m_motorLimitsConfig.slideMinSpeed);
+    Serial.printf("  slideMaxSpeed: %.1f mm / s\n", m_motorLimitsConfig.slideMaxSpeed);
+    Serial.printf("  slideMinAcceleration: %.1f mm / s²\n", m_motorLimitsConfig.slideMinAcceleration);
+    Serial.printf("  slideMaxAcceleration: %.1f mm / s²\n", m_motorLimitsConfig.slideMaxAcceleration);
+
     Serial.printf("[Motor Calibration Config]\n");
     bytesRead= m_preferences.getBytes("motor_cal", &m_motorCalibrationConfig, sizeof(StepperMotorCalibration));
     if (bytesRead != sizeof(StepperMotorCalibration) || m_motorCalibrationConfig.version != STEPPER_MOTOR_CALIBRATION_VER)
@@ -25,10 +50,10 @@ void ConfigManager::load()
       memset(&m_motorCalibrationConfig, 0, sizeof(StepperMotorCalibration));
     }
     Serial.printf("  ver: %d\n", m_motorCalibrationConfig.version);
-    Serial.printf("  pan_center: %d\n", m_motorCalibrationConfig.panStepperCenter);
-    Serial.printf("  tilt_center: %d\n", m_motorCalibrationConfig.tiltStepperCenter);
-    Serial.printf("  slide_min: %d\n", m_motorCalibrationConfig.slideStepperMin);
-    Serial.printf("  slide_max: %d\n", m_motorCalibrationConfig.slideStepperMax);
+    Serial.printf("  panStepperCenter: %d\n", m_motorCalibrationConfig.panStepperCenter);
+    Serial.printf("  tiltStepperCenter: %d\n", m_motorCalibrationConfig.tiltStepperCenter);
+    Serial.printf("  slideStepperMin: %d\n", m_motorCalibrationConfig.slideStepperMin);
+    Serial.printf("  slideStepperMax: %d\n", m_motorCalibrationConfig.slideStepperMax);
 
     Serial.printf("[Motor Position Config]\n");
     bytesRead= m_preferences.getBytes("motor_pos", &m_motorPositionConfig, sizeof(StepperMotorPosition));
@@ -39,9 +64,9 @@ void ConfigManager::load()
       m_motorPositionConfig.version= STEPPER_MOTOR_POSITION_VER;
     }
     Serial.printf("  ver: %d\n", m_motorPositionConfig.version);
-    Serial.printf("  pan_position: %d\n", m_motorPositionConfig.panStepperPosition);
-    Serial.printf("  tilt_position: %d\n", m_motorPositionConfig.tiltStepperPosition);
-    Serial.printf("  slide_position: %d\n", m_motorPositionConfig.slideStepperPosition);
+    Serial.printf("  panStepperPosition: %d\n", m_motorPositionConfig.panStepperPosition);
+    Serial.printf("  tiltStepperPosition: %d\n", m_motorPositionConfig.tiltStepperPosition);
+    Serial.printf("  slideStepperPosition: %d\n", m_motorPositionConfig.slideStepperPosition);
     
     m_isMotorPositionConfigDirty= false;
     m_bValidPrefs= true;
@@ -61,6 +86,28 @@ void ConfigManager::clearListener(ConfigEventListener *listener)
 {
   if (m_listener == listener)
     m_listener= nullptr;
+}
+
+void ConfigManager::getMotorLimitsConfig(StepperMotorLimits& outMotorConfig) const
+{
+  if (m_motorLimitsConfig.version == STEPPER_MOTOR_LIMITS_VER)
+  {
+    outMotorConfig= m_motorLimitsConfig;
+  }
+  else
+  {
+    outMotorConfig.setDefaults();
+  }
+}
+
+void ConfigManager::setMotorLimitsConfig(const StepperMotorLimits& motorConfig)
+{
+  m_motorLimitsConfig= motorConfig;
+  m_motorLimitsConfig.version= STEPPER_MOTOR_LIMITS_VER;
+  if (m_bValidPrefs)
+    m_preferences.putBytes("motor_limits", &m_motorLimitsConfig, sizeof(StepperMotorLimits));
+  if (m_listener != nullptr)
+    m_listener->onLimitsChanged();
 }
 
 bool ConfigManager::getMotorCalibrationConfig(StepperMotorCalibration& outMotorConfig) const

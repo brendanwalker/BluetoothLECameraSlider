@@ -7,7 +7,7 @@
 #include "ConfigManager.h"
 #include "SliderManager.h"
 
-#include <sstream>
+#include <iomanip>
 #include <vector>
 
 #define SERVICE_UUID        "6b42e290-28cb-11ee-be56-0242ac120002"
@@ -20,6 +20,50 @@
 #define SPEED_CHARACTERISTIC_UUID "781ef5a1-e5df-411d-9276-7a229e469719"
 #define ACCEL_CHARACTERISTIC_UUID "5cf074e3-2014-4776-8734-b0d0eb49229a"
 
+// -- BLE Command Response -----
+BLECommandResponse::BLECommandResponse()
+  : m_bIsEmpty(true)
+{
+}
+
+bool BLECommandResponse::isEmpty() const
+{
+  return m_bIsEmpty;
+}
+
+void BLECommandResponse::addStringParam(const std::string& value)
+{
+  addSeperator();
+  m_responseStream << value;
+}
+
+void BLECommandResponse::addIntParam(const int value)
+{
+  addSeperator();
+  m_responseStream << value;
+}
+
+void BLECommandResponse::addFloatParam(const float value)
+{
+  addSeperator();
+  m_responseStream << value;
+}
+
+std::string BLECommandResponse::toString()
+{
+  return m_responseStream.str();
+}
+
+void BLECommandResponse::addSeperator()
+{
+  if (!m_bIsEmpty)
+  {
+    m_responseStream << " ";
+  }
+  m_bIsEmpty= false;
+}
+
+// -- BLE Manager -----
 BLEManager* BLEManager::s_instance= nullptr;
 
 BLEManager::BLEManager(ConfigManager* config)
@@ -334,25 +378,32 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
     }
 
     // Prepend the command id (if any) to the start of the results
-    std::vector<std::string> results;
+    BLECommandResponse response;
     if (commandId > 0)
     {
-      results.push_back(commandIdStr);
+      response.addStringParam(commandIdStr);
     }
 
     // Process the command
     if (args.size() > 0 && args[0] == "ping")
     {
       Serial.printf("BLEManager - Received Ping\n");
-      results.push_back("pong");
+      response.addStringParam("pong");
     }
     else if (m_commandHandler != nullptr)
     {
-      Serial.printf("BLEManager - Handling command: %s\n", value.c_str());
-
       if (args.size() > 0)
       {
-        m_commandHandler->onCommand(args, results);
+        Serial.printf("BLEManager - Handling command: %s\n", commandIdStr.c_str());
+
+        if (!m_commandHandler->onCommand(args, response))
+        {
+          Serial.printf("BLEManager - Failed to handle command: %s\n", value.c_str());
+        }
+      }
+      else
+      {
+        Serial.printf("BLEManager - Received empty command\n");
       }
     }
     else
@@ -363,19 +414,21 @@ void BLEManager::onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_pa
     // always send a response back if we had a request id
     // so that the clinet knows it's safe to post another command
     // without it getting missed
-    if (results.size() > 0)
+    if (!response.isEmpty())
     {
-      // Join the results into a single string with " " seperated elements
-      std::stringstream ss;      
-      ss << results[0];
-      for (size_t i = 1; i < results.size(); i++)
-      {
-        ss << " " << results[i];
-      }
+      std::string responseString= response.toString();
 
-      std::string response= ss.str();
-      m_pResponseCharacteristic->setValue(response.c_str());
-      m_pResponseCharacteristic->notify();      
+      Serial.printf("BLEManager - Sending response: %s\n", responseString.c_str());
+      const int responseLength= (int)responseString.size();
+      if (responseLength < ESP_GATT_MAX_ATTR_LEN)
+      {
+        m_pResponseCharacteristic->setValue(responseString.c_str());
+        m_pResponseCharacteristic->notify();
+      }
+      else 
+      {
+        Serial.printf("BLEManager - ERROR - Response too big: (%d > %d)\n", responseLength, ESP_GATT_MAX_ATTR_LEN);
+      }
     }
   }
   // Speed Controls

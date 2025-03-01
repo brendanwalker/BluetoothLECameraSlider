@@ -7,13 +7,32 @@
 #include "ConfigManager.h"
 #include "SliderManager.h"
 
-#include <vector>
 #include <string>
+#include <sstream>
+#include <vector>
+
+class BLECommandResponse
+{
+public:
+  BLECommandResponse();
+
+  bool isEmpty() const;
+  void addStringParam(const std::string& value);
+  void addIntParam(const int value);
+  void addFloatParam(const float value);
+  std::string toString();
+
+private:
+  void addSeperator();
+
+  std::stringstream m_responseStream;
+  bool m_bIsEmpty;
+};
 
 class BLECommandHandler
 {
 public:
-  virtual void onCommand(const std::vector<std::string>& args, std::vector<std::string>& results) {}
+  virtual bool onCommand(const std::vector<std::string>& args, BLECommandResponse& results) {}
 };
 
 class BLEManager : public BLECharacteristicCallbacks, public BLEServerCallbacks, public SliderStateEventListener
