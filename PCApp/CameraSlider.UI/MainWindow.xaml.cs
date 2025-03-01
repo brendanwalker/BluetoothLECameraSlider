@@ -54,6 +54,24 @@ namespace CameraSlider.UI
 		private float _presetTargetTiltPosition = 0.0f;
 		private bool _hasPendingPresetTarget = false;
 
+		// Motor Limits
+		private float _motorPanMinAngle= 0.0f;
+		private float _motorPanMaxAngle= 0.0f;
+		private float _motorPanMinSpeed= 0.0f;
+		private float _motorPanMaxSpeed= 0.0f;
+		private float _motorPanMinAcceleration= 0.0f;
+		private float _motorPanMaxAcceleration= 0.0f;
+		private float _motorTiltMinAngle= 0.0f;
+		private float _motorTiltMaxAngle= 0.0f;
+		private float _motorTiltMinSpeed= 0.0f;
+		private float _motorTiltMaxSpeed= 0.0f;
+		private float _motorTiltMinAcceleration= 0.0f;
+		private float _motorTiltMaxAcceleration= 0.0f;
+		private float _motorSlideMinSpeed= 0.0f;
+		private float _motorSlideMaxSpeed= 0.0f;
+		private float _motorSlideMinAcceleration= 0.0f;
+		private float _motorSlideMaxAcceleration= 0.0f;
+
 		// Slider state
 		private int _sliderMinPos = 0;
 		private int _sliderMaxPos = 0;
@@ -300,6 +318,105 @@ namespace CameraSlider.UI
 			});
 		}
 
+		private async void SetMotorPanMinAngleLabel(float minAngle)
+		{
+			await RunOnUiThread(() =>
+			{
+			});
+		}
+		private async void SetMotorPanMaxAngleLabel(float maxAngle)
+		{
+			await RunOnUiThread(() =>
+			{
+			});
+		}
+		private async void SetMotorPanMinSpeedLabel(float minSpeed)
+		{
+			await RunOnUiThread(() =>
+			{
+			});
+		}
+		private async void SetMotorPanMaxSpeedLabel(float maxSpeed)
+		{
+			await RunOnUiThread(() =>
+			{
+			});
+		}
+		private async void SetMotorPanMinAccelerationLabel(float minAcceleration)
+		{
+			await RunOnUiThread(() =>
+			{
+			});
+		}
+		private async void SetMotorPanMaxAccelerationLabel(float maxAcceleration)
+		{
+			await RunOnUiThread(() =>
+			{
+			});
+		}
+
+		private async void SetMotorTiltMinAngleLabel(float minAngle)
+		{
+			await RunOnUiThread(() =>
+			{
+			});
+		}
+		private async void SetMotorTiltMaxAngleLabel(float maxAngle)
+		{
+			await RunOnUiThread(() =>
+			{
+			});
+		}
+		private async void SetMotorTiltMinSpeedLabel(float minSpeed)
+		{
+			await RunOnUiThread(() =>
+			{
+			});
+		}
+		private async void SetMotorTiltMaxSpeedLabel(float maxSpeed)
+		{
+			await RunOnUiThread(() =>
+			{
+			});
+		}
+		private async void SetMotorTiltMinAccelerationLabel(float minAcceleration)
+		{
+			await RunOnUiThread(() =>
+			{
+			});
+		}
+		private async void SetMotorTiltMaxAccelerationLabel(float maxAcceleration)
+		{
+			await RunOnUiThread(() =>
+			{
+			});
+		}
+
+		private async void SetMotorSlideMinSpeedLabel(float minSpeed)
+		{
+			await RunOnUiThread(() =>
+			{
+			});
+		}
+		private async void SetMotorSlideMaxSpeedLabel(float maxSpeed)
+		{
+			await RunOnUiThread(() =>
+			{
+			});
+		}
+		private async void SetMotorSlideMinAccelerationLabel(float minAcceleration)
+		{
+			await RunOnUiThread(() =>
+			{
+			});
+		}
+		private async void SetMotorSlideMaxAccelerationLabel(float maxAcceleration)
+		{
+			await RunOnUiThread(() =>
+			{
+			});
+		}
+
 		private void CameraSliderResponseReceived(object sender, CameraResponseArgs evt)
 		{
 			EmitLog("Received slider response received: " + evt.Args.ToString());
@@ -323,6 +440,62 @@ namespace CameraSlider.UI
 
 						SetCameraSliderMinPositionLabel(_sliderMinPos);
 						SetCameraSliderMaxPositionLabel(_sliderMaxPos);
+					}
+				}
+				break;
+				case "motor_pan_limits":
+				{
+					if (args.Length >= 7)
+					{
+						_motorPanMinAngle= float.Parse(args[1]);
+						_motorPanMaxAngle= float.Parse(args[2]);
+						_motorPanMinSpeed = float.Parse(args[3]);
+						_motorPanMaxSpeed = float.Parse(args[4]);
+						_motorPanMinAcceleration = float.Parse(args[5]);
+						_motorPanMaxAcceleration = float.Parse(args[6]);
+
+						SetMotorPanMinAngleLabel(_motorPanMinAngle);
+						SetMotorPanMaxAngleLabel(_motorPanMaxAngle);
+						SetMotorPanMinSpeedLabel(_motorPanMinSpeed);
+						SetMotorPanMaxSpeedLabel(_motorPanMaxSpeed);
+						SetMotorPanMinAccelerationLabel(_motorPanMinAcceleration);
+						SetMotorPanMaxAccelerationLabel(_motorPanMaxAcceleration);
+					}
+				}
+				break;
+				case "motor_tile_limits":
+				{
+					if (args.Length >= 7)
+					{
+						_motorTiltMinAngle = float.Parse(args[1]);
+						_motorTiltMaxAngle = float.Parse(args[2]);
+						_motorTiltMinSpeed = float.Parse(args[3]);
+						_motorTiltMaxSpeed = float.Parse(args[4]);
+						_motorTiltMinAcceleration = float.Parse(args[5]);
+						_motorTiltMaxAcceleration = float.Parse(args[6]);
+
+						SetMotorTiltMinAngleLabel(_motorTiltMinAngle);
+						SetMotorTiltMaxAngleLabel(_motorTiltMaxAngle);
+						SetMotorTiltMinSpeedLabel(_motorTiltMinSpeed);
+						SetMotorTiltMaxSpeedLabel(_motorTiltMaxSpeed);
+						SetMotorTiltMinAccelerationLabel(_motorTiltMinAcceleration);
+						SetMotorTiltMaxAccelerationLabel(_motorTiltMaxAcceleration);
+					}
+				}
+				break;
+				case "motor_slide_limits":
+				{
+					if (args.Length >= 5)
+					{
+						_motorSlideMinSpeed = float.Parse(args[1]);
+						_motorSlideMaxSpeed = float.Parse(args[2]);
+						_motorSlideMinAcceleration = float.Parse(args[3]);
+						_motorSlideMaxAcceleration = float.Parse(args[4]);
+
+						SetMotorSlideMinSpeedLabel(_motorSlideMinSpeed);
+						SetMotorSlideMaxSpeedLabel(_motorSlideMaxSpeed);
+						SetMotorSlideMinAccelerationLabel(_motorSlideMinAcceleration);
+						SetMotorSlideMaxAccelerationLabel(_motorSlideMaxAcceleration);
 					}
 				}
 				break;
@@ -421,6 +594,12 @@ namespace CameraSlider.UI
 
 				// Get the slider calibration from the device (response updates the	UI)	
 				_cameraSliderDevice.GetSliderCalibration();
+
+				// Get the motor angle, speed, and acceleration limits from the device 
+				// (response updates the UI)
+				_cameraSliderDevice.GetMotorPanLimits();
+				_cameraSliderDevice.GetMotorTiltLimits();
+				_cameraSliderDevice.GetMotorSlideLimits();
 
 				// Send the desired speed, accel, and position params to the device
 				_cameraSliderDevice.SetSpeed(_configState._cameraSettingsConfig.Speed);
@@ -1019,6 +1198,11 @@ namespace CameraSlider.UI
 		{
 			_configState._cameraSettingsConfig.AutoSlideCalibration = (bool)SlideEnabledCheckBox.IsChecked;
 			_configState._areConfigSettingsDirty = true;
+		}
+
+		private void PanMinAngleTextBox_TextChanged(object sender, TextChangedEventArgs e)
+		{
+
 		}
 	}
 }

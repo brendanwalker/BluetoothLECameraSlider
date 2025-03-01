@@ -468,6 +468,21 @@ namespace CameraSlider.Bluetooth
 			SendCommand("get_slider_calibration");
 		}
 
+		public void GetMotorPanLimits()
+		{
+			SendCommand("get_motor_pan_limits");
+		}
+
+		public void GetMotorTiltLimits()
+		{
+			SendCommand("get_motor_tilt_limits");
+		}
+
+		public void GetMotorSlideLimits()
+		{
+			SendCommand("get_motor_slide_limits");
+		}
+
 		public void WakeUp()
 		{
 			SendCommand("ping");
