@@ -85,6 +85,11 @@ bool AppStage_Monitor::onCommand(const std::vector<std::string>& args, BLEComman
     results.addIntParam(max_pos);
     return true;
   }
+  else if (args[0] == "reset_motor_limits")
+  {
+    Serial.println("Monitor: Received reset_motor_limits command");
+    ConfigManager::getInstance()->resetMotorLimits();
+  }
   else if (args[0] == "get_motor_pan_limits")
   {
     Serial.println("Monitor: Received get_motor_pan_limits command");
@@ -149,9 +154,43 @@ bool AppStage_Monitor::onCommand(const std::vector<std::string>& args, BLEComman
     sliderState->setSlideStepperPosition(pos + delta);
     return true;
   }
-  else if (args[0] == "set_slide_min_pos")
+  else if (args[0] == "set_pan_motor_limits")
   {
-    Serial.println("Monitor: Received set_slide_min_pos command");
+    float minAngle = std::stof(args[1]);
+    float maxAngle = std::stof(args[2]);
+    float minSpeed = std::stof(args[3]);
+    float maxSpeed = std::stof(args[4]);
+    float minAccel = std::stof(args[5]);
+    float maxAccel = std::stof(args[6]);    
+    Serial.println("Monitor: Received set_pan_motor_limits command");
+    ConfigManager::getInstance()->setPanMotorLimits(minAngle, maxAngle, minSpeed, maxSpeed, minAccel, maxAccel);
+    return true;
+  }
+  else if (args[0] == "set_tilt_motor_limits")
+  {
+    float minAngle = std::stof(args[1]);
+    float maxAngle = std::stof(args[2]);
+    float minSpeed = std::stof(args[3]);
+    float maxSpeed = std::stof(args[4]);
+    float minAccel = std::stof(args[5]);
+    float maxAccel = std::stof(args[6]);    
+    Serial.println("Monitor: Received set_tilt_motor_limits command");
+    ConfigManager::getInstance()->setTiltMotorLimits(minAngle, maxAngle, minSpeed, maxSpeed, minAccel, maxAccel);
+    return true;
+  }
+  else if (args[0] == "set_slide_motor_limits")
+  {
+    float minSpeed = std::stof(args[1]);
+    float maxSpeed = std::stof(args[2]);
+    float minAccel = std::stof(args[3]);
+    float maxAccel = std::stof(args[4]);    
+    Serial.println("Monitor: Received set_slide_motor_limits command");
+    ConfigManager::getInstance()->setSlideMotorLimits(minSpeed, maxSpeed, minAccel, maxAccel);
+    return true;
+  }
+  else if (args[0] == "save_slide_min_pos")
+  {
+    Serial.println("Monitor: Received save_slide_min_pos command");
     sliderState->saveSlideStepperPosAsMin();
     int32_t min_pos= sliderState->getSlideStepperMin();
 
@@ -159,9 +198,9 @@ bool AppStage_Monitor::onCommand(const std::vector<std::string>& args, BLEComman
     results.addIntParam(min_pos);
     return true;
   }
-  else if (args[0] == "set_slide_max_pos")
+  else if (args[0] == "save_slide_max_pos")
   {
-    Serial.println("Monitor: Received set_slide_max_pos command");
+    Serial.println("Monitor: Received save_slide_max_pos command");
     sliderState->saveSlideStepperPosAsMax();
     int32_t max_pos= sliderState->getSlideStepperMax();
 

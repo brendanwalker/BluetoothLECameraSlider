@@ -168,54 +168,62 @@
                         <StackPanel>
                             <Label Content="Pan Motor Limits" HorizontalAlignment="Left" Width="70"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                <Label Content="Min Angle" HorizontalAlignment="Left" Width="70"/>
-                                <TextBox x:Name="PanMinAngleTextBox" Width="80" HorizontalAlignment="Left" Margin="0,5,0,0" TextChanged="PanMinAngleTextBox_TextChanged"/>
-                                <Label Content="Max Angle" HorizontalAlignment="Left" Width="70"/>
-                                <TextBox x:Name="PanMaxAngleTextBox" Width="80" HorizontalAlignment="Left" Margin="0,5,0,0" TextChanged="PanMaxAngleTextBox_TextChanged"/>
+                                <Label Content="Min Angle (deg)" HorizontalAlignment="Left" Width="100"/>
+                                <TextBox x:Name="PanMinAngleTextBox" Width="50" HorizontalAlignment="Left" Margin="0,5,0,0"/>
+                                <Label Content="Max Angle (deg)" HorizontalAlignment="Left" Width="100"/>
+                                <TextBox x:Name="PanMaxAngleTextBox" Width="50" HorizontalAlignment="Left" Margin="0,5,0,0"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                <Label Content="Min Speed" HorizontalAlignment="Left" Width="70"/>
-                                <TextBox x:Name="PanMinSpeedTextBox" Width="80" HorizontalAlignment="Left" Margin="0,5,0,0" TextChanged="PanMinSpeedTextBox_TextChanged"/>
-                                <Label Content="Max Speed" HorizontalAlignment="Left" Width="70"/>
-                                <TextBox x:Name="PanMaxSpeedTextBox" Width="80" HorizontalAlignment="Left" Margin="0,5,0,0" TextChanged="PanMaxSpeedTextBox_TextChanged"/>
+                                <Label Content="Min Speed (deg/s)" HorizontalAlignment="Left" Width="110"/>
+                                <TextBox x:Name="PanMinSpeedTextBox" Width="50" HorizontalAlignment="Left" Margin="0,5,0,0"/>
+                                <Label Content="Max Speed (deg/s)" HorizontalAlignment="Left" Width="110"/>
+                                <TextBox x:Name="PanMaxSpeedTextBox" Width="50" HorizontalAlignment="Left" Margin="0,5,0,0"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                <Label Content="Min Acceleration" HorizontalAlignment="Left" Width="100"/>
-                                <TextBox x:Name="PanMinAccelerationTextBox" Width="80" HorizontalAlignment="Left" Margin="0,5,0,0" TextChanged="PanMinAccelerationTextBox_TextChanged"/>
-                                <Label Content="Max Acceleration" HorizontalAlignment="Left" Width="100"/>
-                                <TextBox x:Name="PanMaxAccelerationTextBox" Width="80" HorizontalAlignment="Left" Margin="0,5,0,0" TextChanged="PanMaxAccelerationTextBox_TextChanged"/>
+                                <Label Content="Min Accel (deg/s²)" HorizontalAlignment="Left" Width="110"/>
+                                <TextBox x:Name="PanMinAccelerationTextBox" Width="50" HorizontalAlignment="Left" Margin="0,5,0,0"/>
+                                <Label Content="Max Accel (deg/s²)" HorizontalAlignment="Left" Width="110"/>
+                                <TextBox x:Name="PanMaxAccelerationTextBox" Width="50" HorizontalAlignment="Left" Margin="0,5,0,0"/>
                             </StackPanel>
+                            <Separator Height="10"/>
                             <Label Content="Tilt Motor Limits" HorizontalAlignment="Left" Width="100"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                <Label Content="Min Angle" HorizontalAlignment="Left" Width="70"/>
-                                <TextBox x:Name="TiltMinAngleTextBox" Width="80" HorizontalAlignment="Left" Margin="0,5,0,0" TextChanged="TiltMinAngleTextBox_TextChanged"/>
-                                <Label Content="Max Angle" HorizontalAlignment="Left" Width="70"/>
-                                <TextBox x:Name="TiltMaxAngleTextBox" Width="80" HorizontalAlignment="Left" Margin="0,5,0,0" TextChanged="TiltMaxAngleTextBox_TextChanged"/>
+                                <Label Content="Min Angle (deg)" HorizontalAlignment="Left" Width="100"/>
+                                <TextBox x:Name="TiltMinAngleTextBox" Width="50" HorizontalAlignment="Left" Margin="0,5,0,0"/>
+                                <Label Content="Max Angle (deg)" HorizontalAlignment="Left" Width="100"/>
+                                <TextBox x:Name="TiltMaxAngleTextBox" Width="50" HorizontalAlignment="Left" Margin="0,5,0,0"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                <Label Content="Min Speed" HorizontalAlignment="Left" Width="70"/>
-                                <TextBox x:Name="TiltMinSpeedTextBox" Width="80" HorizontalAlignment="Left" Margin="0,5,0,0" TextChanged="TiltMinSpeedTextBox_TextChanged"/>
-                                <Label Content="Max Speed" HorizontalAlignment="Left" Width="70"/>
-                                <TextBox x:Name="TiltMaxSpeedTextBox" Width="80" HorizontalAlignment="Left" Margin="0,5,0,0" TextChanged="TiltMaxSpeedTextBox_TextChanged"/>
+                                <Label Content="Min Speed (deg/s)" HorizontalAlignment="Left" Width="110"/>
+                                <TextBox x:Name="TiltMinSpeedTextBox" Width="50" HorizontalAlignment="Left" Margin="0,5,0,0"/>
+                                <Label Content="Max Speed (deg/s)" HorizontalAlignment="Left" Width="110"/>
+                                <TextBox x:Name="TiltMaxSpeedTextBox" Width="50" HorizontalAlignment="Left" Margin="0,5,0,0"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                <Label Content="Min Acceleration" HorizontalAlignment="Left" Width="100"/>
-                                <TextBox x:Name="TiltMinAccelerationTextBox" Width="80" HorizontalAlignment="Left" Margin="0,5,0,0" TextChanged="TiltMinAccelerationTextBox_TextChanged"/>
-                                <Label Content="Max Acceleration" HorizontalAlignment="Left" Width="100"/>
-                                <TextBox x:Name="TiltMaxAccelerationTextBox" Width="80" HorizontalAlignment="Left" Margin="0,5,0,0" TextChanged="TiltMaxAccelerationTextBox_TextChanged"/>
+                                <Label Content="Min Accel (deg/s²)" HorizontalAlignment="Left" Width="110"/>
+                                <TextBox x:Name="TiltMinAccelerationTextBox" Width="50" HorizontalAlignment="Left" Margin="0,5,0,0"/>
+                                <Label Content="Max Accel (deg/s²)" HorizontalAlignment="Left" Width="110"/>
+                                <TextBox x:Name="TiltMaxAccelerationTextBox" Width="50" HorizontalAlignment="Left" Margin="0,5,0,0"/>
                             </StackPanel>
+                            <Separator Height="10"/>
                             <Label Content="Slide Motor Limits" HorizontalAlignment="Left" Width="120"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                <Label Content="Min Speed" HorizontalAlignment="Left" Width="70"/>
-                                <TextBox x:Name="SlideMinSpeedTextBox" Width="80" HorizontalAlignment="Left" Margin="0,5,0,0" TextChanged="SlideMinSpeedTextBox_TextChanged"/>
-                                <Label Content="Max Speed" HorizontalAlignment="Left" Width="70"/>
-                                <TextBox x:Name="SlideMaxSpeedTextBox" Width="80" HorizontalAlignment="Left" Margin="0,5,0,0" TextChanged="SlideMaxSpeedTextBox_TextChanged"/>
+                                <Label Content="Min Speed (deg/s)" HorizontalAlignment="Left" Width="110"/>
+                                <TextBox x:Name="SlideMinSpeedTextBox" Width="50" HorizontalAlignment="Left" Margin="0,5,0,0"/>
+                                <Label Content="Max Speed (deg/s)" HorizontalAlignment="Left" Width="110"/>
+                                <TextBox x:Name="SlideMaxSpeedTextBox" Width="50" HorizontalAlignment="Left" Margin="0,5,0,0"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                <Label Content="Min Acceleration" HorizontalAlignment="Left" Width="100"/>
-                                <TextBox x:Name="SlideMinAccelerationTextBox" Width="80" HorizontalAlignment="Left" Margin="0,5,0,0" TextChanged="SlideMinAccelerationTextBox_TextChanged"/>
-                                <Label Content="Max Acceleration" HorizontalAlignment="Left" Width="100"/>
-                                <TextBox x:Name="SlideMaxAccelerationTextBox" Width="80" HorizontalAlignment="Left" Margin="0,5,0,0" TextChanged="SlideMaxAccelerationTextBox_TextChanged"/>
+                                <Label Content="Min Accel (deg/s²)" HorizontalAlignment="Left" Width="110"/>
+                                <TextBox x:Name="SlideMinAccelerationTextBox" Width="50" HorizontalAlignment="Left" Margin="0,5,0,0"/>
+                                <Label Content="Max Accel (deg/s²)" HorizontalAlignment="Left" Width="110"/>
+                                <TextBox x:Name="SlideMaxAccelerationTextBox" Width="50" HorizontalAlignment="Left" Margin="0,5,0,0"/>
+                            </StackPanel>
+                            <Separator Height="10"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <Button x:Name="BtnApplyMotorLimits" Content="Apply" IsEnabled="True" Width="100" Margin="5,5,5,5" Click="BtnApplyMotorLimits_Click" VerticalAlignment="Center"/>
+                                <Button x:Name="BtnRefreshMotorLimits" Content="Refresh" IsEnabled="True" Width="100" Margin="5,5,5,5" Click="BtnRefreshMotorLimits_Click" VerticalAlignment="Center"/>
+                                <Button x:Name="BtnResetMotorLimits" Content="Reset" IsEnabled="True" Width="100" Margin="5,5,5,5" Click="BtnResetMotorLimits_Click" VerticalAlignment="Center"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>

@@ -15,6 +15,8 @@ using System.Net;
 using vtortola.WebSockets;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
+using Newtonsoft.Json.Linq;
 
 namespace CameraSlider.UI
 {
@@ -286,135 +288,105 @@ namespace CameraSlider.UI
 			});
 		}
 
-		private async void SetCameraStatusLabel(string status)
+		private async void SetLabelValue(Label label, string value)
 		{
 			await RunOnUiThread(() =>
 			{
-				CameraTxtStatus.Content = status;
+				label.Content = value;
 			});
 		}
 
-		private async void SetCameraSliderPositionLabel(int slidePos)
+		private async void SetTextBoxValue(TextBox textBox, string value)
 		{
 			await RunOnUiThread(() =>
 			{
-				LblSliderRawPos.Content = slidePos.ToString();
+				textBox.Text = value;
 			});
 		}
 
-		private async void SetCameraSliderMinPositionLabel(int slidePos)
+		private void SetCameraStatusLabel(string status)
 		{
-			await RunOnUiThread(() =>
-			{
-				LblSlideMin.Content = slidePos.ToString();
-			});
+			SetLabelValue(CameraTxtStatus, status);
 		}
 
-		private async void SetCameraSliderMaxPositionLabel(int slidePos)
+		private void SetCameraSliderPositionLabel(int value)
 		{
-			await RunOnUiThread(() =>
-			{
-				LblSlideMax.Content = slidePos.ToString();
-			});
+			SetLabelValue(LblSliderRawPos, value.ToString());
+		}
+		private void SetCameraSliderMinPositionLabel(int value)
+		{
+			SetLabelValue(LblSlideMin, value.ToString());
+		}
+		private void SetCameraSliderMaxPositionLabel(int value)
+		{
+			SetLabelValue(LblSlideMax, value.ToString());
 		}
 
-		private async void SetMotorPanMinAngleLabel(float minAngle)
+		private void SetMotorPanMinAngleLabel(float minAngle)
 		{
-			await RunOnUiThread(() =>
-			{
-			});
+			SetTextBoxValue(PanMinAngleTextBox, minAngle.ToString());
 		}
-		private async void SetMotorPanMaxAngleLabel(float maxAngle)
+		private void SetMotorPanMaxAngleLabel(float maxAngle)
 		{
-			await RunOnUiThread(() =>
-			{
-			});
+			SetTextBoxValue(PanMaxAngleTextBox, maxAngle.ToString());
 		}
-		private async void SetMotorPanMinSpeedLabel(float minSpeed)
+		private void SetMotorPanMinSpeedLabel(float minSpeed)
 		{
-			await RunOnUiThread(() =>
-			{
-			});
+			SetTextBoxValue(PanMinSpeedTextBox, minSpeed.ToString());
 		}
-		private async void SetMotorPanMaxSpeedLabel(float maxSpeed)
+		private void SetMotorPanMaxSpeedLabel(float maxSpeed)
 		{
-			await RunOnUiThread(() =>
-			{
-			});
+			SetTextBoxValue(PanMaxSpeedTextBox, maxSpeed.ToString());
 		}
-		private async void SetMotorPanMinAccelerationLabel(float minAcceleration)
+		private void SetMotorPanMinAccelerationLabel(float minAcceleration)
 		{
-			await RunOnUiThread(() =>
-			{
-			});
+			SetTextBoxValue(PanMinAccelerationTextBox, minAcceleration.ToString());
 		}
-		private async void SetMotorPanMaxAccelerationLabel(float maxAcceleration)
+		private void SetMotorPanMaxAccelerationLabel(float maxAcceleration)
 		{
-			await RunOnUiThread(() =>
-			{
-			});
+			SetTextBoxValue(PanMaxAccelerationTextBox, maxAcceleration.ToString());
 		}
 
-		private async void SetMotorTiltMinAngleLabel(float minAngle)
+		private void SetMotorTiltMinAngleLabel(float minAngle)
 		{
-			await RunOnUiThread(() =>
-			{
-			});
+			SetTextBoxValue(TiltMinAngleTextBox, minAngle.ToString());
 		}
-		private async void SetMotorTiltMaxAngleLabel(float maxAngle)
+		private void SetMotorTiltMaxAngleLabel(float maxAngle)
 		{
-			await RunOnUiThread(() =>
-			{
-			});
+			SetTextBoxValue(TiltMaxAngleTextBox, maxAngle.ToString());
 		}
-		private async void SetMotorTiltMinSpeedLabel(float minSpeed)
+		private void SetMotorTiltMinSpeedLabel(float minSpeed)
 		{
-			await RunOnUiThread(() =>
-			{
-			});
+			SetTextBoxValue(TiltMinSpeedTextBox, minSpeed.ToString());
 		}
-		private async void SetMotorTiltMaxSpeedLabel(float maxSpeed)
+		private void SetMotorTiltMaxSpeedLabel(float maxSpeed)
 		{
-			await RunOnUiThread(() =>
-			{
-			});
+			SetTextBoxValue(TiltMaxSpeedTextBox, maxSpeed.ToString());
 		}
-		private async void SetMotorTiltMinAccelerationLabel(float minAcceleration)
+		private void SetMotorTiltMinAccelerationLabel(float minAcceleration)
 		{
-			await RunOnUiThread(() =>
-			{
-			});
+			SetTextBoxValue(TiltMinAccelerationTextBox, minAcceleration.ToString());
 		}
-		private async void SetMotorTiltMaxAccelerationLabel(float maxAcceleration)
+		private void SetMotorTiltMaxAccelerationLabel(float maxAcceleration)
 		{
-			await RunOnUiThread(() =>
-			{
-			});
+			SetTextBoxValue(TiltMaxAccelerationTextBox, maxAcceleration.ToString());
 		}
 
-		private async void SetMotorSlideMinSpeedLabel(float minSpeed)
+		private void SetMotorSlideMinSpeedLabel(float minSpeed)
 		{
-			await RunOnUiThread(() =>
-			{
-			});
+			SetTextBoxValue(SlideMinSpeedTextBox, minSpeed.ToString());
 		}
-		private async void SetMotorSlideMaxSpeedLabel(float maxSpeed)
+		private void SetMotorSlideMaxSpeedLabel(float maxSpeed)
 		{
-			await RunOnUiThread(() =>
-			{
-			});
+			SetTextBoxValue(SlideMaxSpeedTextBox, maxSpeed.ToString());
 		}
-		private async void SetMotorSlideMinAccelerationLabel(float minAcceleration)
+		private void SetMotorSlideMinAccelerationLabel(float minAcceleration)
 		{
-			await RunOnUiThread(() =>
-			{
-			});
+			SetTextBoxValue(SlideMinAccelerationTextBox, minAcceleration.ToString());
 		}
-		private async void SetMotorSlideMaxAccelerationLabel(float maxAcceleration)
+		private void SetMotorSlideMaxAccelerationLabel(float maxAcceleration)
 		{
-			await RunOnUiThread(() =>
-			{
-			});
+			SetTextBoxValue(SlideMaxAccelerationTextBox, maxAcceleration.ToString());
 		}
 
 		private void CameraSliderResponseReceived(object sender, CameraResponseArgs evt)
@@ -463,7 +435,7 @@ namespace CameraSlider.UI
 					}
 				}
 				break;
-				case "motor_tile_limits":
+				case "motor_tilt_limits":
 				{
 					if (args.Length >= 7)
 					{
@@ -1046,7 +1018,7 @@ namespace CameraSlider.UI
 			}
 		}
 
-		private async void BtnResetCalibration_Click(object sender, RoutedEventArgs e)
+		private void BtnResetCalibration_Click(object sender, RoutedEventArgs e)
 		{
 			if (!_deviceCalibrationRunning)
 			{
@@ -1149,12 +1121,12 @@ namespace CameraSlider.UI
 
 		private void BtnSetSlideMin_Click(object sender, RoutedEventArgs e)
 		{
-			_cameraSliderDevice.SetSlideMin();
+			_cameraSliderDevice.SaveSlideMin();
 		}
 
 		private void BtnSetSlideMax_Click(object sender, RoutedEventArgs e)
 		{
-			_cameraSliderDevice.SetSlideMax();
+			_cameraSliderDevice.SaveSlideMax();
 		}
 
 		private void BtnManualMoveLeft_Click(object sender, RoutedEventArgs e)
@@ -1200,9 +1172,87 @@ namespace CameraSlider.UI
 			_configState._areConfigSettingsDirty = true;
 		}
 
-		private void PanMinAngleTextBox_TextChanged(object sender, TextChangedEventArgs e)
+		private bool FetchLimitTextBoxValue(TextBox textBox, float currentValue, out float newValue)
 		{
+			if (float.TryParse(textBox.Text, out newValue))
+			{
+				return Math.Abs(newValue - currentValue) > 0.1f;
+			}
+			return false;
+		}
 
+		private void BtnApplyMotorLimits_Click(object sender, RoutedEventArgs e)
+		{
+			// Check if the pan limits have changed
+			bool bHasPanLimitsChanged = false;
+			float newPanMinAngle, newPanMaxAngle;
+			float newPanMinSpeed, newPanMaxSpeed;
+			float newPanMinAcceleration, newPanMaxAcceleration;
+			bHasPanLimitsChanged|= FetchLimitTextBoxValue(PanMinAngleTextBox, _motorPanMinAngle, out newPanMinAngle);
+			bHasPanLimitsChanged|= FetchLimitTextBoxValue(PanMaxAngleTextBox, _motorPanMaxAngle, out newPanMaxAngle);
+			bHasPanLimitsChanged|= FetchLimitTextBoxValue(PanMinSpeedTextBox, _motorPanMinSpeed, out newPanMinSpeed);
+			bHasPanLimitsChanged|= FetchLimitTextBoxValue(PanMaxSpeedTextBox, _motorPanMaxSpeed, out newPanMaxSpeed);
+			bHasPanLimitsChanged|= FetchLimitTextBoxValue(PanMinAccelerationTextBox, _motorPanMinAcceleration, out newPanMinAcceleration);
+			bHasPanLimitsChanged|= FetchLimitTextBoxValue(PanMaxAccelerationTextBox, _motorPanMaxAcceleration, out newPanMaxAcceleration);
+			if (bHasPanLimitsChanged)
+			{
+				_cameraSliderDevice.SetPanMotorLimits(
+					newPanMinAngle, newPanMaxAngle,
+					newPanMinSpeed, newPanMaxSpeed,
+					newPanMinAcceleration, newPanMaxAcceleration);
+				_cameraSliderDevice.GetMotorPanLimits();
+			}
+
+			// Check if the tilt limits have changed
+			bool bHasTiltLimitsChanged = false;
+			float newTiltMinAngle, newTiltMaxAngle;
+			float newTiltMinSpeed, newTiltMaxSpeed;
+			float newTiltMinAcceleration, newTiltMaxAcceleration;
+			bHasTiltLimitsChanged|= FetchLimitTextBoxValue(TiltMinAngleTextBox, _motorTiltMinAngle, out newTiltMinAngle);
+			bHasTiltLimitsChanged|= FetchLimitTextBoxValue(TiltMaxAngleTextBox, _motorTiltMaxAngle, out newTiltMaxAngle);
+			bHasTiltLimitsChanged|= FetchLimitTextBoxValue(TiltMinSpeedTextBox, _motorTiltMinSpeed, out newTiltMinSpeed);
+			bHasTiltLimitsChanged|= FetchLimitTextBoxValue(TiltMaxSpeedTextBox, _motorTiltMaxSpeed, out newTiltMaxSpeed);
+			bHasTiltLimitsChanged|= FetchLimitTextBoxValue(TiltMinAccelerationTextBox, _motorTiltMinAcceleration, out newTiltMinAcceleration);
+			bHasTiltLimitsChanged|= FetchLimitTextBoxValue(TiltMaxAccelerationTextBox, _motorTiltMaxAcceleration, out newTiltMaxAcceleration);
+			if (bHasTiltLimitsChanged)
+			{
+				_cameraSliderDevice.SetTiltMotorLimits(
+					newTiltMinAngle, newTiltMaxAngle,
+					newTiltMinSpeed, newTiltMaxSpeed,
+					newTiltMinAcceleration, newTiltMaxAcceleration);
+				_cameraSliderDevice.GetMotorTiltLimits();
+			}
+
+			// Check if the slide limits have changed
+			bool bHasSlideLimitsChanged = false;
+			float newSlideMinSpeed, newSlideMaxSpeed;
+			float newSlideMinAcceleration, newSlideMaxAcceleration;
+			bHasSlideLimitsChanged|= FetchLimitTextBoxValue(SlideMinSpeedTextBox, _motorSlideMinSpeed, out newSlideMinSpeed);
+			bHasSlideLimitsChanged|= FetchLimitTextBoxValue(SlideMaxSpeedTextBox, _motorSlideMaxSpeed, out newSlideMaxSpeed);
+			bHasSlideLimitsChanged|= FetchLimitTextBoxValue(SlideMinAccelerationTextBox, _motorSlideMinAcceleration, out newSlideMinAcceleration);
+			bHasSlideLimitsChanged|= FetchLimitTextBoxValue(SlideMaxAccelerationTextBox, _motorSlideMaxAcceleration, out newSlideMaxAcceleration);
+			if (bHasSlideLimitsChanged)
+			{
+				_cameraSliderDevice.SetSlideMotorLimits(
+					newSlideMinSpeed, newSlideMaxSpeed,
+					newSlideMinAcceleration, newSlideMaxAcceleration);
+				_cameraSliderDevice.GetMotorSlideLimits();
+			}
+		}
+
+		private void BtnRefreshMotorLimits_Click(object sender, RoutedEventArgs e)
+		{
+			_cameraSliderDevice.GetMotorPanLimits();
+			_cameraSliderDevice.GetMotorTiltLimits();
+			_cameraSliderDevice.GetMotorSlideLimits();
+		}
+
+		private void BtnResetMotorLimits_Click(object sender, RoutedEventArgs e)
+		{
+			_cameraSliderDevice.ResetMotorLimits();
+			_cameraSliderDevice.GetMotorPanLimits();
+			_cameraSliderDevice.GetMotorTiltLimits();
+			_cameraSliderDevice.GetMotorSlideLimits();
 		}
 	}
 }

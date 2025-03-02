@@ -109,8 +109,14 @@ public:
   void setListener(ConfigEventListener *listener);
   void clearListener(ConfigEventListener *listener);
 
+  void resetMotorLimits();
   void getMotorLimitsConfig(StepperMotorLimits& outMotorConfig) const;
   void setMotorLimitsConfig(const StepperMotorLimits& motorConfig);
+  void notifyMotorLimitsChanged();
+
+  void setPanMotorLimits(float minAngle, float maxAngle, float minSpeed, float maxSpeed, float minAccel, float maxAccel);
+  void setTiltMotorLimits(float minAngle, float maxAngle, float minSpeed, float maxSpeed, float minAccel, float maxAccel);
+  void setSlideMotorLimits(float minSpeed, float maxSpeed, float minAccel, float maxAccel);
 
   bool getMotorCalibrationConfig(StepperMotorCalibration& outMotorConfig) const;
   void setMotorCalibrationConfig(const StepperMotorCalibration& motorConfig);

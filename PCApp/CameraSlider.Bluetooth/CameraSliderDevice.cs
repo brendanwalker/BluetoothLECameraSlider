@@ -483,6 +483,11 @@ namespace CameraSlider.Bluetooth
 			SendCommand("get_motor_slide_limits");
 		}
 
+		public void ResetMotorLimits()
+		{
+			SendCommand("reset_motor_limits");
+		}
+
 		public void WakeUp()
 		{
 			SendCommand("ping");
@@ -521,14 +526,40 @@ namespace CameraSlider.Bluetooth
 			SendCommand(command);
 		}
 
-		public void SetSlideMin()
+		public void SetPanMotorLimits(
+				float minAngle, float maxAngle, 
+				float minSpeed, float maxSpeed, 
+				float minAccel, float maxAccel)
 		{
-			SendCommand("set_slide_min_pos");
+			SendCommand(
+				$"set_pan_motor_limits {minAngle} {maxAngle} {minSpeed} {maxSpeed} {minAccel} {maxAccel}");
 		}
 
-		public void SetSlideMax()
+		public void SetTiltMotorLimits(
+				float minAngle, float maxAngle,
+				float minSpeed, float maxSpeed,
+				float minAccel, float maxAccel)
 		{
-			SendCommand("set_slide_max_pos");
+			SendCommand(
+				$"set_tilt_motor_limits {minAngle} {maxAngle} {minSpeed} {maxSpeed} {minAccel} {maxAccel}");
+		}
+
+		public void SetSlideMotorLimits(
+				float minSpeed, float maxSpeed,
+				float minAccel, float maxAccel)
+		{
+			SendCommand(
+				$"set_slide_motor_limits {minSpeed} {maxSpeed} {minAccel} {maxAccel}");
+		}
+
+		public void SaveSlideMin()
+		{
+			SendCommand("save_slide_min_pos");
+		}
+
+		public void SaveSlideMax()
+		{
+			SendCommand("save_slide_max_pos");
 		}
 
 		private void DeviceConnectionStatusChanged(BluetoothLEDevice sender, object args)

@@ -123,6 +123,9 @@ void SliderState::setup()
 
   // Cache motor angle, speed and acceleration limits
   configManager->getMotorLimitsConfig(m_limits);
+
+  // Listen for config changes
+  configManager->setListener(this);
 }
 
 void SliderState::loop()
@@ -357,6 +360,7 @@ void SliderState::setPanStepperAngularSpeed(float cameraDegreesPerSecond)
   int32_t newTargetPanSpeed= motorAngleToSteps(motorDegreesPerSecond);
 
   m_panStepper->setSpeedInHz(newTargetPanSpeed);
+  Serial.printf("Set Pan Speed: %f(deg/sec) -> %d(hz)\n", cameraDegreesPerSecond, newTargetPanSpeed);
 }
 
 float SliderState::getPanStepperAngularSpeed()

@@ -22,7 +22,8 @@ void ConfigManager::load()
     if (bytesRead != sizeof(StepperMotorLimits) || m_motorLimitsConfig.version != STEPPER_MOTOR_LIMITS_VER)
     {
       Serial.printf("  Invalid. Setting Defaults.\n");
-      m_motorLimitsConfig.setDefaults();        
+      m_motorLimitsConfig.setDefaults();
+      m_motorLimitsConfig.version= STEPPER_MOTOR_LIMITS_VER;
     }
     Serial.printf("  ver: %d\n", m_motorLimitsConfig.version);
     Serial.printf("  panMinAngle: %.1f degrees\n", m_motorLimitsConfig.panMinAngle);
@@ -48,6 +49,7 @@ void ConfigManager::load()
     {
       Serial.printf("  Invalid. Setting Defaults.\n");
       memset(&m_motorCalibrationConfig, 0, sizeof(StepperMotorCalibration));
+      m_motorCalibrationConfig.version= STEPPER_MOTOR_CALIBRATION_VER;
     }
     Serial.printf("  ver: %d\n", m_motorCalibrationConfig.version);
     Serial.printf("  panStepperCenter: %d\n", m_motorCalibrationConfig.panStepperCenter);
@@ -104,10 +106,52 @@ void ConfigManager::setMotorLimitsConfig(const StepperMotorLimits& motorConfig)
 {
   m_motorLimitsConfig= motorConfig;
   m_motorLimitsConfig.version= STEPPER_MOTOR_LIMITS_VER;
+  notifyMotorLimitsChanged();
+}
+
+void ConfigManager::notifyMotorLimitsChanged()
+{
   if (m_bValidPrefs)
     m_preferences.putBytes("motor_limits", &m_motorLimitsConfig, sizeof(StepperMotorLimits));
   if (m_listener != nullptr)
     m_listener->onLimitsChanged();
+}
+
+void ConfigManager::resetMotorLimits()
+{
+  m_motorLimitsConfig.setDefaults();
+  notifyMotorLimitsChanged();
+}
+
+void ConfigManager::setPanMotorLimits(float minAngle, float maxAngle, float minSpeed, float maxSpeed, float minAccel, float maxAccel)
+{
+  m_motorLimitsConfig.panMinAngle= minAngle;
+  m_motorLimitsConfig.panMaxAngle= maxAngle;
+  m_motorLimitsConfig.panMinSpeed= minSpeed;
+  m_motorLimitsConfig.panMaxSpeed= maxSpeed;
+  m_motorLimitsConfig.panMinAcceleration= minAccel;
+  m_motorLimitsConfig.panMaxAcceleration= maxAccel;
+  notifyMotorLimitsChanged();
+}
+
+void ConfigManager::setTiltMotorLimits(float minAngle, float maxAngle, float minSpeed, float maxSpeed, float minAccel, float maxAccel)
+{
+  m_motorLimitsConfig.tiltMinAngle= minAngle;
+  m_motorLimitsConfig.tiltMaxAngle= maxAngle;
+  m_motorLimitsConfig.tiltMinSpeed= minSpeed;
+  m_motorLimitsConfig.tiltMaxSpeed= maxSpeed;
+  m_motorLimitsConfig.tiltMinAcceleration= minAccel;
+  m_motorLimitsConfig.tiltMaxAcceleration= maxAccel;
+  notifyMotorLimitsChanged();
+}
+
+void ConfigManager::setSlideMotorLimits(float minSpeed, float maxSpeed, float minAccel, float maxAccel)
+{
+  m_motorLimitsConfig.slideMinSpeed= minSpeed;
+  m_motorLimitsConfig.slideMaxSpeed= maxSpeed;
+  m_motorLimitsConfig.slideMinAcceleration= minAccel;
+  m_motorLimitsConfig.slideMaxAcceleration= maxAccel;
+  notifyMotorLimitsChanged();
 }
 
 bool ConfigManager::getMotorCalibrationConfig(StepperMotorCalibration& outMotorConfig) const
