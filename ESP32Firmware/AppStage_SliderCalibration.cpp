@@ -263,22 +263,31 @@ void AppStage_SliderCalibration::update(float deltaSeconds)
         {
             if (!sliderState->getPanStepper()->isRunning())
             {
-                if (m_searchMode == eSearchMode::NotStarted)
+                if (m_searchMode == eSearchMode::Idle)
                 {
-                    Serial.println("Start Pan Center counter-clockwise search");
-                    m_searchMode = eSearchMode::SearchCounterClockwise;
-                    sliderState->movePanStepperDegrees(-180.f);
+                    Serial.printf("Start Pan Center positive search -> %.1f\n", m_searchScanSize);
+                    m_searchMode = eSearchMode::SearchPositive;
+                    sliderState->movePanStepperDegrees(m_searchScanSize);
                 }
-                else if (m_searchMode == eSearchMode::SearchCounterClockwise)
+                else if (m_searchMode == eSearchMode::SearchPositive)
                 {
-                    Serial.println("Start Pan Center clockwise search");
-                    m_searchMode = eSearchMode::SearchClockwise;
-                    sliderState->movePanStepperDegrees(360.f);
+                    m_searchScanSize= min(m_searchScanSize*2.f, m_searchScanMaxSize);
+                    Serial.printf("Start Pan Center negative search -> -%.1f\n", m_searchScanSize);
+                    m_searchMode = eSearchMode::SearchNegative;
+                    sliderState->movePanStepperDegrees(-m_searchScanSize);
                 }
                 else
                 {
-                    Serial.println("Failed to find Pan Center!");
-                    nextState= eSliderCalibrationState::Failed;                    
+                    if (m_searchScanSize < m_searchScanMaxSize)
+                    {
+                        m_searchScanSize= min(m_searchScanSize*2.f, m_searchScanMaxSize);
+                        m_searchMode = eSearchMode::Idle;
+                    }
+                    else
+                    {
+                        Serial.println("Failed to find Pan Center!");
+                        nextState= eSliderCalibrationState::Failed;                    
+                    }
                 }
             }
         }
@@ -287,22 +296,31 @@ void AppStage_SliderCalibration::update(float deltaSeconds)
         {
             if (!sliderState->getTiltStepper()->isRunning())
             {
-                if (m_searchMode == eSearchMode::NotStarted)
+                if (m_searchMode == eSearchMode::Idle)
                 {
-                    Serial.println("Start Tilt Center counter-clockwise search");
-                    m_searchMode = eSearchMode::SearchCounterClockwise;
-                    sliderState->moveTiltStepperDegrees(-90.f);
+                    Serial.printf("Start Tilt Center positive search -> %.1f\n", m_searchScanSize);
+                    m_searchMode = eSearchMode::SearchPositive;
+                    sliderState->moveTiltStepperDegrees(m_searchScanSize);
                 }
-                else if (m_searchMode == eSearchMode::SearchCounterClockwise)
+                else if (m_searchMode == eSearchMode::SearchPositive)
                 {
-                    Serial.println("Start Tilt Center clockwise search");
-                    m_searchMode = eSearchMode::SearchClockwise;
-                    sliderState->moveTiltStepperDegrees(180.f);
+                    m_searchScanSize= min(m_searchScanSize*2.f, m_searchScanMaxSize);
+                    Serial.printf("Start Tilt Center negative search -> -%.1f\n", m_searchScanSize);
+                    m_searchMode = eSearchMode::SearchNegative;
+                    sliderState->moveTiltStepperDegrees(-m_searchScanSize);
                 }
                 else
                 {
-                    Serial.println("Failed to find Tilt Center!");
-                    nextState= eSliderCalibrationState::Failed;
+                    if (m_searchScanSize < m_searchScanMaxSize)
+                    {
+                        m_searchScanSize= min(m_searchScanSize*2.f, m_searchScanMaxSize);
+                        m_searchMode = eSearchMode::Idle;
+                    }
+                    else
+                    {
+                        Serial.println("Failed to find Tilt Center!");
+                        nextState= eSliderCalibrationState::Failed;                    
+                    }
                 }
             }            
         }
@@ -410,6 +428,7 @@ void AppStage_SliderCalibration::onEnterState(eSliderCalibrationState newState)
 {
     BLEManager* bleManager= BLEManager::getInstance();
     SliderState* sliderState= SliderState::getInstance();
+    ConfigManager* configManager= ConfigManager::getInstance();
 
     m_activeMenu= nullptr;
 
@@ -448,13 +467,17 @@ void AppStage_SliderCalibration::onEnterState(eSliderCalibrationState newState)
     case eSliderCalibrationState::FindPanCenter:
         {
             // Let update() manage the search state
-            m_searchMode= eSearchMode::NotStarted;
+            m_searchMode= eSearchMode::Idle;
+            m_searchScanMaxSize= 180.f;
+            m_searchScanSize= m_searchScanMaxSize / 8;
         }
         break;
     case eSliderCalibrationState::FindTiltCenter:
         {
             // Let update() manage the search state
-            m_searchMode= eSearchMode::NotStarted;
+            m_searchMode= eSearchMode::Idle;
+            m_searchScanMaxSize= 60.f;
+            m_searchScanSize= m_searchScanMaxSize / 4;
         }    
         break;
     case eSliderCalibrationState::Complete:

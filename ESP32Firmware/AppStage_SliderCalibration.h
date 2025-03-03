@@ -27,9 +27,9 @@ enum class eSliderCalibrationState : int
 
 enum class eSearchMode : int
 {
-    NotStarted,
-    SearchCounterClockwise,
-    SearchClockwise,
+    Idle,
+    SearchNegative,
+    SearchPositive,
 
     COUNT
 };
@@ -101,7 +101,9 @@ private:
     SelectionMenu m_failedMenu;
     SelectionMenu* m_activeMenu= nullptr;
     uint8_t m_moveState= 0;
-    eSearchMode m_searchMode= eSearchMode::NotStarted;
+    eSearchMode m_searchMode= eSearchMode::Idle;
+    float m_searchScanSize= 0;
+    float m_searchScanMaxSize= 0;
 };
 
 #endif
