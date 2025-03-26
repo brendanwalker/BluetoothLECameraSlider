@@ -106,7 +106,7 @@ namespace CameraSlider.UI
 			_cameraSliderDevice.SliderPosChanged += (sender, args) => { _messageQueue.Enqueue(args); };
 			_cameraSliderDevice.PanPosChanged += (sender, args) => { _messageQueue.Enqueue(args); };
 			_cameraSliderDevice.TiltPosChanged += (sender, args) => { _messageQueue.Enqueue(args); };
-			_cameraSliderDevice.ConnectionStatusChanged += (sender, args) => { _messageQueue.Enqueue(args); };
+			_cameraSliderDevice.CameraDisconnected += (sender, args) => { _messageQueue.Enqueue(args); };
 			_cameraSliderDevice.CameraStatusChanged += (sender, args) => { _messageQueue.Enqueue(args); };
 			_cameraSliderDevice.CameraResponseHandler += (sender, args) => { _messageQueue.Enqueue(args); };
 
@@ -132,7 +132,7 @@ namespace CameraSlider.UI
 			}
 
 			// Disconnect from everything
-			if (_cameraSliderDevice.IsConnected)
+			if (_cameraSliderDevice.IsSetupAndConnected)
 			{
 				_cameraSliderDevice.Disconnect();
 			}
@@ -227,7 +227,7 @@ namespace CameraSlider.UI
 					{
 						EmitLog($"getCameraConnectionStatus requested.");
 
-						string statusString= _cameraSliderDevice.IsConnected ? "connected" : "disconnected";
+						string statusString= _cameraSliderDevice.IsSetupAndConnected ? "connected" : "disconnected";
 						ws.WriteString($"getCameraConnectionStatus {statusString}");
 					} break;
 
@@ -554,57 +554,56 @@ namespace CameraSlider.UI
 			SetCameraSliderPositionLabel(_targetSlidePos);
 		}
 
-		private void OnDeviceConnectionStatusChanged(object sender, ConnectionStatusChangedEventArgs args)
+		private void OnCameraSliderConnected()
 		{
-			bool connected = args.IsConnected;
-			EmitLog("CameraSlider connection status is: " + connected);
+			EmitLog("CameraSlider connected");
 
-			if (connected)
-			{
-				SetCameraStatusLabel("Idle");
-				SetUIControlsDisableFlag(UIControlDisableFlags.DeviceDisconnected, false);
+			SetCameraStatusLabel("Idle");
+			SetUIControlsDisableFlag(UIControlDisableFlags.DeviceDisconnected, false);
 
-				// Get the slider calibration from the device (response updates the	UI)	
-				_cameraSliderDevice.GetSliderCalibration();
+			// Get the slider calibration from the device (response updates the	UI)	
+			_cameraSliderDevice.GetSliderCalibration();
 
-				// Get the motor angle, speed, and acceleration limits from the device 
-				// (response updates the UI)
-				_cameraSliderDevice.GetMotorPanLimits();
-				_cameraSliderDevice.GetMotorTiltLimits();
-				_cameraSliderDevice.GetMotorSlideLimits();
+			// Get the motor angle, speed, and acceleration limits from the device 
+			// (response updates the UI)
+			_cameraSliderDevice.GetMotorPanLimits();
+			_cameraSliderDevice.GetMotorTiltLimits();
+			_cameraSliderDevice.GetMotorSlideLimits();
 
-				// Send the desired speed, accel, and position params to the device
-				_cameraSliderDevice.SetSpeed(_configState._cameraSettingsConfig.Speed);
-				_cameraSliderDevice.SetAcceleration(_configState._cameraSettingsConfig.Accel);
-				_cameraSliderDevice.SetPosition(
-						_configState._cameraSettingsConfig.SlidePos,
-						_configState._cameraSettingsConfig.PanPos,
-						_configState._cameraSettingsConfig.TiltPos);
-
-				// Get the actual target raw slider position from the device
-				_targetSlidePos = _cameraSliderDevice.GetSlidePosition();
-				SetCameraSliderPositionLabel(_targetSlidePos);
-
-				_suppressUIUpdatesToDevice = true;
-				SetCameraPositionSliders(
+			// Send the desired speed, accel, and position params to the device
+			_cameraSliderDevice.SetSpeed(_configState._cameraSettingsConfig.Speed);
+			_cameraSliderDevice.SetAcceleration(_configState._cameraSettingsConfig.Accel);
+			_cameraSliderDevice.SetPosition(
 					_configState._cameraSettingsConfig.SlidePos,
 					_configState._cameraSettingsConfig.PanPos,
 					_configState._cameraSettingsConfig.TiltPos);
-				SetCameraSpeedSliders(
-					_configState._cameraSettingsConfig.Speed,
-					_configState._cameraSettingsConfig.Accel);
-				_suppressUIUpdatesToDevice = false;
 
-				BroadcastMessageToAllWebSocketClients("cameraConnectionStatusChanged connected");
-			}
-			else
-			{
-				SetCameraStatusLabel("Searching...");
-				SetActivePresetStatusLabel("");
-				SetUIControlsDisableFlag(UIControlDisableFlags.DeviceDisconnected, true);
+			// Get the actual target raw slider position from the device
+			_targetSlidePos = _cameraSliderDevice.GetSlidePosition();
+			SetCameraSliderPositionLabel(_targetSlidePos);
 
-				BroadcastMessageToAllWebSocketClients("cameraConnectionStatusChanged disconnected");
-			}
+			_suppressUIUpdatesToDevice = true;
+			SetCameraPositionSliders(
+				_configState._cameraSettingsConfig.SlidePos,
+				_configState._cameraSettingsConfig.PanPos,
+				_configState._cameraSettingsConfig.TiltPos);
+			SetCameraSpeedSliders(
+				_configState._cameraSettingsConfig.Speed,
+				_configState._cameraSettingsConfig.Accel);
+			_suppressUIUpdatesToDevice = false;
+
+			BroadcastMessageToAllWebSocketClients("cameraConnectionStatusChanged connected");
+		}
+
+		private void OnCameraSliderDisconnected(object sender, DisconnectedEventArgs args)
+		{
+			EmitLog("CameraSlider Disconnected");
+
+			SetCameraStatusLabel("Searching...");
+			SetActivePresetStatusLabel("");
+			SetUIControlsDisableFlag(UIControlDisableFlags.DeviceDisconnected, true);
+
+			BroadcastMessageToAllWebSocketClients("cameraConnectionStatusChanged disconnected");
 		}
 
 		private async Task StartMessagePump(CancellationToken cancellationToken)
@@ -614,7 +613,7 @@ namespace CameraSlider.UI
 				while (true)
 				{
 					// Ping a connected device regularly to keep it awake
-					if (_cameraSliderDevice.IsConnected)
+					if (_cameraSliderDevice.IsSetupAndConnected)
 					{
 						_deviceKeepAliveCountdown--;
 						if (_deviceKeepAliveCountdown <= 0)
@@ -624,26 +623,23 @@ namespace CameraSlider.UI
 						}
 					}
 					// Attempt to kick off an async device reconnection
-					else if (!_cameraSliderDevice.IsConnected)
+					else
 					{
 						try
 						{
-							_cameraSliderDevice.Connect(_deviceName);
+							if (_cameraSliderDevice.Connect(_deviceName))
+							{
+								OnCameraSliderConnected();
+							}
 						}
 						catch (Exception ex)
 						{
 							EmitLog("Device connect error: " + ex.Message);
 						}
-
-						// Clear the control UI disable if the device is connected
-						if (_cameraSliderDevice.IsConnected)
-						{
-							SetUIControlsDisableFlag(UIControlDisableFlags.DeviceDisconnected, false);
-						}
 					}
 
 					// Send next pending command to the device
-					if (_cameraSliderDevice.IsConnected)
+					if (_cameraSliderDevice.IsSetupAndConnected)
 					{
 						_cameraSliderDevice.SendNextPendingCommand();
 					}
@@ -671,9 +667,9 @@ namespace CameraSlider.UI
 		{
 			while (_messageQueue.TryDequeue(out EventArgs evt))
 			{
-				if (evt is ConnectionStatusChangedEventArgs)
+				if (evt is DisconnectedEventArgs)
 				{
-					OnDeviceConnectionStatusChanged(this, evt as ConnectionStatusChangedEventArgs);
+					OnCameraSliderDisconnected(this, evt as DisconnectedEventArgs);
 				}
 				else if (evt is CameraResponseArgs)
 				{

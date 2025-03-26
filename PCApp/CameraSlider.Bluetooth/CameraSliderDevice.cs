@@ -24,6 +24,8 @@ namespace CameraSlider.Bluetooth
 		public readonly string SPEED_CHARACTERISTIC_UUID = "781ef5a1-e5df-411d-9276-7a229e469719";
 		public readonly string ACCEL_CHARACTERISTIC_UUID = "5cf074e3-2014-4776-8734-b0d0eb49229a";
 
+		private bool _isDeviceSetup= false;
+
 		private BluetoothLEDevice _cameraSliderDevice = null;
 
 		private GattDeviceService _cameraSliderService = null;
@@ -42,7 +44,7 @@ namespace CameraSlider.Bluetooth
 
 		private CommandManager _requestManager = new CommandManager();
 
-		public event EventHandler<ConnectionStatusChangedEventArgs> ConnectionStatusChanged;
+		public event EventHandler<DisconnectedEventArgs> CameraDisconnected;
 		public event EventHandler<CameraStatusChangedEventArgs> CameraStatusChanged;
 		public event EventHandler<CameraResponseArgs> CameraResponseHandler;
 		public event EventHandler<CameraPositionChangedEventArgs> SliderPosChanged;
@@ -101,17 +103,21 @@ namespace CameraSlider.Bluetooth
 				return false;
 			}
 
-			// we should always monitor the connection status
-			_cameraSliderDevice.ConnectionStatusChanged -= DeviceConnectionStatusChanged;
-			_cameraSliderDevice.ConnectionStatusChanged += DeviceConnectionStatusChanged;
-
-			if (SetupCameraSliderCharacteristics() == false)
+			if (GetConnectionStatus() != BluetoothConnectionStatus.Connected)
 			{
 				return false;
 			}
 
-			// we could force propagation of event with connection status change, to run the callback for initial status
-			DeviceConnectionStatusChanged(_cameraSliderDevice, null);
+			if (!SetupCameraSliderCharacteristics())
+			{
+				return false;
+			}
+
+			// Monitor for disconnects
+			_cameraSliderDevice.ConnectionStatusChanged -= DeviceConnectionStatusChanged;
+			_cameraSliderDevice.ConnectionStatusChanged += DeviceConnectionStatusChanged;
+
+			_isDeviceSetup= true;
 
 			return true;
 		}
@@ -564,17 +570,13 @@ namespace CameraSlider.Bluetooth
 
 		private void DeviceConnectionStatusChanged(BluetoothLEDevice sender, object args)
 		{
-			var result = new ConnectionStatusChangedEventArgs()
-			{
-				IsConnected = sender != null && (sender.ConnectionStatus == BluetoothConnectionStatus.Connected)
-			};
-
-			if (!result.IsConnected)
+			if (GetConnectionStatus() != BluetoothConnectionStatus.Connected)
 			{
 				CleanUpGattState();
-			}
+				_isDeviceSetup= false;
 
-			ConnectionStatusChanged?.Invoke(this, result);
+				CameraDisconnected?.Invoke(this, new DisconnectedEventArgs());
+			}
 		}
 
 		private void NotifyCameraStatusEvent(GattCharacteristic sender, GattValueChangedEventArgs e)
@@ -650,11 +652,18 @@ namespace CameraSlider.Bluetooth
 				TiltPosChanged?.Invoke(this, Event);
 		}
 
-		public bool IsConnected
+		private BluetoothConnectionStatus GetConnectionStatus()
+		{
+			return _cameraSliderDevice != null 
+				? _cameraSliderDevice.ConnectionStatus 
+				: BluetoothConnectionStatus.Disconnected;
+		}
+
+		public bool IsSetupAndConnected
 		{
 			get
 			{
-				return _cameraSliderDevice != null ? _cameraSliderDevice.ConnectionStatus == BluetoothConnectionStatus.Connected : false;
+				return _isDeviceSetup;
 			}
 		}
 	}

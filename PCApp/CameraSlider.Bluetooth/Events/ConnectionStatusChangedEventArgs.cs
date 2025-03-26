@@ -2,8 +2,7 @@
 
 namespace CameraSlider.Bluetooth.Events
 {
-    public class ConnectionStatusChangedEventArgs: EventArgs
+    public class DisconnectedEventArgs: EventArgs
     {
-        public bool IsConnected { get; set; }
     }
 }
